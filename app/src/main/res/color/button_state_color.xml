@@ -2,6 +2,10 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true" android:color="@color/primary" />
     <item android:state_checked="true" android:color="@color/primary" />
-    <item android:state_enabled="true" android:color="@color/primary" />
-    <item android:color="#444444" />
+    <!-- For toggle buttons that are NOT checked, show grey -->
+    <item android:state_checkable="true" android:state_checked="false" android:color="?attr/colorButtonInactive" />
+    <!-- Disabled buttons show grey -->
+    <item android:state_enabled="false" android:color="?attr/colorButtonInactive" />
+    <!-- Default for primary action buttons is Red -->
+    <item android:color="@color/primary" />
 </selector>

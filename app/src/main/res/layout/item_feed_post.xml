@@ -7,8 +7,8 @@
     android:layout_marginBottom="12dp"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
-    app:cardBackgroundColor="@color/surface"
-    app:strokeColor="@color/divider"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:strokeColor="?attr/colorDivider"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -30,7 +30,7 @@
                 android:scaleType="centerCrop"
                 android:src="@android:drawable/ic_menu_gallery"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
-                app:strokeColor="@color/divider"
+                app:strokeColor="?attr/colorDivider"
                 app:strokeWidth="1dp" />
 
             <LinearLayout
@@ -46,14 +46,14 @@
                     android:layout_height="wrap_content"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    android:textColor="@color/text_primary" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <TextView
                     android:id="@+id/tvTimestamp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textSize="12sp"
-                    android:textColor="@color/text_secondary" />
+                    android:textColor="?attr/colorTextSecondary" />
             </LinearLayout>
 
             <TextView
@@ -73,7 +73,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="15sp"
-            android:textColor="@color/text_primary"
+            android:textColor="?attr/colorTextPrimary"
             android:layout_marginTop="12dp"
             android:lineSpacingExtra="3dp" />
 
@@ -82,14 +82,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="14sp"
-            android:textColor="@color/text_secondary"
+            android:textColor="?attr/colorTextSecondary"
             android:layout_marginTop="8dp"
             android:lineSpacingExtra="2dp" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="@color/divider"
+            android:background="?attr/colorDivider"
             android:layout_marginTop="16dp" />
 
         <LinearLayout
@@ -113,7 +113,7 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@android:drawable/btn_star_big_off"
-                    app:tint="@color/text_secondary" />
+                    app:tint="?attr/colorTextSecondary" />
 
                 <TextView
                     android:id="@+id/tvLikeCount"
@@ -121,7 +121,7 @@
                     android:layout_height="wrap_content"
                     android:text="0"
                     android:textSize="13sp"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="?attr/colorTextSecondary"
                     android:layout_marginStart="6dp" />
             </LinearLayout>
 

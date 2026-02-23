@@ -21,9 +21,6 @@ class LoginActivity : AppCompatActivity() {
     private val viewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Force Dark Mode globally
-        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-
         super.onCreate(savedInstanceState)
 
         if (viewModel.isLoggedIn) {
@@ -79,13 +76,30 @@ class LoginActivity : AppCompatActivity() {
     private fun checkProfileAndNavigate() {
         lifecycleScope.launch {
             val profileRepo = ProfileRepository()
-            val hasProfile = profileRepo.hasProfile()
-            if (hasProfile) {
+            val result = profileRepo.getProfile()
+            
+            result.onSuccess { profile ->
+                // Apply saved theme preference immediately
+                if (profile.theme == "light") {
+                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+                } else {
+                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+                }
+                
                 startActivity(Intent(this@LoginActivity, MainActivity::class.java))
-            } else {
-                startActivity(Intent(this@LoginActivity, ProfileSetupActivity::class.java))
+                finish()
+            }.onFailure {
+                // If no profile, default to Dark Mode for the setup process
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+
+                val hasProfile = profileRepo.hasProfile()
+                if (hasProfile) {
+                    startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                } else {
+                    startActivity(Intent(this@LoginActivity, ProfileSetupActivity::class.java))
+                }
+                finish()
             }
-            finish()
         }
     }
 }

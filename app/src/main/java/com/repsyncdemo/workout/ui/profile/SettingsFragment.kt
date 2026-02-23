@@ -1,11 +1,13 @@
 package com.repsyncdemo.workout.ui.profile
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -65,6 +67,13 @@ class SettingsFragment : Fragment() {
                     binding.toggleUnit.check(R.id.btnLbs)
                 }
 
+                // Check correct theme button based on profile
+                if (it.theme == "light") {
+                    binding.toggleTheme.check(R.id.btnLightTheme)
+                } else {
+                    binding.toggleTheme.check(R.id.btnDarkTheme)
+                }
+
                 binding.switchHeightPublic.isChecked = it.isHeightPublic
                 binding.switchWeightPublic.isChecked = it.isWeightPublic
                 binding.switchWorkoutsPublic.isChecked = it.isWorkoutsPublic
@@ -103,6 +112,7 @@ class SettingsFragment : Fragment() {
             val twitterUrl = binding.etTwitterUrl.text.toString().trim()
             
             val preferredUnit = if (binding.toggleUnit.checkedButtonId == R.id.btnKg) "kg" else "lbs"
+            val themePreference = if (binding.toggleTheme.checkedButtonId == R.id.btnLightTheme) "light" else "dark"
             
             val isHeightPublic = binding.switchHeightPublic.isChecked
             val isWeightPublic = binding.switchWeightPublic.isChecked
@@ -136,21 +146,35 @@ class SettingsFragment : Fragment() {
                     facebookUrl = facebookUrl,
                     twitterUrl = twitterUrl,
                     preferredUnit = preferredUnit,
+                    theme = themePreference,
                     isHeightPublic = isHeightPublic,
                     isWeightPublic = isWeightPublic,
                     isWorkoutsPublic = isWorkoutsPublic
                 )
+                
+                // 1. Save theme to local preferences for instant startup next time
+                val prefs = requireContext().getSharedPreferences("settings", Context.MODE_PRIVATE)
+                prefs.edit().putString("theme", themePreference).apply()
+
+                // 2. Apply theme immediately
+                if (themePreference == "light") {
+                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+                } else {
+                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+                }
+
+                // 3. Sync to Firebase
                 profileViewModel.updateProfile(updatedProfile)
             }
         }
 
         profileViewModel.profileResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess {
-                Toast.makeText(requireContext(), "Profile updated", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Settings saved", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
             }
             result.onFailure {
-                Toast.makeText(requireContext(), "Update failed: ${it.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Save failed: ${it.message}", Toast.LENGTH_SHORT).show()
             }
         }
 

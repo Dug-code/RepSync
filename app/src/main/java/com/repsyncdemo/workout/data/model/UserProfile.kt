@@ -40,6 +40,7 @@ data class UserProfile(
     val twitterUrl: String = "",
 
     val preferredUnit: String = "lbs", // "lbs" or "kg"
+    val theme: String = "dark", // "light" or "dark"
 
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),
