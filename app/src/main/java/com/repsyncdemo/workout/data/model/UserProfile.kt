@@ -9,6 +9,7 @@ data class UserProfile(
     val id: String = "",
     val userId: String = "",
     val username: String = "",
+    val usernameLowercase: String = "", // Added for case-insensitive search
     val bio: String = "",
     val email: String = "",
     val profilePictureUrl: String = "",
@@ -40,6 +41,7 @@ data class UserProfile(
     val twitterUrl: String = "",
 
     val preferredUnit: String = "lbs", // "lbs" or "kg"
+    val theme: String = "dark", // "light" or "dark"
 
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),

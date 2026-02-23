@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?attr/android:windowBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,7 +15,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Settings"
-            android:textColor="@color/text_primary"
+            android:textColor="?attr/colorOnBackground"
             android:textSize="28sp"
             android:textStyle="bold" />
 
@@ -24,7 +24,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            app:cardBackgroundColor="@color/surface"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/divider"
@@ -90,7 +90,7 @@
                         android:id="@+id/etProfilePicUrl"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -110,7 +110,7 @@
                         android:id="@+id/etUsername"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -133,7 +133,7 @@
                         android:gravity="top"
                         android:inputType="textMultiLine"
                         android:lines="3"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -143,7 +143,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            app:cardBackgroundColor="@color/surface"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/divider"
@@ -165,11 +165,19 @@
                     android:textAllCaps="true"
                     android:letterSpacing="0.05" />
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Weight Unit"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="12sp" />
+
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/toggleUnit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
+                    android:layout_marginTop="8dp"
                     app:singleSelection="true"
                     app:selectionRequired="true">
                     <com.google.android.material.button.MaterialButton
@@ -180,8 +188,7 @@
                         android:layout_weight="1"
                         android:text="LBS"
                         app:cornerRadius="12dp"
-                        app:backgroundTint="@color/button_state_color"
-                        android:textColor="@color/white" />
+                        app:backgroundTint="@color/button_state_color" />
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnKg"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
@@ -190,8 +197,42 @@
                         android:layout_weight="1"
                         android:text="KG"
                         app:cornerRadius="12dp"
-                        app:backgroundTint="@color/button_state_color"
-                        android:textColor="@color/white" />
+                        app:backgroundTint="@color/button_state_color" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="App Theme"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnLightTheme"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Light"
+                        app:cornerRadius="12dp"
+                        app:backgroundTint="@color/button_state_color" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDarkTheme"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Dark"
+                        app:cornerRadius="12dp"
+                        app:backgroundTint="@color/button_state_color" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
                 <View
@@ -205,7 +246,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Make Height Public"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/colorOnSurface"
                     app:thumbTint="@color/switch_thumb_selector"
                     app:trackTint="@color/switch_track_selector" />
 
@@ -215,7 +256,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Make Weight Public"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/colorOnSurface"
                     app:thumbTint="@color/switch_thumb_selector"
                     app:trackTint="@color/switch_track_selector" />
 
@@ -225,7 +266,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Make Saved Workouts Public"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/colorOnSurface"
                     app:thumbTint="@color/switch_thumb_selector"
                     app:trackTint="@color/switch_track_selector" />
             </LinearLayout>
@@ -236,7 +277,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            app:cardBackgroundColor="@color/surface"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/divider"

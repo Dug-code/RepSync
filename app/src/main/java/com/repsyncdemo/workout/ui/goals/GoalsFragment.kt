@@ -52,6 +52,7 @@ class GoalsFragment : Fragment() {
         }
 
         goalAdapter = GoalAdapter(
+            isMyProfile = true,
             onUpdateProgress = { goal -> showUpdateProgressDialog(goal) },
             onDelete = { goal -> viewModel.deleteGoal(goal.id) }
         )

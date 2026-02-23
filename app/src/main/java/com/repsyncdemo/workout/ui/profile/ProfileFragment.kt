@@ -136,11 +136,19 @@ class ProfileFragment : Fragment() {
             onDecline = { request -> socialViewModel.declineRequest(request.id) }
         )
 
-        searchAdapter = UserSearchAdapter { user ->
-            val myUsername = profileViewModel.myProfile.value?.username ?: "User"
-            socialViewModel.sendFriendRequest(user.userId, user.username, myUsername)
-            Toast.makeText(requireContext(), "Friend request sent to @${user.username}", Toast.LENGTH_SHORT).show()
-        }
+        searchAdapter = UserSearchAdapter(
+            onUserClick = { user ->
+                if (user.userId != targetUserId) {
+                    val bundle = Bundle().apply { putString("userId", user.userId) }
+                    findNavController().navigate(R.id.profileFragment, bundle)
+                }
+            },
+            onAddFriend = { user ->
+                val myUsername = profileViewModel.myProfile.value?.username ?: "User"
+                socialViewModel.sendFriendRequest(user.userId, user.username, myUsername)
+                Toast.makeText(requireContext(), "Friend request sent to @${user.username}", Toast.LENGTH_SHORT).show()
+            }
+        )
 
         miniGoalAdapter = MiniGoalAdapter()
 
@@ -162,6 +170,7 @@ class ProfileFragment : Fragment() {
         }
 
         goalAdapter = GoalAdapter(
+            isMyProfile = targetUserId == null,
             onUpdateProgress = { goal -> 
                 val bundle = Bundle().apply { putString("goalId", goal.id) }
                 findNavController().navigate(R.id.goalsFragment, bundle)
@@ -175,9 +184,11 @@ class ProfileFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                if (binding.profileTabs.selectedTabPosition == 1) {
-                    updateContent(1)
+                val query = s.toString().trim()
+                if (query.isNotEmpty()) {
+                    profileViewModel.searchUsers(query)
                 }
+                updateContent(binding.profileTabs.selectedTabPosition)
             }
         })
     }
@@ -191,7 +202,6 @@ class ProfileFragment : Fragment() {
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
         
-        // Initial state
         updateContent(0)
     }
 
@@ -309,7 +319,7 @@ class ProfileFragment : Fragment() {
                     binding.profileTabs.getTabAt(4)?.view?.visibility = View.VISIBLE
                 }
                 
-                if (binding.profileTabs.selectedTabPosition == 2) updateContent(2)
+                if (binding.profileTabs.selectedTabPosition == 2) refreshCurrentTab()
             }
         }
 
@@ -329,7 +339,7 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // --- Core Data Observers ---
+        // Data Observers
         profileViewModel.myPosts.observe(viewLifecycleOwner) { if (targetUserId == null && binding.profileTabs.selectedTabPosition == 0) updateContent(0) }
         profileViewModel.userPosts.observe(viewLifecycleOwner) { if (targetUserId != null && binding.profileTabs.selectedTabPosition == 0) updateContent(0) }
         socialViewModel.friends.observe(viewLifecycleOwner) { if (targetUserId == null && binding.profileTabs.selectedTabPosition == 1) updateContent(1) }
@@ -346,6 +356,10 @@ class ProfileFragment : Fragment() {
             binding.tvGoalsHeader.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
             binding.rvMiniGoals.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
         }
+    }
+
+    private fun refreshCurrentTab() {
+        updateContent(binding.profileTabs.selectedTabPosition)
     }
 
     private fun setupSocialIcon(button: View, url: String) {

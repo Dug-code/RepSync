@@ -32,6 +32,9 @@ class SocialViewModel : ViewModel() {
         }
         .asLiveData()
 
+    private val _friendshipWithTarget = MutableLiveData<Friendship?>()
+    val friendshipWithTarget: LiveData<Friendship?> = _friendshipWithTarget
+
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
@@ -45,6 +48,14 @@ class SocialViewModel : ViewModel() {
                 .collect {
                     _targetUserFriends.value = it
                 }
+        }
+    }
+
+    fun loadFriendshipWithUser(otherUserId: String) {
+        viewModelScope.launch {
+            repository.getFriendshipWithUser(otherUserId).collect {
+                _friendshipWithTarget.value = it
+            }
         }
     }
 

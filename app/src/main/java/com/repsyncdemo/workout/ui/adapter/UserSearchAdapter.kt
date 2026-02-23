@@ -9,6 +9,7 @@ import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.databinding.ItemUserSearchBinding
 
 class UserSearchAdapter(
+    private val onUserClick: (UserProfile) -> Unit,
     private val onAddFriend: (UserProfile) -> Unit
 ) : ListAdapter<UserProfile, UserSearchAdapter.ViewHolder>(UserDiffCallback()) {
 
@@ -29,6 +30,7 @@ class UserSearchAdapter(
 
         fun bind(user: UserProfile) {
             binding.tvUsername.text = user.username
+            binding.root.setOnClickListener { onUserClick(user) }
             binding.btnAddFriend.setOnClickListener { onAddFriend(user) }
         }
     }

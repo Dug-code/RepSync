@@ -4,12 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="?attr/android:windowBackground">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/background"
+        android:background="?attr/android:windowBackground"
         app:elevation="0dp">
 
         <LinearLayout
@@ -43,7 +43,7 @@
                     android:scaleType="centerCrop"
                     android:src="@android:drawable/ic_menu_gallery"
                     app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
-                    app:strokeColor="@color/divider"
+                    app:strokeColor="?attr/colorDivider"
                     app:strokeWidth="2dp" />
 
                 <LinearLayout
@@ -61,7 +61,7 @@
                         android:text="Username"
                         android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="?attr/colorOnBackground" />
 
                     <TextView
                         android:id="@+id/tvBio"
@@ -70,7 +70,7 @@
                         android:layout_marginTop="4dp"
                         android:text="This is your bio."
                         android:textSize="14sp"
-                        android:textColor="@color/text_secondary" />
+                        android:textColor="?attr/colorTextSecondary" />
                 </LinearLayout>
 
                 <ImageButton
@@ -81,7 +81,22 @@
                     android:layout_centerVertical="true"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_settings"
-                    app:tint="@color/text_secondary" />
+                    app:tint="?attr/colorOnSurface" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFriendAction"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:visibility="gone"
+                    android:text="Friend +"
+                    app:cornerRadius="20dp"
+                    android:textSize="12sp"
+                    android:paddingHorizontal="12dp"
+                    app:strokeColor="@color/primary"
+                    android:textColor="@color/primary" />
             </RelativeLayout>
 
             <!-- Social Media Icons -->
@@ -101,7 +116,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:visibility="gone"
                     android:layout_marginEnd="12dp"
-                    app:tint="@color/text_secondary" />
+                    app:tint="?attr/colorOnSurface" />
 
                 <ImageButton
                     android:id="@+id/btnFacebook"
@@ -111,7 +126,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:visibility="gone"
                     android:layout_marginEnd="12dp"
-                    app:tint="@color/text_secondary" />
+                    app:tint="?attr/colorOnSurface" />
 
                 <ImageButton
                     android:id="@+id/btnTwitter"
@@ -120,7 +135,7 @@
                     android:src="@drawable/ic_twitter"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:visibility="gone"
-                    app:tint="@color/text_secondary" />
+                    app:tint="?attr/colorOnSurface" />
             </LinearLayout>
 
             <LinearLayout
@@ -135,10 +150,10 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
-                    app:cardBackgroundColor="@color/surface"
+                    app:cardBackgroundColor="?attr/colorSurface"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
-                    app:strokeColor="@color/divider"
+                    app:strokeColor="?attr/colorDivider"
                     app:strokeWidth="1dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -161,7 +176,7 @@
                             android:textSize="11sp"
                             android:textAllCaps="true"
                             android:letterSpacing="0.05"
-                            android:textColor="@color/text_secondary" />
+                            android:textColor="?attr/colorTextSecondary" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -171,10 +186,10 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="8dp"
-                    app:cardBackgroundColor="@color/surface"
+                    app:cardBackgroundColor="?attr/colorSurface"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
-                    app:strokeColor="@color/divider"
+                    app:strokeColor="?attr/colorDivider"
                     app:strokeWidth="1dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -198,7 +213,7 @@
                             android:textSize="11sp"
                             android:textAllCaps="true"
                             android:letterSpacing="0.05"
-                            android:textColor="@color/text_secondary" />
+                            android:textColor="?attr/colorTextSecondary" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -209,7 +224,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="Current Goals"
-                android:textColor="@color/text_primary"
+                android:textColor="?attr/colorOnBackground"
                 android:textStyle="bold"
                 android:textSize="16sp" />
 
@@ -227,10 +242,10 @@
             android:id="@+id/profileTabs"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/background"
+            android:background="?attr/android:windowBackground"
             app:tabIndicatorColor="@color/primary"
             app:tabSelectedTextColor="@color/primary"
-            app:tabTextColor="@color/text_secondary"
+            app:tabTextColor="?attr/colorTextSecondary"
             app:tabIndicatorFullWidth="false"
             app:tabIndicatorHeight="3dp"
             app:tabMode="scrollable">
@@ -293,7 +308,7 @@
                         android:id="@+id/etFriendSearch"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -302,7 +317,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="Pending Requests"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/colorOnBackground"
                     android:textStyle="bold" android:visibility="gone" />
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -318,7 +333,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="Friends / Search Results"
-                    android:textColor="@color/text_primary"
+                    android:textColor="?attr/colorOnBackground"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -337,7 +352,7 @@
                 android:gravity="center"
                 android:padding="48dp"
                 android:text="Nothing here yet."
-                android:textColor="@color/text_secondary"
+                android:textColor="?attr/colorTextSecondary"
                 android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

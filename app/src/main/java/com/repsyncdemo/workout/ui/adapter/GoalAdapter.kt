@@ -1,6 +1,7 @@
 package com.repsyncdemo.workout.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -11,6 +12,7 @@ import com.repsyncdemo.workout.databinding.ItemGoalBinding
 import kotlin.math.abs
 
 class GoalAdapter(
+    private val isMyProfile: Boolean,
     private val onUpdateProgress: (Goal) -> Unit,
     private val onDelete: (Goal) -> Unit
 ) : ListAdapter<Goal, GoalAdapter.ViewHolder>(GoalDiffCallback()) {
@@ -63,13 +65,23 @@ class GoalAdapter(
             binding.tvCurrentValue.text = "${goal.currentValue.toInt()} ${goal.unit} ($changeText)"
             binding.tvTargetValue.text = "${start.toInt()} -> ${goal.targetValue.toInt()} ${goal.unit}"
 
-            if (goal.isCompleted) {
-                binding.progressBar.progress = 100
-                binding.btnUpdateProgress.isEnabled = false
-                binding.btnUpdateProgress.text = "Completed"
+            if (isMyProfile) {
+                binding.btnUpdateProgress.visibility = View.VISIBLE
+                binding.btnDeleteGoal.visibility = View.VISIBLE
+                if (goal.isCompleted) {
+                    binding.progressBar.progress = 100
+                    binding.btnUpdateProgress.isEnabled = false
+                    binding.btnUpdateProgress.text = "Completed"
+                } else {
+                    binding.btnUpdateProgress.isEnabled = true
+                    binding.btnUpdateProgress.text = "Update"
+                }
             } else {
-                binding.btnUpdateProgress.isEnabled = true
-                binding.btnUpdateProgress.text = "Update"
+                binding.btnUpdateProgress.visibility = View.GONE
+                binding.btnDeleteGoal.visibility = View.GONE
+                if (goal.isCompleted) {
+                    binding.progressBar.progress = 100
+                }
             }
 
             binding.btnUpdateProgress.setOnClickListener { onUpdateProgress(goal) }

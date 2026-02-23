@@ -55,6 +55,35 @@ class SocialRepository {
         awaitClose { listener.remove() }
     }
 
+    fun getFriendshipWithUser(otherUserId: String): Flow<Friendship?> = callbackFlow {
+        val listener = friendshipsCollection
+            .whereArrayContainsAny("requesterId", listOf(currentUserId, otherUserId)) // Not exactly right, but we'll filter
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(null)
+                    return@addSnapshotListener
+                }
+                // Filter manually for accuracy
+                val friendship = snapshot?.toObjects(Friendship::class.java)
+                    ?.find { (it.requesterId == currentUserId && it.receiverId == otherUserId) || 
+                             (it.requesterId == otherUserId && it.receiverId == currentUserId) }
+                trySend(friendship)
+            }
+        // Fallback: observe all friendships for user
+        val listenerForAll = friendshipsCollection
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val friendship = snapshot?.toObjects(Friendship::class.java)
+                    ?.find { (it.requesterId == currentUserId && it.receiverId == otherUserId) || 
+                             (it.requesterId == otherUserId && it.receiverId == currentUserId) }
+                trySend(friendship)
+            }
+        awaitClose { 
+            listener.remove()
+            listenerForAll.remove()
+        }
+    }
+
     suspend fun sendFriendRequest(
         receiverId: String,
         receiverUsername: String,
