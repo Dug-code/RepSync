@@ -191,6 +191,7 @@
                             android:textStyle="bold"
                             android:textColor="@color/primary" />
                         <TextView
+                            android:id="@+id/tvWeightLabel"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Weight"
@@ -218,8 +219,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:orientation="horizontal"
-                android:clipToPadding="false"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                android:clipToPadding="false" />
 
         </LinearLayout>
 
@@ -232,7 +232,8 @@
             app:tabSelectedTextColor="@color/primary"
             app:tabTextColor="@color/text_secondary"
             app:tabIndicatorFullWidth="false"
-            app:tabIndicatorHeight="3dp">
+            app:tabIndicatorHeight="3dp"
+            app:tabMode="scrollable">
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -245,6 +246,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Workouts" />
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Goals" />
             <com.google.android.material.tabs.TabItem
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

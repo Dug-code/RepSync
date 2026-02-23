@@ -25,6 +25,14 @@ class ProfileViewModel : ViewModel() {
     private val _hasProfile = MutableLiveData<Boolean>()
     val hasProfile: LiveData<Boolean> = _hasProfile
 
+    // Real-time observation of the logged-in user's profile
+    val myProfile: LiveData<UserProfile?> = repository.observeProfile()
+        .catch { e -> 
+            Log.e("ProfileViewModel", "Error observing my profile", e)
+            emit(null) 
+        }
+        .asLiveData()
+
     private val _currentProfile = MutableLiveData<UserProfile?>()
     val currentProfile: LiveData<UserProfile?> = _currentProfile
 

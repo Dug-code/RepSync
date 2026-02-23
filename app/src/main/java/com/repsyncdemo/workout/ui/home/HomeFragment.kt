@@ -14,7 +14,6 @@ import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentHomeBinding
 import com.repsyncdemo.workout.ui.adapter.HistoryAdapter
 import com.repsyncdemo.workout.ui.adapter.WorkoutAdapter
-import com.repsyncdemo.workout.viewmodel.AuthViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import java.util.*
@@ -24,7 +23,6 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private val workoutViewModel: WorkoutViewModel by activityViewModels()
-    private val authViewModel: AuthViewModel by activityViewModels()
     private val profileViewModel: ProfileViewModel by activityViewModels()
 
     private lateinit var workoutAdapter: WorkoutAdapter
@@ -42,6 +40,13 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupAdapters()
+        setupListeners()
+        setupTabs()
+        observeData()
+    }
+
+    private fun setupAdapters() {
         workoutAdapter = WorkoutAdapter { workout ->
             val bundle = Bundle().apply { putString("workoutId", workout.id) }
             findNavController().navigate(R.id.action_home_to_workoutDetail, bundle)
@@ -58,7 +63,9 @@ class HomeFragment : Fragment() {
         binding.rvHomeContent.apply {
             layoutManager = LinearLayoutManager(requireContext())
         }
+    }
 
+    private fun setupListeners() {
         binding.layoutGoals.setOnClickListener {
             findNavController().navigate(R.id.goalsFragment)
         }
@@ -70,26 +77,74 @@ class HomeFragment : Fragment() {
         binding.btnStartWorkout.setOnClickListener {
             showStartWorkoutDialog()
         }
+    }
 
+    private fun setupTabs() {
         binding.homeTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                updateHomeContent(tab?.position ?: 0)
+                refreshTabContent()
             }
             override fun onTabUnselected(tab: TabLayout.Tab?) {}
             override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
+    }
 
-        // Initialize with "Recent" (History)
-        updateHomeContent(0)
+    private fun observeData() {
+        // Observe profile for real-time username updates
+        profileViewModel.myProfile.observe(viewLifecycleOwner) {
+            updateCongratsMessage()
+        }
+        
+        // Observe logs for workout count and list content
+        workoutViewModel.workoutLogs.observe(viewLifecycleOwner) {
+            updateCongratsMessage()
+            refreshTabContent()
+        }
 
-        profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
-            val username = profile?.username ?: ""
-            workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { logs ->
-                val last30Days = Calendar.getInstance()
-                last30Days.add(Calendar.DAY_OF_YEAR, -30)
-                val count = logs.count { it.completedAt >= last30Days.timeInMillis }
-                binding.tvCongrats.text = "Congrats $username! You worked out $count times in the last 30 days"
-            }
+        // Observe workouts for "Saved" tab
+        workoutViewModel.workouts.observe(viewLifecycleOwner) {
+            refreshTabContent()
+        }
+    }
+
+    private fun updateCongratsMessage() {
+        val profile = profileViewModel.myProfile.value
+        val logs = workoutViewModel.workoutLogs.value
+        
+        val username = profile?.username ?: ""
+        val greeting = if (username.isNotEmpty()) "Congrats $username!" else "Congrats!"
+        
+        if (logs != null) {
+            val thirtyDaysAgo = Calendar.getInstance().apply { 
+                add(Calendar.DAY_OF_YEAR, -30) 
+            }.timeInMillis
+            
+            val count = logs.count { it.completedAt >= thirtyDaysAgo }
+            binding.tvCongrats.text = "$greeting You worked out $count times in the last 30 days"
+        } else {
+            // Initial placeholder while logs fetch
+            binding.tvCongrats.text = if (username.isNotEmpty()) "Congrats $username! Checking your progress..." else "Loading your progress..."
+        }
+    }
+
+    private fun refreshTabContent() {
+        val position = binding.homeTabs.selectedTabPosition
+        val logs = workoutViewModel.workoutLogs.value ?: emptyList()
+        val workouts = workoutViewModel.workouts.value ?: emptyList()
+
+        if (position == 0) {
+            // Recent Tab
+            binding.rvHomeContent.adapter = historyAdapter
+            val sortedLogs = logs.take(10)
+            historyAdapter.submitList(sortedLogs)
+            binding.tvEmpty.visibility = if (sortedLogs.isEmpty()) View.VISIBLE else View.GONE
+            binding.tvEmpty.text = "No recent workouts logged."
+        } else {
+            // Saved Tab
+            binding.rvHomeContent.adapter = workoutAdapter
+            workoutAdapter.submitList(workouts)
+            binding.tvEmpty.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
+            binding.tvEmpty.text = "No saved workouts found."
         }
     }
 
@@ -99,40 +154,11 @@ class HomeFragment : Fragment() {
             .setTitle("Start Workout")
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> {
-                        binding.homeTabs.getTabAt(1)?.select()
-                    }
-                    1 -> {
-                        findNavController().navigate(R.id.action_home_to_createWorkout)
-                    }
+                    0 -> binding.homeTabs.getTabAt(1)?.select()
+                    1 -> findNavController().navigate(R.id.action_home_to_createWorkout)
                 }
             }
             .show()
-    }
-
-    private fun updateHomeContent(position: Int) {
-        if (position == 0) {
-            // Recent Tab (History Logs)
-            binding.rvHomeContent.adapter = historyAdapter
-            workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { logs ->
-                if (binding.homeTabs.selectedTabPosition == 0) {
-                    val sortedLogs = logs.sortedByDescending { it.completedAt }.take(10)
-                    historyAdapter.submitList(sortedLogs)
-                    binding.tvEmpty.visibility = if (sortedLogs.isEmpty()) View.VISIBLE else View.GONE
-                    binding.tvEmpty.text = "No recent workouts logged."
-                }
-            }
-        } else {
-            // Saved Tab (Workout Templates)
-            binding.rvHomeContent.adapter = workoutAdapter
-            workoutViewModel.workouts.observe(viewLifecycleOwner) { workouts ->
-                if (binding.homeTabs.selectedTabPosition == 1) {
-                    workoutAdapter.submitList(workouts)
-                    binding.tvEmpty.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
-                    binding.tvEmpty.text = "No saved workouts found."
-                }
-            }
-        }
     }
 
     override fun onDestroyView() {

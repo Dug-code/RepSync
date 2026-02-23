@@ -126,7 +126,7 @@ class GoalsFragment : Fragment() {
 
                 viewModel.addGoal(goal)
 
-                // Automaticaly update profile weight if it's a weight goal
+                // Sync profile weight immediately
                 if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
                     profileViewModel.currentProfile.value?.let { profile ->
                         profileViewModel.updateProfile(profile.copy(weightLbs = initialVal))
@@ -155,7 +155,7 @@ class GoalsFragment : Fragment() {
                 val newValue = input.text.toString().toDoubleOrNull() ?: return@setPositiveButton
                 viewModel.updateProgress(goal.id, newValue)
 
-                // Automaticaly update profile weight if it's a weight goal
+                // Sync profile weight on update
                 if (goal.type == GoalType.WEIGHT_LOSS || goal.type == GoalType.WEIGHT_GAIN) {
                     profileViewModel.currentProfile.value?.let { profile ->
                         profileViewModel.updateProfile(profile.copy(weightLbs = newValue))

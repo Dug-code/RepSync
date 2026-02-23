@@ -17,6 +17,9 @@ import coil.load
 import coil.transform.CircleCropTransformation
 import com.google.android.material.tabs.TabLayout
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.UserProfile
+import com.repsyncdemo.workout.data.model.FeedPost
+import com.repsyncdemo.workout.data.model.Goal
 import com.repsyncdemo.workout.databinding.FragmentProfileBinding
 import com.repsyncdemo.workout.ui.adapter.*
 import com.repsyncdemo.workout.viewmodel.*
@@ -38,6 +41,7 @@ class ProfileFragment : Fragment() {
     private lateinit var searchAdapter: UserSearchAdapter
     private lateinit var miniGoalAdapter: MiniGoalAdapter
     private lateinit var workoutAdapter: WorkoutAdapter
+    private lateinit var goalAdapter: GoalAdapter
     
     private var targetUserId: String? = null
 
@@ -56,10 +60,17 @@ class ProfileFragment : Fragment() {
         targetUserId = arguments?.getString("userId")
 
         setupAdapters()
-        
-        binding.rvProfileContent.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-        }
+        setupRecyclerViews()
+        setupListeners()
+        setupTabs()
+        setupSearch()
+        observeViewModel()
+
+        loadData()
+    }
+
+    private fun setupRecyclerViews() {
+        binding.rvProfileContent.layoutManager = LinearLayoutManager(requireContext())
         
         binding.rvFriendRequests.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -70,31 +81,32 @@ class ProfileFragment : Fragment() {
             layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
             adapter = miniGoalAdapter
         }
+    }
 
+    private fun setupListeners() {
         binding.btnBack.setOnClickListener {
             findNavController().popBackStack()
         }
 
-        setupTabs()
-        setupSearch()
-        observeViewModel()
-
-        if (targetUserId != null) {
-            binding.btnSettings.visibility = View.GONE
-            binding.btnBack.visibility = View.VISIBLE
-            // Hide Analytics tab if it's someone else's profile
-            binding.profileTabs.getTabAt(3)?.view?.visibility = View.GONE
-
-            profileViewModel.loadProfile(targetUserId)
-            socialViewModel.loadFriendsForUser(targetUserId!!)
-            goalViewModel.loadGoalsForUser(targetUserId!!)
-            workoutViewModel.loadWorkoutsForUser(targetUserId!!)
-        } else {
+        if (targetUserId == null) {
             binding.btnSettings.visibility = View.VISIBLE
             binding.btnBack.visibility = View.GONE
             binding.btnSettings.setOnClickListener {
                 findNavController().navigate(R.id.action_profile_to_settings)
             }
+        } else {
+            binding.btnSettings.visibility = View.GONE
+            binding.btnBack.visibility = View.VISIBLE
+        }
+    }
+
+    private fun loadData() {
+        if (targetUserId != null) {
+            profileViewModel.loadProfile(targetUserId)
+            socialViewModel.loadFriendsForUser(targetUserId!!)
+            goalViewModel.loadGoalsForUser(targetUserId!!)
+            workoutViewModel.loadWorkoutsForUser(targetUserId!!)
+        } else {
             profileViewModel.loadProfile()
         }
     }
@@ -107,12 +119,8 @@ class ProfileFragment : Fragment() {
                     findNavController().navigate(R.id.profileFragment, bundle)
                 }
             },
-            onLikeClick = { postId ->
-                feedViewModel.toggleLike(postId)
-            },
-            onDeleteClick = { postId ->
-                feedViewModel.deletePost(postId)
-            }
+            onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
+            onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
         )
         
         friendsAdapter = FriendAdapter { friendship -> 
@@ -125,13 +133,11 @@ class ProfileFragment : Fragment() {
                 socialViewModel.acceptRequest(request.id)
                 Toast.makeText(requireContext(), "Request accepted", Toast.LENGTH_SHORT).show()
             },
-            onDecline = { request ->
-                socialViewModel.declineRequest(request.id)
-            }
+            onDecline = { request -> socialViewModel.declineRequest(request.id) }
         )
 
         searchAdapter = UserSearchAdapter { user ->
-            val myUsername = profileViewModel.currentProfile.value?.username ?: "User"
+            val myUsername = profileViewModel.myProfile.value?.username ?: "User"
             socialViewModel.sendFriendRequest(user.userId, user.username, myUsername)
             Toast.makeText(requireContext(), "Friend request sent to @${user.username}", Toast.LENGTH_SHORT).show()
         }
@@ -140,7 +146,6 @@ class ProfileFragment : Fragment() {
 
         workoutAdapter = WorkoutAdapter { workout ->
             if (targetUserId != null) {
-                // Option to copy workout
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle("Copy Workout")
                     .setMessage("Do you want to copy this workout routine to your collection?")
@@ -155,6 +160,14 @@ class ProfileFragment : Fragment() {
                 findNavController().navigate(R.id.workoutDetailFragment, bundle)
             }
         }
+
+        goalAdapter = GoalAdapter(
+            onUpdateProgress = { goal -> 
+                val bundle = Bundle().apply { putString("goalId", goal.id) }
+                findNavController().navigate(R.id.goalsFragment, bundle)
+            },
+            onDelete = { goal -> goalViewModel.deleteGoal(goal.id) }
+        )
     }
 
     private fun setupSearch() {
@@ -162,16 +175,8 @@ class ProfileFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                val query = s.toString().trim()
-                if (query.isNotEmpty()) {
-                    profileViewModel.searchUsers(query)
-                    if (binding.rvProfileContent.adapter != searchAdapter) {
-                        binding.rvProfileContent.adapter = searchAdapter
-                    }
-                } else {
-                    if (binding.rvProfileContent.adapter != friendsAdapter) {
-                        binding.rvProfileContent.adapter = friendsAdapter
-                    }
+                if (binding.profileTabs.selectedTabPosition == 1) {
+                    updateContent(1)
                 }
             }
         })
@@ -191,18 +196,19 @@ class ProfileFragment : Fragment() {
     }
 
     private fun updateContent(position: Int) {
+        if (_binding == null) return
+        
         binding.layoutFriendSearch.visibility = View.GONE
+        binding.tvEmptyProfile.visibility = View.GONE
         
         when (position) {
             0 -> { // Posts
                 binding.rvProfileContent.adapter = feedAdapter
-                val postsSource = if (targetUserId != null) profileViewModel.userPosts else profileViewModel.myPosts
-                postsSource.observe(viewLifecycleOwner) { posts ->
-                    if (binding.profileTabs.selectedTabPosition == 0) {
-                        feedAdapter.submitList(posts)
-                        binding.tvEmptyProfile.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
-                        binding.tvEmptyProfile.text = "No posts yet."
-                    }
+                val posts = if (targetUserId != null) profileViewModel.userPosts.value else profileViewModel.myPosts.value
+                feedAdapter.submitList(posts)
+                if (posts.isNullOrEmpty()) {
+                    binding.tvEmptyProfile.text = "No posts yet."
+                    binding.tvEmptyProfile.visibility = View.VISIBLE
                 }
             }
             1 -> { // Friends
@@ -210,47 +216,62 @@ class ProfileFragment : Fragment() {
                     binding.layoutFriendSearch.visibility = View.VISIBLE
                     if (binding.etFriendSearch.text.isNullOrEmpty()) {
                         binding.rvProfileContent.adapter = friendsAdapter
+                        val friends = socialViewModel.friends.value
+                        friendsAdapter.submitList(friends)
+                        if (friends.isNullOrEmpty()) {
+                            binding.tvEmptyProfile.text = "No friends yet."
+                            binding.tvEmptyProfile.visibility = View.VISIBLE
+                        }
                     } else {
                         binding.rvProfileContent.adapter = searchAdapter
+                        val results = profileViewModel.searchResults.value
+                        searchAdapter.submitList(results)
+                        if (results.isNullOrEmpty()) {
+                            binding.tvEmptyProfile.text = "No users found."
+                            binding.tvEmptyProfile.visibility = View.VISIBLE
+                        }
                     }
                 } else {
                     binding.rvProfileContent.adapter = friendsAdapter
-                }
-
-                val friendsSource = if (targetUserId != null) socialViewModel.targetUserFriends else socialViewModel.friends
-                friendsSource.observe(viewLifecycleOwner) { friends ->
-                    if (binding.profileTabs.selectedTabPosition == 1 && (targetUserId != null || binding.etFriendSearch.text.isNullOrEmpty())) {
-                        friendsAdapter.submitList(friends)
-                        binding.tvEmptyProfile.visibility = if (friends.isEmpty()) View.VISIBLE else View.GONE
+                    val friends = socialViewModel.targetUserFriends.value
+                    friendsAdapter.submitList(friends)
+                    if (friends.isNullOrEmpty()) {
                         binding.tvEmptyProfile.text = "No friends yet."
+                        binding.tvEmptyProfile.visibility = View.VISIBLE
                     }
                 }
             }
-            2 -> { // Workouts (Shared routines)
+            2 -> { // Workouts
                 binding.rvProfileContent.adapter = workoutAdapter
-                
-                val currentProfile = profileViewModel.currentProfile.value
-                val isWorkoutsPublic = currentProfile?.isWorkoutsPublic ?: true
+                val profile = profileViewModel.currentProfile.value
+                val isWorkoutsPublic = profile?.isWorkoutsPublic ?: true
                 
                 if (targetUserId != null && !isWorkoutsPublic) {
                     workoutAdapter.submitList(emptyList())
-                    binding.tvEmptyProfile.visibility = View.VISIBLE
                     binding.tvEmptyProfile.text = "This user's workouts are private."
+                    binding.tvEmptyProfile.visibility = View.VISIBLE
                 } else {
-                    val workoutsSource = if (targetUserId != null) workoutViewModel.targetUserWorkouts else workoutViewModel.workouts
-                    workoutsSource.observe(viewLifecycleOwner) { workouts ->
-                        if (binding.profileTabs.selectedTabPosition == 2) {
-                            workoutAdapter.submitList(workouts)
-                            binding.tvEmptyProfile.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
-                            binding.tvEmptyProfile.text = "No saved workouts."
-                        }
+                    val workouts = if (targetUserId != null) workoutViewModel.targetUserWorkouts.value else workoutViewModel.workouts.value
+                    workoutAdapter.submitList(workouts)
+                    if (workouts.isNullOrEmpty()) {
+                        binding.tvEmptyProfile.text = "No saved workouts."
+                        binding.tvEmptyProfile.visibility = View.VISIBLE
                     }
                 }
             }
-            3 -> { // Analytics
+            3 -> { // Goals
+                binding.rvProfileContent.adapter = goalAdapter
+                val goals = if (targetUserId != null) goalViewModel.targetUserGoals.value else goalViewModel.goals.value
+                goalAdapter.submitList(goals)
+                if (goals.isNullOrEmpty()) {
+                    binding.tvEmptyProfile.text = "No goals set."
+                    binding.tvEmptyProfile.visibility = View.VISIBLE
+                }
+            }
+            4 -> { // Analytics
                 binding.rvProfileContent.adapter = null
-                binding.tvEmptyProfile.visibility = View.VISIBLE
                 binding.tvEmptyProfile.text = "Analytics coming soon."
+                binding.tvEmptyProfile.visibility = View.VISIBLE
             }
         }
     }
@@ -259,7 +280,7 @@ class ProfileFragment : Fragment() {
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
-                binding.tvBio.text = if (it.bio.isNotEmpty()) it.bio else "No bio set."
+                binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
                 
                 if (it.profilePictureUrl.isNotEmpty()) {
                     binding.ivProfilePic.load(it.profilePictureUrl) {
@@ -277,10 +298,18 @@ class ProfileFragment : Fragment() {
                 binding.tvHeightValue.text = if (it.isHeightPublic || targetUserId == null) "${feet}' ${inches}\"" else "Private"
                 binding.tvWeightValue.text = if (it.isWeightPublic || targetUserId == null) "${it.weightLbs.toInt()} lbs" else "Private"
 
-                // Setup social media icons
                 setupSocialIcon(binding.btnInstagram, it.instagramUrl)
                 setupSocialIcon(binding.btnFacebook, it.facebookUrl)
                 setupSocialIcon(binding.btnTwitter, it.twitterUrl)
+                
+                // Hide Analytics tab if it's someone else's profile
+                if (targetUserId != null) {
+                    binding.profileTabs.getTabAt(4)?.view?.visibility = View.GONE
+                } else {
+                    binding.profileTabs.getTabAt(4)?.view?.visibility = View.VISIBLE
+                }
+                
+                if (binding.profileTabs.selectedTabPosition == 2) updateContent(2)
             }
         }
 
@@ -293,15 +322,25 @@ class ProfileFragment : Fragment() {
         }
 
         profileViewModel.searchResults.observe(viewLifecycleOwner) { users ->
-            if (targetUserId == null && !binding.etFriendSearch.text.isNullOrEmpty()) {
+            if (binding.profileTabs.selectedTabPosition == 1 && targetUserId == null && !binding.etFriendSearch.text.isNullOrEmpty()) {
                 searchAdapter.submitList(users)
                 binding.tvEmptyProfile.visibility = if (users.isEmpty()) View.VISIBLE else View.GONE
                 binding.tvEmptyProfile.text = "No users found."
             }
         }
 
-        val goalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
-        goalsSource.observe(viewLifecycleOwner) { goals ->
+        // --- Core Data Observers ---
+        profileViewModel.myPosts.observe(viewLifecycleOwner) { if (targetUserId == null && binding.profileTabs.selectedTabPosition == 0) updateContent(0) }
+        profileViewModel.userPosts.observe(viewLifecycleOwner) { if (targetUserId != null && binding.profileTabs.selectedTabPosition == 0) updateContent(0) }
+        socialViewModel.friends.observe(viewLifecycleOwner) { if (targetUserId == null && binding.profileTabs.selectedTabPosition == 1) updateContent(1) }
+        socialViewModel.targetUserFriends.observe(viewLifecycleOwner) { if (targetUserId != null && binding.profileTabs.selectedTabPosition == 1) updateContent(1) }
+        workoutViewModel.workouts.observe(viewLifecycleOwner) { if (targetUserId == null && binding.profileTabs.selectedTabPosition == 2) updateContent(2) }
+        workoutViewModel.targetUserWorkouts.observe(viewLifecycleOwner) { if (targetUserId != null && binding.profileTabs.selectedTabPosition == 2) updateContent(2) }
+        goalViewModel.goals.observe(viewLifecycleOwner) { if (targetUserId == null && binding.profileTabs.selectedTabPosition == 3) updateContent(3) }
+        goalViewModel.targetUserGoals.observe(viewLifecycleOwner) { if (targetUserId != null && binding.profileTabs.selectedTabPosition == 3) updateContent(3) }
+
+        val activeGoalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
+        activeGoalsSource.observe(viewLifecycleOwner) { goals ->
             val activeGoals = goals.filter { !it.isCompleted }.take(5)
             miniGoalAdapter.submitList(activeGoals)
             binding.tvGoalsHeader.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
