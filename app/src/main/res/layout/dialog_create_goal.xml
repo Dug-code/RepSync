@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etGoalTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Goal Title" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etGoalDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Description" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Goal Type"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp" />
+
+    <RadioGroup
+        android:id="@+id/rgGoalType"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp">
+
+        <RadioButton
+            android:id="@+id/rbPR"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Personal Record (PR)" />
+
+        <RadioButton
+            android:id="@+id/rbWeightLoss"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Weight Loss" />
+
+        <RadioButton
+            android:id="@+id/rbWeightGain"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Weight Gain" />
+    </RadioGroup>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilExerciseName"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:visibility="gone">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etExerciseName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Exercise Name" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp">
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etCurrentValue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Current Value"
+                android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etTargetValue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Target Value"
+                android:inputType="numberDecimal" />
+        </com.google.android.material.textfield.TextInputLayout>
+    </LinearLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etUnit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Unit (lbs, kg, etc.)" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchPublicGoal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Share this goal publicly" />
+
+</LinearLayout>
