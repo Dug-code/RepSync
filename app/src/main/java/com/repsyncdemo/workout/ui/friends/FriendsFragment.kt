@@ -9,7 +9,10 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.tabs.TabLayout
+import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentFriendsBinding
 import com.repsyncdemo.workout.ui.adapter.FriendAdapter
 import com.repsyncdemo.workout.ui.adapter.FriendRequestAdapter
@@ -57,11 +60,17 @@ class FriendsFragment : Fragment() {
             }
         )
 
-        searchAdapter = UserSearchAdapter { user ->
-            val myUsername = profileViewModel.currentProfile.value?.username ?: ""
-            socialViewModel.sendFriendRequest(user.userId, user.username, myUsername)
-            Toast.makeText(requireContext(), "Friend request sent!", Toast.LENGTH_SHORT).show()
-        }
+        searchAdapter = UserSearchAdapter(
+            onUserClick = { user ->
+                val bundle = Bundle().apply { putString("userId", user.userId) }
+                findNavController().navigate(R.id.profileFragment, bundle)
+            },
+            onAddFriend = { user ->
+                val myUsername = profileViewModel.myProfile.value?.username ?: ""
+                socialViewModel.sendFriendRequest(user.userId, user.username, myUsername)
+                Toast.makeText(requireContext(), "Friend request sent!", Toast.LENGTH_SHORT).show()
+            }
+        )
 
         binding.rvFriends.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -76,16 +85,16 @@ class FriendsFragment : Fragment() {
             adapter = searchAdapter
         }
 
-        binding.tabLayout.addOnTabSelectedListener(object : com.google.android.material.tabs.TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: com.google.android.material.tabs.TabLayout.Tab?) {
+        binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
                 when (tab?.position) {
                     0 -> showTab(friends = true)
                     1 -> showTab(requests = true)
                     2 -> showTab(search = true)
                 }
             }
-            override fun onTabUnselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
-            override fun onTabReselected(tab: com.google.android.material.tabs.TabLayout.Tab?) {}
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
         })
 
         binding.etSearch.addTextChangedListener(object : TextWatcher {

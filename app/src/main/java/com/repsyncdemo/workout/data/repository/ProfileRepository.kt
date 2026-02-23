@@ -21,7 +21,10 @@ class ProfileRepository {
 
     suspend fun createProfile(profile: UserProfile): Result<Unit> {
         return try {
-            val profileWithUser = profile.copy(userId = currentUserId)
+            val profileWithUser = profile.copy(
+                userId = currentUserId,
+                usernameLowercase = profile.username.lowercase()
+            )
             profilesCollection.document(currentUserId).set(profileWithUser).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -34,7 +37,16 @@ class ProfileRepository {
         return try {
             val doc = profilesCollection.document(id).get().await()
             val profile = doc.toObject(UserProfile::class.java)
-            if (profile != null) Result.success(profile)
+            if (profile != null) {
+                // Migration: If lowercase field is missing, update it now
+                if (profile.usernameLowercase.isEmpty() && profile.username.isNotEmpty()) {
+                    val updated = profile.copy(usernameLowercase = profile.username.lowercase())
+                    profilesCollection.document(id).set(updated)
+                    Result.success(updated)
+                } else {
+                    Result.success(profile)
+                }
+            }
             else Result.failure(Exception("Profile not found"))
         } catch (e: Exception) {
             Result.failure(e)
@@ -50,14 +62,20 @@ class ProfileRepository {
                     trySend(null)
                     return@addSnapshotListener
                 }
-                trySend(snapshot?.toObject(UserProfile::class.java))
+                val profile = snapshot?.toObject(UserProfile::class.java)
+                trySend(profile)
             }
         awaitClose { listener.remove() }
     }
 
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
-            profilesCollection.document(currentUserId).set(profile.copy(updatedAt = System.currentTimeMillis())).await()
+            profilesCollection.document(currentUserId).set(
+                profile.copy(
+                    updatedAt = System.currentTimeMillis(),
+                    usernameLowercase = profile.username.lowercase()
+                )
+            ).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -86,16 +104,34 @@ class ProfileRepository {
 
     suspend fun searchUsers(query: String): Result<List<UserProfile>> {
         return try {
+            val lowerQuery = query.lowercase().trim()
+            if (lowerQuery.isEmpty()) return Result.success(emptyList())
+
+            // Try searching by lowercase username
             val snapshot = profilesCollection
-                .whereGreaterThanOrEqualTo("username", query)
-                .whereLessThanOrEqualTo("username", query + "\uf8ff")
+                .whereGreaterThanOrEqualTo("usernameLowercase", lowerQuery)
+                .whereLessThanOrEqualTo("usernameLowercase", lowerQuery + "\uf8ff")
                 .limit(20)
                 .get()
                 .await()
-            val profiles = snapshot.toObjects(UserProfile::class.java)
-                .filter { it.userId != currentUserId }
-            Result.success(profiles)
+            
+            var profiles = snapshot.toObjects(UserProfile::class.java)
+            
+            // If no results, try searching the original username field (case sensitive) as a fallback
+            if (profiles.isEmpty()) {
+                val fallbackSnapshot = profilesCollection
+                    .whereGreaterThanOrEqualTo("username", query)
+                    .whereLessThanOrEqualTo("username", query + "\uf8ff")
+                    .limit(20)
+                    .get()
+                    .await()
+                profiles = fallbackSnapshot.toObjects(UserProfile::class.java)
+            }
+
+            val filteredResults = profiles.filter { it.userId != currentUserId }
+            Result.success(filteredResults)
         } catch (e: Exception) {
+            Log.e("ProfileRepository", "Search failed", e)
             Result.failure(e)
         }
     }

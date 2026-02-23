@@ -43,7 +43,7 @@
                     android:scaleType="centerCrop"
                     android:src="@android:drawable/ic_menu_gallery"
                     app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
-                    app:strokeColor="@color/divider"
+                    app:strokeColor="?attr/colorDivider"
                     app:strokeWidth="2dp" />
 
                 <LinearLayout
@@ -70,8 +70,7 @@
                         android:layout_marginTop="4dp"
                         android:text="This is your bio."
                         android:textSize="14sp"
-                        android:textColor="?attr/colorOnSurface"
-                        android:alpha="0.7" />
+                        android:textColor="?attr/colorTextSecondary" />
                 </LinearLayout>
 
                 <ImageButton
@@ -83,6 +82,21 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_settings"
                     app:tint="?attr/colorOnSurface" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFriendAction"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:visibility="gone"
+                    android:text="Friend +"
+                    app:cornerRadius="20dp"
+                    android:textSize="12sp"
+                    android:paddingHorizontal="12dp"
+                    app:strokeColor="@color/primary"
+                    android:textColor="@color/primary" />
             </RelativeLayout>
 
             <!-- Social Media Icons -->
@@ -139,7 +153,7 @@
                     app:cardBackgroundColor="?attr/colorSurface"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
-                    app:strokeColor="@color/divider"
+                    app:strokeColor="?attr/colorDivider"
                     app:strokeWidth="1dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -162,8 +176,7 @@
                             android:textSize="11sp"
                             android:textAllCaps="true"
                             android:letterSpacing="0.05"
-                            android:textColor="?attr/colorOnSurface"
-                            android:alpha="0.6" />
+                            android:textColor="?attr/colorTextSecondary" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -176,7 +189,7 @@
                     app:cardBackgroundColor="?attr/colorSurface"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
-                    app:strokeColor="@color/divider"
+                    app:strokeColor="?attr/colorDivider"
                     app:strokeWidth="1dp">
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -200,8 +213,7 @@
                             android:textSize="11sp"
                             android:textAllCaps="true"
                             android:letterSpacing="0.05"
-                            android:textColor="?attr/colorOnSurface"
-                            android:alpha="0.6" />
+                            android:textColor="?attr/colorTextSecondary" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -233,7 +245,7 @@
             android:background="?attr/android:windowBackground"
             app:tabIndicatorColor="@color/primary"
             app:tabSelectedTextColor="@color/primary"
-            app:tabTextColor="?attr/colorOnSurface"
+            app:tabTextColor="?attr/colorTextSecondary"
             app:tabIndicatorFullWidth="false"
             app:tabIndicatorHeight="3dp"
             app:tabMode="scrollable">
@@ -340,8 +352,7 @@
                 android:gravity="center"
                 android:padding="48dp"
                 android:text="Nothing here yet."
-                android:textColor="?attr/colorOnSurface"
-                android:alpha="0.6"
+                android:textColor="?attr/colorTextSecondary"
                 android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

@@ -9,6 +9,7 @@ data class UserProfile(
     val id: String = "",
     val userId: String = "",
     val username: String = "",
+    val usernameLowercase: String = "", // Added for case-insensitive search
     val bio: String = "",
     val email: String = "",
     val profilePictureUrl: String = "",
