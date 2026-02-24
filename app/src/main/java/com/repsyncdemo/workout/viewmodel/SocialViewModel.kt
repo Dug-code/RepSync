@@ -22,6 +22,14 @@ class SocialViewModel : ViewModel() {
         }
         .asLiveData()
 
+    // Real-time observation of all friendships (Pending and Accepted)
+    val myFriendships: LiveData<List<Friendship>> = repository.getMyFriendships()
+        .catch { e ->
+            Log.e("SocialViewModel", "Error in myFriendships flow", e)
+            emit(emptyList())
+        }
+        .asLiveData()
+
     private val _targetUserFriends = MutableLiveData<List<Friendship>>()
     val targetUserFriends: LiveData<List<Friendship>> = _targetUserFriends
 
@@ -77,9 +85,9 @@ class SocialViewModel : ViewModel() {
         }
     }
 
-    fun removeFriend(friendshipId: String) {
+    fun removeFriendship(friendshipId: String) {
         viewModelScope.launch {
-            repository.removeFriend(friendshipId)
+            repository.removeFriendship(friendshipId)
         }
     }
 }

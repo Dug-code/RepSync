@@ -72,7 +72,7 @@ class FeedRepository {
         awaitClose { listener.remove() }
     }
 
-    fun getUserPosts(targetUserId: String): Flow<List<FeedPost>> = callbackFlow {
+    fun getUserPosts(targetUserId: String, includeChat: Boolean = true): Flow<List<FeedPost>> = callbackFlow {
         val listener = feedCollection
             .whereEqualTo("userId", targetUserId)
             .addSnapshotListener { snapshot, error ->
@@ -80,13 +80,18 @@ class FeedRepository {
                     close(error)
                     return@addSnapshotListener
                 }
-                val posts = snapshot?.toObjects(FeedPost::class.java) ?: emptyList()
-                trySend(posts.sortedByDescending { it.createdAt }.filter { it.type != FeedPostType.CHAT_MESSAGE })
+                var posts = snapshot?.toObjects(FeedPost::class.java) ?: emptyList()
+                
+                if (!includeChat) {
+                    posts = posts.filter { it.type != FeedPostType.CHAT_MESSAGE }
+                }
+                
+                trySend(posts.sortedByDescending { it.createdAt })
             }
         awaitClose { listener.remove() }
     }
 
-    fun getMyPosts(): Flow<List<FeedPost>> = getUserPosts(userId)
+    fun getMyPosts(includeChat: Boolean = true): Flow<List<FeedPost>> = getUserPosts(userId, includeChat)
 
     suspend fun createPost(post: FeedPost): Result<String> {
         return try {

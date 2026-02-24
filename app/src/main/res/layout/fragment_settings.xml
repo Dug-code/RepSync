@@ -27,7 +27,7 @@
             app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/divider"
+            app:strokeColor="?attr/colorDivider"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -60,7 +60,7 @@
                         android:scaleType="centerCrop"
                         android:src="@android:drawable/ic_menu_gallery"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
-                        app:strokeColor="@color/divider"
+                        app:strokeColor="?attr/colorDivider"
                         app:strokeWidth="2dp" />
 
                     <com.google.android.material.button.MaterialButton
@@ -146,7 +146,7 @@
             app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/divider"
+            app:strokeColor="?attr/colorDivider"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -238,7 +238,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="@color/divider"
+                    android:background="?attr/colorDivider"
                     android:layout_marginVertical="16dp" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
@@ -272,7 +272,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Social Media Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -280,7 +279,7 @@
             app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/divider"
+            app:strokeColor="?attr/colorDivider"
             app:strokeWidth="1dp">
 
             <LinearLayout
@@ -309,7 +308,7 @@
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_instagram"
                     app:cornerRadius="12dp"
-                    app:strokeColor="@color/divider" />
+                    app:strokeColor="?attr/colorDivider" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilInstagram"
@@ -338,7 +337,7 @@
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_facebook"
                     app:cornerRadius="12dp"
-                    app:strokeColor="@color/divider" />
+                    app:strokeColor="?attr/colorDivider" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilFacebook"
@@ -367,7 +366,7 @@
                     android:textAllCaps="false"
                     app:icon="@drawable/ic_twitter"
                     app:cornerRadius="12dp"
-                    app:strokeColor="@color/divider" />
+                    app:strokeColor="?attr/colorDivider" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilTwitter"

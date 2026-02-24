@@ -4,12 +4,14 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.repsyncdemo.workout.data.model.RestDay
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.*
 
 class WorkoutRepository {
 
@@ -24,6 +26,9 @@ class WorkoutRepository {
 
     private val logsCollection
         get() = db.collection("workout_logs")
+
+    private val restDaysCollection
+        get() = db.collection("rest_days")
 
     fun getWorkouts(userId: String? = null): Flow<List<Workout>> = callbackFlow {
         val id = userId ?: currentUserId
@@ -86,14 +91,70 @@ class WorkoutRepository {
             .whereEqualTo("userId", id)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.e("WorkoutRepository", "Error fetching workout logs", error)
-                    trySend(emptyList())
+                    close(error)
                     return@addSnapshotListener
                 }
                 val logs = snapshot?.toObjects(WorkoutLog::class.java) ?: emptyList()
                 trySend(logs.sortedByDescending { it.completedAt })
             }
         awaitClose { listener.remove() }
+    }
+
+    fun getRestDays(userId: String? = null): Flow<List<RestDay>> = callbackFlow {
+        val id = userId ?: currentUserId
+        val listener = restDaysCollection
+            .whereEqualTo("userId", id)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val restDays = snapshot?.toObjects(RestDay::class.java) ?: emptyList()
+                trySend(restDays)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun addRestDay(restDay: RestDay): Result<Unit> {
+        return try {
+            val startOfDay = getStartOfDay(restDay.date)
+            val existing = restDaysCollection
+                .whereEqualTo("userId", currentUserId)
+                .whereEqualTo("date", startOfDay)
+                .get().await()
+            
+            if (existing.isEmpty) {
+                restDaysCollection.add(restDay.copy(userId = currentUserId, date = startOfDay)).await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeRestDay(timestamp: Long): Result<Unit> {
+        return try {
+            val startOfDay = getStartOfDay(timestamp)
+            val snapshot = restDaysCollection
+                .whereEqualTo("userId", currentUserId)
+                .whereEqualTo("date", startOfDay)
+                .get().await()
+            
+            snapshot.documents.forEach { it.reference.delete() }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun getStartOfDay(timestamp: Long): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = timestamp
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
     }
 
     suspend fun getWorkoutLog(logId: String): Result<WorkoutLog> {
@@ -109,7 +170,6 @@ class WorkoutRepository {
 
     suspend fun updateWorkoutLog(log: WorkoutLog): Result<Unit> {
         return try {
-            // Ensure userId is preserved so it doesn't "disappear" from the query
             val logWithUser = log.copy(userId = currentUserId)
             logsCollection.document(log.id).set(logWithUser).await()
             Result.success(Unit)
@@ -120,9 +180,19 @@ class WorkoutRepository {
 
     suspend fun addWorkoutLog(log: WorkoutLog): Result<String> {
         return try {
+            removeRestDay(log.completedAt)
             val logWithUser = log.copy(userId = currentUserId)
             val doc = logsCollection.add(logWithUser).await()
             Result.success(doc.id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteWorkoutLog(logId: String): Result<Unit> {
+        return try {
+            logsCollection.document(logId).delete().await()
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

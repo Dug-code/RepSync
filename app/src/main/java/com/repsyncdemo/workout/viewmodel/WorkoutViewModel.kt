@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
+import com.repsyncdemo.workout.data.model.RestDay
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.data.repository.WorkoutRepository
@@ -33,6 +34,13 @@ class WorkoutViewModel : ViewModel() {
         .catch { e -> 
             Log.e("WorkoutViewModel", "Error in workoutLogs flow", e)
             emit(emptyList()) 
+        }
+        .asLiveData()
+
+    val restDays: LiveData<List<RestDay>> = repository.getRestDays()
+        .catch { e ->
+            Log.e("WorkoutViewModel", "Error in restDays flow", e)
+            emit(emptyList())
         }
         .asLiveData()
 
@@ -174,6 +182,14 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    fun deleteWorkoutLog(logId: String) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            repository.deleteWorkoutLog(logId)
+            _isLoading.value = false
+        }
+    }
+
     fun logWorkout(log: WorkoutLog) {
         _isLoading.value = true
         viewModelScope.launch {
@@ -184,6 +200,12 @@ class WorkoutViewModel : ViewModel() {
             }
             _operationResult.value = result
             _isLoading.value = false
+        }
+    }
+
+    fun addRestDay() {
+        viewModelScope.launch {
+            repository.addRestDay(RestDay(date = System.currentTimeMillis()))
         }
     }
 

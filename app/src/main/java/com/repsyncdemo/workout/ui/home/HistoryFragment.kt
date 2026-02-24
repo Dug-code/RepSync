@@ -66,6 +66,11 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
             updateCalendarDecorators()
             filterLogsForSelectedDate()
         }
+
+        viewModel.restDays.observe(viewLifecycleOwner) {
+            updateCalendarDecorators()
+            filterLogsForSelectedDate() // Re-filter to show rest day message if needed
+        }
     }
 
     override fun onDateSelected(
@@ -80,32 +85,63 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
     private fun updateCalendarDecorators() {
         binding.calendarView.removeDecorators()
         
-        val workoutCounts = mutableMapOf<CalendarDay, Int>()
-        allLogs.forEach { log ->
+        // 1. Draw Workout Dots (Red)
+        val workoutDays = allLogs.map { log ->
             val cal = Calendar.getInstance()
             cal.timeInMillis = log.completedAt
-            val day = CalendarDay.from(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
-            workoutCounts[day] = workoutCounts.getOrDefault(day, 0) + 1
-        }
+            CalendarDay.from(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
+        }.distinct()
 
         val primaryColor = ContextCompat.getColor(requireContext(), R.color.primary)
-        
-        workoutCounts.forEach { (day, count) ->
-            binding.calendarView.addDecorator(WorkoutCountDecorator(primaryColor, day, count))
+        workoutDays.forEach { day ->
+            binding.calendarView.addDecorator(WorkoutCountDecorator(primaryColor, day))
+        }
+
+        // 2. Draw Rest Day Dots (Light Blue)
+        val restDays = viewModel.restDays.value ?: emptyList()
+        val restDayDates = restDays.map { 
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.date
+            CalendarDay.from(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
+        }
+
+        val blueColor = android.graphics.Color.parseColor("#81D4FA")
+        restDayDates.forEach { day ->
+            binding.calendarView.addDecorator(WorkoutCountDecorator(blueColor, day))
         }
     }
 
     private fun filterLogsForSelectedDate() {
-        val filtered = allLogs.filter { log ->
+        val filteredWorkouts = allLogs.filter { log ->
             val logCal = Calendar.getInstance()
             logCal.timeInMillis = log.completedAt
             val logDay = CalendarDay.from(logCal.get(Calendar.YEAR), logCal.get(Calendar.MONTH) + 1, logCal.get(Calendar.DAY_OF_MONTH))
             logDay == selectedDate
         }
+
+        val restDays = viewModel.restDays.value ?: emptyList()
+        val isRestDay = restDays.any { 
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = it.date
+            val day = CalendarDay.from(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
+            day == selectedDate
+        }
         
-        historyAdapter.submitList(filtered)
-        binding.tvEmpty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
-        binding.rvHistory.visibility = if (filtered.isEmpty()) View.GONE else View.VISIBLE
+        if (filteredWorkouts.isNotEmpty()) {
+            historyAdapter.submitList(filteredWorkouts)
+            binding.rvHistory.visibility = View.VISIBLE
+            binding.tvEmpty.visibility = View.GONE
+        } else if (isRestDay) {
+            historyAdapter.submitList(emptyList())
+            binding.rvHistory.visibility = View.GONE
+            binding.tvEmpty.visibility = View.VISIBLE
+            binding.tvEmpty.text = "Hope you enjoyed the day off\nDon't make it a habit"
+        } else {
+            historyAdapter.submitList(emptyList())
+            binding.rvHistory.visibility = View.GONE
+            binding.tvEmpty.visibility = View.VISIBLE
+            binding.tvEmpty.text = "No workouts on this day."
+        }
     }
 
     override fun onDestroyView() {

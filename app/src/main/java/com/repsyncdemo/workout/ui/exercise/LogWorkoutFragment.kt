@@ -1,5 +1,6 @@
 package com.repsyncdemo.workout.ui.exercise
 
+import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
@@ -11,6 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.databinding.FragmentLogWorkoutBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseLogAdapter
@@ -57,9 +59,11 @@ class LogWorkoutFragment : Fragment() {
         if (existingLogId != null) {
             viewModel.loadWorkoutLog(existingLogId!!)
             binding.btnComplete.text = "Update Workout"
+            binding.btnDeleteLog.visibility = View.VISIBLE
         } else if (workoutId != null) {
             viewModel.loadWorkout(workoutId)
             binding.btnComplete.text = "Save Workout"
+            binding.btnDeleteLog.visibility = View.GONE
             // Set default end time 1 hour from now
             endCalendar.add(Calendar.HOUR_OF_DAY, 1)
         }
@@ -93,6 +97,25 @@ class LogWorkoutFragment : Fragment() {
         binding.btnComplete.setOnClickListener {
             saveWorkout()
         }
+
+        binding.btnDeleteLog.setOnClickListener {
+            showDeleteConfirmation()
+        }
+    }
+
+    private fun showDeleteConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Workout")
+            .setMessage("Are you sure you want to delete this workout log? This cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                existingLogId?.let { id ->
+                    viewModel.deleteWorkoutLog(id)
+                    Toast.makeText(requireContext(), "Workout deleted", Toast.LENGTH_SHORT).show()
+                    findNavController().popBackStack()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun updateDateTimeDisplays() {

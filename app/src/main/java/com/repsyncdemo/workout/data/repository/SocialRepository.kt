@@ -38,6 +38,22 @@ class SocialRepository {
         awaitClose { listener.remove() }
     }
 
+    // New: Observe ALL friendships (Pending, Accepted, etc) involving the current user
+    fun getMyFriendships(): Flow<List<Friendship>> = callbackFlow {
+        val listener = friendshipsCollection
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val friendships = snapshot?.toObjects(Friendship::class.java)
+                    ?.filter { it.requesterId == currentUserId || it.receiverId == currentUserId }
+                    ?: emptyList()
+                trySend(friendships)
+            }
+        awaitClose { listener.remove() }
+    }
+
     fun getPendingRequests(): Flow<List<Friendship>> = callbackFlow {
         val listener = friendshipsCollection
             .whereEqualTo("receiverId", currentUserId)
@@ -57,31 +73,17 @@ class SocialRepository {
 
     fun getFriendshipWithUser(otherUserId: String): Flow<Friendship?> = callbackFlow {
         val listener = friendshipsCollection
-            .whereArrayContainsAny("requesterId", listOf(currentUserId, otherUserId)) // Not exactly right, but we'll filter
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(null)
                     return@addSnapshotListener
                 }
-                // Filter manually for accuracy
                 val friendship = snapshot?.toObjects(Friendship::class.java)
                     ?.find { (it.requesterId == currentUserId && it.receiverId == otherUserId) || 
                              (it.requesterId == otherUserId && it.receiverId == currentUserId) }
                 trySend(friendship)
             }
-        // Fallback: observe all friendships for user
-        val listenerForAll = friendshipsCollection
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
-                val friendship = snapshot?.toObjects(Friendship::class.java)
-                    ?.find { (it.requesterId == currentUserId && it.receiverId == otherUserId) || 
-                             (it.requesterId == otherUserId && it.receiverId == currentUserId) }
-                trySend(friendship)
-            }
-        awaitClose { 
-            listener.remove()
-            listenerForAll.remove()
-        }
+        awaitClose { listener.remove() }
     }
 
     suspend fun sendFriendRequest(
@@ -126,7 +128,7 @@ class SocialRepository {
         }
     }
 
-    suspend fun removeFriend(friendshipId: String): Result<Unit> {
+    suspend fun removeFriendship(friendshipId: String): Result<Unit> {
         return try {
             friendshipsCollection.document(friendshipId).delete().await()
             Result.success(Unit)

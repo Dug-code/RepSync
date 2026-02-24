@@ -12,6 +12,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
+import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentFriendsBinding
 import com.repsyncdemo.workout.ui.adapter.FriendAdapter
@@ -30,6 +31,8 @@ class FriendsFragment : Fragment() {
     private lateinit var friendAdapter: FriendAdapter
     private lateinit var requestAdapter: FriendRequestAdapter
     private lateinit var searchAdapter: UserSearchAdapter
+    
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -46,7 +49,7 @@ class FriendsFragment : Fragment() {
         profileViewModel.loadProfile()
 
         friendAdapter = FriendAdapter { friendship ->
-            socialViewModel.removeFriend(friendship.id)
+            socialViewModel.removeFriendship(friendship.id)
             Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
         }
 
@@ -61,6 +64,7 @@ class FriendsFragment : Fragment() {
         )
 
         searchAdapter = UserSearchAdapter(
+            currentUserId = currentUserId,
             onUserClick = { user ->
                 val bundle = Bundle().apply { putString("userId", user.userId) }
                 findNavController().navigate(R.id.profileFragment, bundle)
@@ -69,6 +73,10 @@ class FriendsFragment : Fragment() {
                 val myUsername = profileViewModel.myProfile.value?.username ?: ""
                 socialViewModel.sendFriendRequest(user.userId, user.username, myUsername)
                 Toast.makeText(requireContext(), "Friend request sent!", Toast.LENGTH_SHORT).show()
+            },
+            onCancelRequest = { friendshipId ->
+                socialViewModel.removeFriendship(friendshipId)
+                Toast.makeText(requireContext(), "Request cancelled", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -113,6 +121,10 @@ class FriendsFragment : Fragment() {
             if (binding.tabLayout.selectedTabPosition == 0) {
                 binding.tvEmpty.visibility = if (friends.isEmpty()) View.VISIBLE else View.GONE
             }
+        }
+
+        socialViewModel.myFriendships.observe(viewLifecycleOwner) { friendships ->
+            searchAdapter.updateFriendships(friendships)
         }
 
         socialViewModel.pendingRequests.observe(viewLifecycleOwner) { requests ->

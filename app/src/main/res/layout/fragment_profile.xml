@@ -47,11 +47,14 @@
                     app:strokeWidth="2dp" />
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:id="@+id/layoutNameBio"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_toEndOf="@id/ivProfilePic"
+                    android:layout_toStartOf="@+id/btnContainer"
                     android:layout_centerVertical="true"
                     android:layout_marginStart="16dp"
+                    android:layout_marginEnd="8dp"
                     android:orientation="vertical">
 
                     <TextView
@@ -59,7 +62,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Username"
-                        android:textSize="22sp"
+                        android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorOnBackground" />
 
@@ -67,36 +70,48 @@
                         android:id="@+id/tvBio"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="This is your bio."
-                        android:textSize="14sp"
-                        android:textColor="?attr/colorTextSecondary" />
+                        android:textSize="13sp"
+                        android:textColor="?attr/colorTextSecondary"
+                        android:alpha="0.8" />
                 </LinearLayout>
 
-                <ImageButton
-                    android:id="@+id/btnSettings"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_settings"
-                    app:tint="?attr/colorOnSurface" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFriendAction"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                <LinearLayout
+                    android:id="@+id/btnContainer"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:visibility="gone"
-                    android:text="Friend +"
-                    app:cornerRadius="20dp"
-                    android:textSize="12sp"
-                    android:paddingHorizontal="12dp"
-                    app:strokeColor="@color/primary"
-                    android:textColor="@color/primary" />
+                    android:gravity="end"
+                    android:orientation="vertical">
+
+                    <ImageButton
+                        android:id="@+id/btnSettings"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_settings"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFriendAction"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone"
+                        android:text="Friend +"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        app:cornerRadius="20dp"
+                        android:textSize="11sp"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="6dp"
+                        app:strokeColor="@color/primary"
+                        android:textColor="@color/primary" />
+                </LinearLayout>
             </RelativeLayout>
 
             <!-- Social Media Icons -->
@@ -176,7 +191,8 @@
                             android:textSize="11sp"
                             android:textAllCaps="true"
                             android:letterSpacing="0.05"
-                            android:textColor="?attr/colorTextSecondary" />
+                            android:textColor="?attr/colorTextSecondary"
+                            android:alpha="0.6" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -213,7 +229,8 @@
                             android:textSize="11sp"
                             android:textAllCaps="true"
                             android:letterSpacing="0.05"
-                            android:textColor="?attr/colorTextSecondary" />
+                            android:textColor="?attr/colorOnSurface"
+                            android:alpha="0.6" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -234,7 +251,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:orientation="horizontal"
-                android:clipToPadding="false" />
+                android:clipToPadding="false"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
         </LinearLayout>
 
@@ -245,7 +263,7 @@
             android:background="?attr/android:windowBackground"
             app:tabIndicatorColor="@color/primary"
             app:tabSelectedTextColor="@color/primary"
-            app:tabTextColor="?attr/colorTextSecondary"
+            app:tabTextColor="?attr/colorOnSurface"
             app:tabIndicatorFullWidth="false"
             app:tabIndicatorHeight="3dp"
             app:tabMode="scrollable">
@@ -353,6 +371,7 @@
                 android:padding="48dp"
                 android:text="Nothing here yet."
                 android:textColor="?attr/colorTextSecondary"
+                android:alpha="0.6"
                 android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

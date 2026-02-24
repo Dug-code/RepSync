@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- If the button is checked or pressed (and thus Red), text must be White -->
+    <!-- White text for any state that results in a Red background -->
     <item android:state_checked="true" android:color="@color/white" />
     <item android:state_pressed="true" android:color="@color/white" />
 
-    <!-- For normal buttons that are always Red (not checkable) -->
-    <item android:state_checkable="false" android:state_enabled="true" android:color="@color/white" />
+    <!-- For normal action buttons (not toggles), background is Red, so text must be White -->
+    <item android:state_checkable="false" android:color="@color/white" />
 
-    <!-- For toggle buttons that are NOT checked (Grey background), use theme text color -->
+    <!-- Theme-appropriate text for the "Grey" (Inactive Toggle) state -->
     <item android:color="?attr/colorOnSurface" />
 </selector>

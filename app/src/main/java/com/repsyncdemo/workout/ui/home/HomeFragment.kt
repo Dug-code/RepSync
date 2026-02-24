@@ -77,6 +77,21 @@ class HomeFragment : Fragment() {
         binding.btnStartWorkout.setOnClickListener {
             showStartWorkoutDialog()
         }
+
+        binding.btnRestDay.setOnClickListener {
+            showRestDayConfirmation()
+        }
+    }
+
+    private fun showRestDayConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Log Rest Day")
+            .setMessage("Ready to take a break? This will mark today as a rest day on your calendar.")
+            .setPositiveButton("Confirm") { _, _ ->
+                workoutViewModel.addRestDay()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupTabs() {
@@ -90,18 +105,15 @@ class HomeFragment : Fragment() {
     }
 
     private fun observeData() {
-        // Observe profile for real-time username updates
         profileViewModel.myProfile.observe(viewLifecycleOwner) {
             updateCongratsMessage()
         }
         
-        // Observe logs for workout count and list content
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) {
             updateCongratsMessage()
             refreshTabContent()
         }
 
-        // Observe workouts for "Saved" tab
         workoutViewModel.workouts.observe(viewLifecycleOwner) {
             refreshTabContent()
         }
@@ -122,7 +134,6 @@ class HomeFragment : Fragment() {
             val count = logs.count { it.completedAt >= thirtyDaysAgo }
             binding.tvCongrats.text = "$greeting You worked out $count times in the last 30 days"
         } else {
-            // Initial placeholder while logs fetch
             binding.tvCongrats.text = if (username.isNotEmpty()) "Congrats $username! Checking your progress..." else "Loading your progress..."
         }
     }
@@ -133,14 +144,12 @@ class HomeFragment : Fragment() {
         val workouts = workoutViewModel.workouts.value ?: emptyList()
 
         if (position == 0) {
-            // Recent Tab
             binding.rvHomeContent.adapter = historyAdapter
             val sortedLogs = logs.take(10)
             historyAdapter.submitList(sortedLogs)
             binding.tvEmpty.visibility = if (sortedLogs.isEmpty()) View.VISIBLE else View.GONE
             binding.tvEmpty.text = "No recent workouts logged."
         } else {
-            // Saved Tab
             binding.rvHomeContent.adapter = workoutAdapter
             workoutAdapter.submitList(workouts)
             binding.tvEmpty.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
