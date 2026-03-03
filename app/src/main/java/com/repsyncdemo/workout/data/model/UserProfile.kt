@@ -15,6 +15,7 @@ data class UserProfile(
     val profilePictureUrl: String = "",
     val heightInches: Int = 0,
     val weightLbs: Double = 0.0,
+    val totalRestDays: Int = 0,
     
     @get:PropertyName("isHeightPublic")
     @set:PropertyName("isHeightPublic")
@@ -42,6 +43,8 @@ data class UserProfile(
 
     val preferredUnit: String = "lbs", // "lbs" or "kg"
     val theme: String = "dark", // "light" or "dark"
+    
+    val pinnedTrophyId: String? = null, // ID of the pinned trophy
 
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),

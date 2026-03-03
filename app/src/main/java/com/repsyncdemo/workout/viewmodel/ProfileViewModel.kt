@@ -108,6 +108,12 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
+    fun incrementRestDays() {
+        val profile = myProfile.value ?: return
+        val updatedProfile = profile.copy(totalRestDays = profile.totalRestDays + 1)
+        updateProfile(updatedProfile)
+    }
+
     fun updateLocation(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             repository.updateLocation(latitude, longitude)

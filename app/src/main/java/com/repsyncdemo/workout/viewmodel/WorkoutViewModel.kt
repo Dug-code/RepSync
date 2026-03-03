@@ -37,6 +37,9 @@ class WorkoutViewModel : ViewModel() {
         }
         .asLiveData()
 
+    private val _targetUserWorkoutLogs = MutableLiveData<List<WorkoutLog>>()
+    val targetUserWorkoutLogs: LiveData<List<WorkoutLog>> = _targetUserWorkoutLogs
+
     val restDays: LiveData<List<RestDay>> = repository.getRestDays()
         .catch { e ->
             Log.e("WorkoutViewModel", "Error in restDays flow", e)
@@ -123,6 +126,17 @@ class WorkoutViewModel : ViewModel() {
                 emit(emptyList())
             }.collect {
                 _targetUserWorkouts.value = it
+            }
+        }
+    }
+
+    fun loadWorkoutLogsForUser(userId: String) {
+        viewModelScope.launch {
+            repository.getWorkoutLogs(userId).catch { e ->
+                Log.e("WorkoutViewModel", "Error loading user workout logs", e)
+                emit(emptyList())
+            }.collect {
+                _targetUserWorkoutLogs.value = it
             }
         }
     }

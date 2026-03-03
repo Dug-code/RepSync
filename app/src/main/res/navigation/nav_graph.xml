@@ -95,6 +95,9 @@
         <action
             android:id="@+id/action_profile_to_settings"
             app:destination="@id/settingsFragment" />
+        <action
+            android:id="@+id/action_profile_to_trophyShelf"
+            app:destination="@id/trophyShelfFragment" />
     </fragment>
 
     <fragment
@@ -120,5 +123,11 @@
         android:name="com.repsyncdemo.workout.ui.home.AnalyticsFragment"
         android:label="Analytics"
         tools:layout="@layout/fragment_analytics" />
+
+    <fragment
+        android:id="@+id/trophyShelfFragment"
+        android:name="com.repsyncdemo.workout.ui.profile.TrophyShelfFragment"
+        android:label="Trophy Shelf"
+        tools:layout="@layout/fragment_trophy_shelf" />
 
 </navigation>

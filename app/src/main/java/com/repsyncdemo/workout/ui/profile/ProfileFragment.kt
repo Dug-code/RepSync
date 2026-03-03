@@ -1,6 +1,7 @@
 package com.repsyncdemo.workout.ui.profile
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -9,12 +10,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import coil.load
 import coil.transform.CircleCropTransformation
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
@@ -90,13 +95,19 @@ class ProfileFragment : Fragment() {
 
         if (targetUserId == null) {
             binding.btnSettings.visibility = View.VISIBLE
+            binding.btnTrophyShelf.visibility = View.VISIBLE
             binding.btnBack.visibility = View.GONE
             binding.btnFriendAction.visibility = View.GONE
+            
             binding.btnSettings.setOnClickListener {
                 findNavController().navigate(R.id.action_profile_to_settings)
             }
+            binding.btnTrophyShelf.setOnClickListener {
+                findNavController().navigate(R.id.action_profile_to_trophyShelf)
+            }
         } else {
             binding.btnSettings.visibility = View.GONE
+            binding.btnTrophyShelf.visibility = View.GONE
             binding.btnBack.visibility = View.VISIBLE
             binding.btnFriendAction.visibility = View.VISIBLE
         }
@@ -109,8 +120,10 @@ class ProfileFragment : Fragment() {
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
             goalViewModel.loadGoalsForUser(targetUserId!!)
             workoutViewModel.loadWorkoutsForUser(targetUserId!!)
+            workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
         } else {
             profileViewModel.loadProfile()
+            workoutViewModel.loadWorkoutLogsForUser(currentUserId)
         }
     }
 
@@ -192,11 +205,8 @@ class ProfileFragment : Fragment() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                val query = s.toString().trim()
-                if (query.isNotEmpty()) {
-                    profileViewModel.searchUsers(query)
-                }
                 if (binding.profileTabs.selectedTabPosition == 1) {
+                    profileViewModel.searchUsers(s.toString().trim())
                     updateContent(1)
                 }
             }
@@ -313,6 +323,8 @@ class ProfileFragment : Fragment() {
                     binding.ivProfilePic.setImageResource(android.R.drawable.ic_menu_gallery)
                 }
 
+                updateTrophyUI()
+
                 val feet = it.heightInches / 12
                 val inches = it.heightInches % 12
                 binding.tvHeightValue.text = if (it.isHeightPublic || targetUserId == null) "${feet}' ${inches}\"" else "Private"
@@ -355,12 +367,11 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Data Observers
+        // --- Core Data Observers ---
         profileViewModel.myPosts.observe(viewLifecycleOwner) { if (targetUserId == null && binding.profileTabs.selectedTabPosition == 0) updateContent(0) }
         profileViewModel.userPosts.observe(viewLifecycleOwner) { if (targetUserId != null && binding.profileTabs.selectedTabPosition == 0) updateContent(0) }
         socialViewModel.friends.observe(viewLifecycleOwner) { 
             if (targetUserId == null && binding.profileTabs.selectedTabPosition == 1) updateContent(1) 
-            // Update search list with friendship status
             searchAdapter.updateFriendships(it)
         }
         socialViewModel.myFriendships.observe(viewLifecycleOwner) { friendships ->
@@ -379,6 +390,71 @@ class ProfileFragment : Fragment() {
             binding.tvGoalsHeader.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
             binding.rvMiniGoals.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
         }
+
+        // Observe workout logs and profile to update trophy
+        workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
+        profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
+    }
+
+    private fun updateTrophyUI() {
+        val profile = profileViewModel.myProfile.value ?: return
+        val workoutCount = workoutViewModel.workoutLogs.value?.size ?: 0
+        val restDayCount = profile.totalRestDays
+
+        val pinnedTrophyId = profile.pinnedTrophyId
+        val trophyToDisplay = if (pinnedTrophyId == "recovery") {
+            Trophy("recovery", "Recovery", "Total rest days recorded", restDayCount, TrophyType.RECOVERY)
+        } else {
+            Trophy("gym_rat", "Gym Rat", "Total workouts completed", workoutCount, TrophyType.GYM_RAT)
+        }
+        
+        val rank = trophyToDisplay.rank
+        binding.ivPinnedTrophy.visibility = View.VISIBLE
+        
+        val iconRes = when (trophyToDisplay.type) {
+            TrophyType.GYM_RAT -> when (rank) {
+                TrophyRank.BRONZE -> R.drawable.gym_rat_bronze
+                TrophyRank.SILVER -> R.drawable.gym_rat_silver
+                TrophyRank.GOLD -> R.drawable.gym_rat_gold
+                TrophyRank.DIAMOND -> R.drawable.gym_rat_diamond
+                else -> R.drawable.gym_rat_locked
+            }
+            TrophyType.RECOVERY -> when (rank) {
+                TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                else -> R.drawable.zzz_icon_locked
+            }
+            else -> R.drawable.ic_trophy
+        }
+        binding.ivPinnedTrophy.setImageResource(iconRes)
+        
+        binding.ivPinnedTrophy.imageTintList = null
+        binding.ivPinnedTrophy.background = null
+        
+        if (targetUserId != null) {
+            binding.ivPinnedTrophy.setOnClickListener {
+                showTrophyDetails(trophyToDisplay)
+            }
+        } else {
+            binding.ivPinnedTrophy.setOnClickListener(null)
+            binding.ivPinnedTrophy.isClickable = false
+        }
+    }
+
+    private fun showTrophyDetails(trophy: Trophy) {
+        val rank = trophy.rank
+        val progressText = when(trophy.type) {
+            TrophyType.GYM_RAT -> "Workouts: ${trophy.currentProgress}"
+            TrophyType.RECOVERY -> "Rest Days: ${trophy.currentProgress}"
+            else -> "Progress: ${trophy.currentProgress}"
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(trophy.name)
+            .setMessage("${trophy.description}\n\nCurrent Rank: ${rank.label}\n$progressText")
+            .setPositiveButton("Close", null)
+            .show()
     }
 
     private fun updateFriendButton(friendship: Friendship?) {

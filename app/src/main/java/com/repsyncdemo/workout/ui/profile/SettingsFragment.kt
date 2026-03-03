@@ -61,10 +61,10 @@ class SettingsFragment : Fragment() {
                     binding.btnEnableTwitter.visibility = View.GONE
                 }
 
-                if (it.preferredUnit == "kg") {
-                    binding.toggleUnit.check(R.id.btnKg)
-                } else {
-                    binding.toggleUnit.check(R.id.btnLbs)
+                // Load height
+                if (it.heightInches > 0) {
+                    binding.etHeightFeet.setText((it.heightInches / 12).toString())
+                    binding.etHeightInches.setText((it.heightInches % 12).toString())
                 }
 
                 // Check correct theme button based on profile
@@ -111,7 +111,10 @@ class SettingsFragment : Fragment() {
             val facebookUrl = binding.etFacebookUrl.text.toString().trim()
             val twitterUrl = binding.etTwitterUrl.text.toString().trim()
             
-            val preferredUnit = if (binding.toggleUnit.checkedButtonId == R.id.btnKg) "kg" else "lbs"
+            val feet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
+            val inches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
+            val totalHeightInches = (feet * 12) + inches
+
             val themePreference = if (binding.toggleTheme.checkedButtonId == R.id.btnLightTheme) "light" else "dark"
             
             val isHeightPublic = binding.switchHeightPublic.isChecked
@@ -145,7 +148,8 @@ class SettingsFragment : Fragment() {
                     instagramUrl = instagramUrl,
                     facebookUrl = facebookUrl,
                     twitterUrl = twitterUrl,
-                    preferredUnit = preferredUnit,
+                    heightInches = totalHeightInches,
+                    preferredUnit = "lbs",
                     theme = themePreference,
                     isHeightPublic = isHeightPublic,
                     isWeightPublic = isWeightPublic,

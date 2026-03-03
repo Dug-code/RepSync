@@ -86,8 +86,9 @@ class HomeFragment : Fragment() {
     private fun showRestDayConfirmation() {
         AlertDialog.Builder(requireContext())
             .setTitle("Log Rest Day")
-            .setMessage("Ready to take a break? This will mark today as a rest day on your calendar.")
+            .setMessage("Ready to take a break? This will mark today as a rest day on your calendar and count towards your Recovery trophy.")
             .setPositiveButton("Confirm") { _, _ ->
+                profileViewModel.incrementRestDays()
                 workoutViewModel.addRestDay()
             }
             .setNegativeButton("Cancel", null)

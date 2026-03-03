@@ -3,25 +3,22 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Large Z -->
+
+    <!-- ZZZ Icon - Filled paths for a bold emoji-like look -->
+
+    <!-- Small Z (Bottom Left) -->
     <path
-        android:pathData="M5,16 L12,16 L5,22 L12,22"
-        android:strokeColor="#81D4FA"
-        android:strokeWidth="2.8"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <!-- Medium Z -->
+        android:fillColor="#C4161C"
+        android:pathData="M2,17h5v1.5l-3.5,4h3.5v1.5h-6v-1.5l3.5,-4h-2.5z" />
+
+    <!-- Medium Z (Middle) -->
     <path
-        android:pathData="M11,5 L17,5 L11,11 L17,11"
-        android:strokeColor="#81D4FA"
-        android:strokeWidth="2.2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <!-- Small Z -->
+        android:fillColor="#C4161C"
+        android:pathData="M8,8h7v2l-5,6h5v2h-8v-2l5,-6h-4z" />
+
+    <!-- Large Z (Top Right) -->
     <path
-        android:pathData="M18,13 L22,13 L18,17 L22,17"
-        android:strokeColor="#81D4FA"
-        android:strokeWidth="1.6"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+        android:fillColor="#C4161C"
+        android:pathData="M14,1h9v2.5l-6.5,8.5h6.5v2.5h-10v-2.5l6.5,-8.5h-5.5z" />
+
 </vector>

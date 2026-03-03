@@ -29,28 +29,43 @@
                     android:id="@+id/btnBack"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:src="@android:drawable/ic_menu_revert"
+                    android:src="@drawable/ic_back_button"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     app:tint="@color/primary"
                     android:visibility="gone"
                     android:contentDescription="Back" />
 
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/ivProfilePic"
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
-                    android:layout_toEndOf="@id/btnBack"
-                    android:scaleType="centerCrop"
-                    android:src="@android:drawable/ic_menu_gallery"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
-                    app:strokeColor="?attr/colorDivider"
-                    app:strokeWidth="2dp" />
+                <FrameLayout
+                    android:id="@+id/profilePicContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_toEndOf="@id/btnBack">
+
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/ivProfilePic"
+                        android:layout_width="80dp"
+                        android:layout_height="80dp"
+                        android:scaleType="centerCrop"
+                        android:src="@android:drawable/ic_menu_gallery"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
+                        app:strokeColor="?attr/colorDivider"
+                        app:strokeWidth="2dp" />
+
+                    <ImageView
+                        android:id="@+id/ivPinnedTrophy"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_gravity="bottom|end"
+                        android:elevation="4dp"
+                        android:scaleType="centerInside"
+                        android:visibility="gone" />
+                </FrameLayout>
 
                 <LinearLayout
                     android:id="@+id/layoutNameBio"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_toEndOf="@id/ivProfilePic"
+                    android:layout_toEndOf="@id/profilePicContainer"
                     android:layout_toStartOf="@+id/btnContainer"
                     android:layout_centerVertical="true"
                     android:layout_marginStart="16dp"
@@ -84,7 +99,16 @@
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
                     android:gravity="end"
-                    android:orientation="vertical">
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnTrophyShelf"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_trophy"
+                        app:tint="?attr/colorOnSurface"
+                        android:layout_marginEnd="4dp" />
 
                     <ImageButton
                         android:id="@+id/btnSettings"
@@ -229,7 +253,7 @@
                             android:textSize="11sp"
                             android:textAllCaps="true"
                             android:letterSpacing="0.05"
-                            android:textColor="?attr/colorOnSurface"
+                            android:textColor="?attr/colorTextSecondary"
                             android:alpha="0.6" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -263,7 +287,7 @@
             android:background="?attr/android:windowBackground"
             app:tabIndicatorColor="@color/primary"
             app:tabSelectedTextColor="@color/primary"
-            app:tabTextColor="?attr/colorOnSurface"
+            app:tabTextColor="?attr/colorTextSecondary"
             app:tabIndicatorFullWidth="false"
             app:tabIndicatorHeight="3dp"
             app:tabMode="scrollable">
