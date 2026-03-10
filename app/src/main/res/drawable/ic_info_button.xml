@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <!-- Outer Circle -->
+    <path
+        android:strokeColor="#C4161C"
+        android:strokeWidth="32"
+        android:pathData="M256,256m-240,0a240,240 0,1 1,480 0a240,240 0,1 1,-480 0" />
+    <!-- Letter 'i' -->
+    <path
+        android:strokeColor="#C4161C"
+        android:strokeWidth="60"
+        android:strokeLineCap="round"
+        android:pathData="M256,150v0 M256,230v132" />
+</vector>
