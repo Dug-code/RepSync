@@ -13,13 +13,20 @@ import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.databinding.FragmentExerciseLibraryBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseLibraryAdapter
 
+/**
+ * Fragment that displays a searchable and filterable library of exercises.
+ * Users can browse exercises by body part, equipment, or movement pattern.
+ */
 class ExerciseLibraryFragment : Fragment() {
 
+    // View Binding for accessing layout elements
     private var _binding: FragmentExerciseLibraryBinding? = null
     private val binding get() = _binding!!
 
+    // Adapter for the exercise list
     private lateinit var exerciseLibraryAdapter: ExerciseLibraryAdapter
 
+    // Current filter states
     private var selectedBodyPart: String? = null
     private var selectedEquipment: String? = null
     private var selectedMovement: String? = null
@@ -30,6 +37,7 @@ class ExerciseLibraryFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // Inflate the layout for this fragment
         _binding = FragmentExerciseLibraryBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -37,13 +45,14 @@ class ExerciseLibraryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Initialize the adapter and RecyclerView
         exerciseLibraryAdapter = ExerciseLibraryAdapter()
-
         binding.rvExercises.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = exerciseLibraryAdapter
         }
 
+        // Setup search bar listener to filter as the user types
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -53,6 +62,7 @@ class ExerciseLibraryFragment : Fragment() {
             }
         })
 
+        // Setup filter chip listeners
         binding.chipBodyPart.setOnClickListener {
             showFilterDialog("Body Part", ExerciseDatabase.bodyParts) { selected ->
                 selectedBodyPart = selected
@@ -80,13 +90,19 @@ class ExerciseLibraryFragment : Fragment() {
             }
         }
 
+        // Button to reset all active filters
         binding.chipClearFilters.setOnClickListener {
             clearFilters()
         }
 
+        // Initial data load
         applyFilters()
     }
 
+    /**
+     * Retrieves the filtered list from the database based on current UI state
+     * and submits it to the adapter for display.
+     */
     private fun applyFilters() {
         val filtered = ExerciseDatabase.filter(
             bodyPart = selectedBodyPart,
@@ -94,13 +110,21 @@ class ExerciseLibraryFragment : Fragment() {
             movementPattern = selectedMovement,
             searchQuery = searchQuery
         )
+        
+        // ListAdapter handles the diffing and animations automatically
         exerciseLibraryAdapter.submitList(filtered)
+        
+        // Update the result count display
         binding.tvResultCount.text = "${filtered.size} exercises"
 
+        // Toggle visibility of the "Clear Filters" button
         val hasFilters = selectedBodyPart != null || selectedEquipment != null || selectedMovement != null
         binding.chipClearFilters.visibility = if (hasFilters) View.VISIBLE else View.GONE
     }
 
+    /**
+     * Resets all filter variables and updates the UI components.
+     */
     private fun clearFilters() {
         selectedBodyPart = null
         selectedEquipment = null
@@ -114,11 +138,15 @@ class ExerciseLibraryFragment : Fragment() {
         applyFilters()
     }
 
+    /**
+     * Helper to show a simple selection dialog for a specific category.
+     */
     private fun showFilterDialog(title: String, options: List<String>, onSelected: (String?) -> Unit) {
         val items = arrayOf("All") + options.toTypedArray()
         AlertDialog.Builder(requireContext())
             .setTitle(title)
             .setItems(items) { _, which ->
+                // "All" returns null to clear that specific filter
                 onSelected(if (which == 0) null else options[which - 1])
             }
             .show()
@@ -126,6 +154,7 @@ class ExerciseLibraryFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Prevent memory leaks
         _binding = null
     }
 }

@@ -59,6 +59,18 @@ class ExerciseInputAdapter : RecyclerView.Adapter<ExerciseInputAdapter.ViewHolde
 
     override fun getItemCount() = items.size
 
+    fun moveExercise(fromPosition: Int, toPosition: Int) {
+
+
+        //swaps the items in the list
+        val movedItem = items.removeAt(fromPosition)
+        items.add(toPosition, movedItem)
+
+        //creates smooth animation
+        notifyItemMoved(fromPosition, toPosition)
+
+    }
+
     inner class ViewHolder(
         private val binding: ItemExerciseInputBinding
     ) : RecyclerView.ViewHolder(binding.root) {
