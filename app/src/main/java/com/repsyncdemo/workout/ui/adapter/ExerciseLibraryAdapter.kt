@@ -22,9 +22,6 @@ class ExerciseLibraryAdapter(
 
     val selectIds = mutableSetOf<String>()
 
-
-
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         // Inflate the item layout using View Binding
         val binding = ItemExerciseLibraryBinding.inflate(
