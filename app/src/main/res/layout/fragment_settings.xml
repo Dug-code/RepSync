@@ -240,6 +240,7 @@
                         android:layout_weight="1"
                         android:text="Light"
                         app:cornerRadius="12dp"
+                        android:textColor="@color/black"
                         app:backgroundTint="@color/button_state_color" />
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDarkTheme"
@@ -249,6 +250,7 @@
                         android:layout_weight="1"
                         android:text="Dark"
                         app:cornerRadius="12dp"
+                        android:textColor="@color/black"
                         app:backgroundTint="@color/button_state_color" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
