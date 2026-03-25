@@ -1,32 +1,29 @@
 package com.repsyncdemo.workout.ui.workout
 
-import android.app.AlertDialog
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.repsyncdemo.workout.R
-import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.databinding.FragmentCreateWorkoutBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseInputAdapter
-import com.repsyncdemo.workout.ui.adapter.ExerciseLibraryAdapter
+import com.repsyncdemo.workout.ui.dialogs.ShowExercisePickerDialog
 import com.repsyncdemo.workout.util.DragToReorderCallBack
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import kotlinx.coroutines.launch
 
 /**
  * Fragment responsible for creating a new workout.
@@ -35,16 +32,13 @@ import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
  */
 class CreateWorkoutFragment : Fragment() {
 
-    // View binding to access UI elements safely
     private var _binding: FragmentCreateWorkoutBinding? = null
     private val binding get() = _binding!!
 
-    // ViewModels shared with the Activity scope to maintain state and handle data logic
     private val workoutViewModel: WorkoutViewModel by activityViewModels()
     private val feedViewModel: FeedViewModel by activityViewModels()
     private val profileViewModel: ProfileViewModel by activityViewModels()
 
-    // Adapter for the dynamic list of exercise input fields
     private lateinit var exerciseInputAdapter: ExerciseInputAdapter
 
     override fun onCreateView(
@@ -52,7 +46,6 @@ class CreateWorkoutFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Inflate the layout for this fragment
         _binding = FragmentCreateWorkoutBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -93,9 +86,11 @@ class CreateWorkoutFragment : Fragment() {
             exerciseInputAdapter.addExercise()
         }
 
+        //Click listener that passes info to the exercise picker dialog
         binding.btnPickExercise.setOnClickListener {
-            showExercisePickerDialog()
+            ShowExercisePickerDialog().show(parentFragmentManager, "exercise_picker")
         }
+
 
         binding.btnSave.setOnClickListener {
             saveWorkout()
@@ -124,49 +119,18 @@ class CreateWorkoutFragment : Fragment() {
                 Toast.makeText(requireContext(), e.message ?: "Save failed", Toast.LENGTH_SHORT).show()
             }
         }
-    }
 
-    /**
-     * Shows a dialog that lets the user pick exercises from a predefined library.
-     */
-    private fun showExercisePickerDialog() {
-        val dialogView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.fragment_exercise_library, null)
-
-        val etSearch = dialogView.findViewById<EditText>(R.id.etSearch)
-        val rvExercises = dialogView.findViewById<RecyclerView>(R.id.rvExercises)
-
-        // Initialize library adapter with a selection callback
-        val pickerAdapter = ExerciseLibraryAdapter { exerciseDef ->
-            exerciseInputAdapter.addExerciseFromLibrary(exerciseDef.name)
-        }
-
-        rvExercises.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = pickerAdapter
-        }
-
-        // Load the full list of exercises initially
-        pickerAdapter.submitList(ExerciseDatabase.allExercises)
-
-        // Filter logic for the exercise search bar
-        etSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                val query = s.toString().trim()
-                val filtered = if (query.isEmpty()) ExerciseDatabase.allExercises
-                else ExerciseDatabase.filter(searchQuery = query)
-                pickerAdapter.submitList(filtered)
+        // Observe exercise selection from library
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                workoutViewModel.selectedExercises.collect { exerciseName ->
+                    if (!exerciseName.isNullOrEmpty()) {
+                        exerciseInputAdapter.addExerciseFromLibrary(exerciseName)
+                        workoutViewModel.clearSelectedExercises() // Prevent re-triggering
+                    }
+                }
             }
-        })
-
-        // Build and display the selection dialog
-        AlertDialog.Builder(requireContext())
-            .setTitle("Pick Exercise")
-            .setView(dialogView)
-            .setNegativeButton("Done", null)
-            .show()
+        }
     }
 
     /**

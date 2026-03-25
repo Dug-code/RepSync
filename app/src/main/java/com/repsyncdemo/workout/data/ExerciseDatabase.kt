@@ -1,5 +1,6 @@
 package com.repsyncdemo.workout.data
 
+import android.util.Log
 import com.repsyncdemo.workout.data.model.ExerciseDefinition
 
 object ExerciseDatabase {
@@ -198,8 +199,8 @@ object ExerciseDatabase {
             val score = calculateMatchScore(exercise, bodyPart, equipment, movementPattern, searchQuery)
             exercise to score
         }.filter { it.second > 0 }
-        .sortedByDescending { it.second }
-        .map { it.first }
+            .sortedByDescending { it.second }
+            .map { it.first }
     }
 
     private fun calculateMatchScore(
@@ -210,17 +211,35 @@ object ExerciseDatabase {
         searchQuery: String?
     ): Int {
         var score = 0
-        
-        // Mandatory equipment and movement filters
-        if (equipment != null && !exercise.equipment.equals(equipment, ignoreCase = true)) return 0
-        if (movementPattern != null && !exercise.movementPattern.equals(movementPattern, ignoreCase = true)) return 0
-        
+
+        // Equipment filters
+        if (equipment != null) {
+            val eqLower = equipment.lowercase()
+
+            if (exercise.equipment.equals(eqLower, ignoreCase = true)) {
+                score += 500
+            } else {
+                return 0
+            }
+        }
+
+        //Movement filter
+        if (movementPattern != null) {
+            val mpLower = movementPattern.lowercase()
+
+            if (exercise.movementPattern.equals(mpLower, ignoreCase = true)) {
+                score += 500
+            } else {
+                return 0
+            }
+        }
+
         // Body part filtering logic (allowing secondary matches)
         if (bodyPart != null) {
             val bpLower = bodyPart.lowercase()
             val primaryLower = exercise.primaryBodyPart.lowercase()
             val secondaryList = exercise.secondaryBodyParts.split(";").map { it.trim().lowercase() }
-            
+
             if (primaryLower == bpLower) {
                 score += 500 // Strong primary match
             } else if (secondaryList.any { it.contains(bpLower) }) {
@@ -236,7 +255,7 @@ object ExerciseDatabase {
             val name = exercise.name.lowercase()
             val primary = exercise.primaryBodyPart.lowercase()
             val secondary = exercise.secondaryBodyParts.lowercase()
-            
+
             when {
                 name.contains(q) -> score += 1000 // High priority for name matches
                 primary.contains(q) -> score += 50 // Primary muscle match
@@ -244,10 +263,10 @@ object ExerciseDatabase {
                 else -> if (score == 0) return 0 // Doesn't match search query and no bodyPart match
             }
         }
-        
+
         return if (score == 0 && bodyPart == null && equipment == null && movementPattern == null && searchQuery == null) 1 else score
     }
-    
+
     fun getExerciseByName(name: String): ExerciseDefinition? {
         return allExercises.find { it.name.equals(name, ignoreCase = true) }
     }

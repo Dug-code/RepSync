@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Change ScrollView to NestedScrollView for better RecyclerView support -->
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="@color/background">
+    android:background="@color/background"
+    android:fillViewport="false">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical"
         android:padding="20dp">
 
@@ -70,7 +68,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="horizontal">
 
             <TextView
@@ -86,19 +84,16 @@
                 android:id="@+id/textView2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:layout_marginStart="8dp"
-                android:text=" - Drag and drop to reorder"
-                android:textColor="@color/text_secondary" />
+                android:layout_marginVertical="24dp"
+                android:text=" - Drag and drop to reorder exercises"
+                android:textColor="@color/text_primary" />
         </LinearLayout>
 
-        <!-- The List Area -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvExercises"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:overScrollMode="never"
             android:nestedScrollingEnabled="false" />
 
         <com.google.android.material.button.MaterialButton
@@ -141,4 +136,4 @@
             app:cornerRadius="16dp" />
 
     </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+</ScrollView>

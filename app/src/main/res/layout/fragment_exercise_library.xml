@@ -38,6 +38,8 @@
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
                 android:text="Body Part" />
 
             <com.google.android.material.chip.Chip
