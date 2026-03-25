@@ -44,6 +44,12 @@ class WorkoutViewModel : ViewModel() {
      */
     val targetUserWorkouts: LiveData<List<Workout>> = _targetUserWorkouts
 
+    private val _targetUserLogs = MutableLiveData<List<WorkoutLog>>()
+    /**
+     * Observable list of workout logs for a specific target user.
+     */
+    val targetUserLogs: LiveData<List<WorkoutLog>> = _targetUserLogs
+
     /**
      * Observable list of all workout logs for the current user.
      */
@@ -204,6 +210,20 @@ class WorkoutViewModel : ViewModel() {
                 emit(emptyList())
             }.collect {
                 _targetUserWorkouts.value = it
+            }
+        }
+    }
+
+    /**
+     * Loads workout logs for a specific user ID into [targetUserLogs].
+     */
+    fun loadWorkoutLogsForUser(userId: String) {
+        viewModelScope.launch {
+            repository.getWorkoutLogs(userId).catch { e ->
+                Log.e("WorkoutViewModel", "Error loading user logs", e)
+                emit(emptyList())
+            }.collect {
+                _targetUserLogs.value = it
             }
         }
     }
