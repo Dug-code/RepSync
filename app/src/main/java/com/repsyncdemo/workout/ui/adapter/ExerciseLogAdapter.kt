@@ -100,12 +100,23 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
                 etWeight.setText(data.weight)
                 cbCompleted.isChecked = data.completed
 
-                etReps.setOnFocusChangeListener { _, _ ->
-                    data.reps = etReps.text.toString()
-                }
-                etWeight.setOnFocusChangeListener { _, _ ->
-                    data.weight = etWeight.text.toString()
-                }
+                // FIX: Use doAfterTextChanged to update the map INSTANTLY as the user types
+                etReps.addTextChangedListener(object : android.text.TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                    override fun afterTextChanged(s: android.text.Editable?) {
+                        data.reps = s.toString()
+                    }
+                })
+
+                etWeight.addTextChangedListener(object : android.text.TextWatcher {
+                    override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                    override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                    override fun afterTextChanged(s: android.text.Editable?) {
+                        data.weight = s.toString()
+                    }
+                })
+
                 cbCompleted.setOnCheckedChangeListener { _, isChecked ->
                     data.completed = isChecked
                 }

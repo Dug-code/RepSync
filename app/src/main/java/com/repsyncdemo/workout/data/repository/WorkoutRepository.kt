@@ -197,4 +197,21 @@ class WorkoutRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun deleteAllWorkoutLogs(): Result<Unit> {
+        return try {
+            val snapshot = logsCollection
+                .whereEqualTo("userId", currentUserId)
+                .get().await()
+
+            val batch = db.batch()
+            for (doc in snapshot.documents) {
+                batch.delete(doc.reference)
+            }
+            batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
