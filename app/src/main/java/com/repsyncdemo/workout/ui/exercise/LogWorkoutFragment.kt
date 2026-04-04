@@ -8,15 +8,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.databinding.FragmentLogWorkoutBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseLogAdapter
+import com.repsyncdemo.workout.ui.dialogs.ShowExercisePickerDialog
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -33,6 +39,7 @@ class LogWorkoutFragment : Fragment() {
     private val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
     
     private var existingLogId: String? = null
+    private var isWorkoutModified = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -45,6 +52,22 @@ class LogWorkoutFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Handle Back Navigation with Warning
+        val backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasUnsavedChanges()) {
+                    showUnsavedChangesDialog {
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                    }
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
 
         exerciseLogAdapter = ExerciseLogAdapter()
 
@@ -94,6 +117,23 @@ class LogWorkoutFragment : Fragment() {
         binding.tvStartTime.setOnClickListener { showTimePicker(startCalendar, true) }
         binding.tvEndTime.setOnClickListener { showTimePicker(endCalendar, false) }
 
+        binding.btnAddExercise.setOnClickListener {
+            ShowExercisePickerDialog().show(parentFragmentManager, "exercise_picker")
+        }
+
+        // Observe exercise selection from library
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.selectedExercises.collect { exerciseName ->
+                    if (!exerciseName.isNullOrEmpty()) {
+                        exerciseLogAdapter.addExercise(exerciseName)
+                        isWorkoutModified = true
+                        viewModel.clearSelectedExercises()
+                    }
+                }
+            }
+        }
+
         binding.btnComplete.setOnClickListener {
             saveWorkout()
         }
@@ -101,6 +141,23 @@ class LogWorkoutFragment : Fragment() {
         binding.btnDeleteLog.setOnClickListener {
             showDeleteConfirmation()
         }
+    }
+
+    private fun hasUnsavedChanges(): Boolean {
+        // Simple modification check for now
+        // In a full implementation, you'd compare the current adapter data against the original data
+        return isWorkoutModified || 
+               binding.etNotes.text.toString().isNotEmpty() || 
+               exerciseLogAdapter.itemCount > 0
+    }
+
+    private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Discard Workout?")
+            .setMessage("You have unsaved changes. Are you sure you want to discard this workout log?")
+            .setPositiveButton("Discard") { _, _ -> onDiscard() }
+            .setNegativeButton("Keep Editing", null)
+            .show()
     }
 
     private fun showDeleteConfirmation() {
@@ -136,6 +193,7 @@ class LogWorkoutFragment : Fragment() {
                 endCalendar.set(Calendar.MONTH, month)
                 endCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
                 updateDateTimeDisplays()
+                isWorkoutModified = true
             },
             startCalendar.get(Calendar.YEAR),
             startCalendar.get(Calendar.MONTH),
@@ -150,6 +208,7 @@ class LogWorkoutFragment : Fragment() {
                 calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
                 calendar.set(Calendar.MINUTE, minute)
                 updateDateTimeDisplays()
+                isWorkoutModified = true
             },
             calendar.get(Calendar.HOUR_OF_DAY),
             calendar.get(Calendar.MINUTE),
@@ -177,6 +236,7 @@ class LogWorkoutFragment : Fragment() {
         viewModel.logWorkout(log)
         Toast.makeText(requireContext(), if (existingLogId == null) "Workout logged!" else "Workout updated!", Toast.LENGTH_SHORT).show()
         viewModel.clearSelection()
+        isWorkoutModified = false // Reset before navigating
         findNavController().popBackStack()
     }
 

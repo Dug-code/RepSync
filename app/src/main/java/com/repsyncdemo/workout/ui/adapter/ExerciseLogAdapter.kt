@@ -1,10 +1,11 @@
 package com.repsyncdemo.workout.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.LinearLayout
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.repsyncdemo.workout.R
@@ -48,6 +49,12 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
         notifyDataSetChanged()
     }
 
+    fun addExercise(exerciseName: String) {
+        exercises.add(exerciseName)
+        setData[exercises.size - 1] = mutableListOf(SetLogData())
+        notifyItemInserted(exercises.size - 1)
+    }
+
     fun getExerciseLogs(): List<ExerciseLog> {
         return exercises.mapIndexed { index, name ->
             ExerciseLog(
@@ -82,8 +89,16 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
 
         fun bind(exerciseName: String, exerciseIndex: Int) {
             binding.tvExerciseName.text = exerciseName
-            binding.layoutSets.removeAllViews()
+            updateSets(exerciseIndex)
 
+            binding.btnAddSet.setOnClickListener {
+                setData[exerciseIndex]?.add(SetLogData())
+                updateSets(exerciseIndex)
+            }
+        }
+
+        private fun updateSets(exerciseIndex: Int) {
+            binding.layoutSets.removeAllViews()
             val sets = setData[exerciseIndex] ?: return
 
             sets.forEachIndexed { setIndex, data ->
@@ -94,13 +109,13 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
                 val etReps = setView.findViewById<EditText>(R.id.etReps)
                 val etWeight = setView.findViewById<EditText>(R.id.etWeight)
                 val cbCompleted = setView.findViewById<CheckBox>(R.id.cbCompleted)
+                val btnRemoveSet = setView.findViewById<ImageButton>(R.id.btnRemoveSet)
 
                 tvLabel.text = "Set ${setIndex + 1}"
                 etReps.setText(data.reps)
                 etWeight.setText(data.weight)
                 cbCompleted.isChecked = data.completed
 
-                // FIX: Use doAfterTextChanged to update the map INSTANTLY as the user types
                 etReps.addTextChangedListener(object : android.text.TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -119,6 +134,11 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
 
                 cbCompleted.setOnCheckedChangeListener { _, isChecked ->
                     data.completed = isChecked
+                }
+
+                btnRemoveSet.setOnClickListener {
+                    sets.removeAt(setIndex)
+                    updateSets(exerciseIndex)
                 }
 
                 binding.layoutSets.addView(setView)

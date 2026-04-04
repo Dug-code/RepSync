@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -17,25 +18,34 @@
 
     <com.google.android.material.textfield.TextInputEditText
         android:id="@+id/etReps"
-        android:layout_width="80dp"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
-        android:hint="@string/reps"
+        android:hint="Reps"
         android:inputType="number"
         android:textSize="14sp"
-        android:layout_marginHorizontal="8dp" />
+        android:layout_marginHorizontal="4dp" />
 
     <com.google.android.material.textfield.TextInputEditText
         android:id="@+id/etWeight"
-        android:layout_width="80dp"
+        android:layout_width="60dp"
         android:layout_height="wrap_content"
-        android:hint="@string/weight"
+        android:hint="Lbs"
         android:inputType="numberDecimal"
         android:textSize="14sp"
-        android:layout_marginEnd="8dp" />
+        android:layout_marginEnd="4dp" />
 
     <CheckBox
         android:id="@+id/cbCompleted"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
+
+    <ImageButton
+        android:id="@+id/btnRemoveSet"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        app:tint="@color/error"
+        android:contentDescription="Remove Set" />
 
 </LinearLayout>

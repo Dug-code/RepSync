@@ -141,6 +141,18 @@
             android:layout_marginTop="20dp"
             android:nestedScrollingEnabled="false" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAddExercise"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="+ Add Exercise"
+            android:textAllCaps="false"
+            app:strokeColor="@color/primary"
+            android:textColor="@color/primary"
+            app:cornerRadius="12dp" />
+
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"

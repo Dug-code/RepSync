@@ -30,5 +30,18 @@
             android:orientation="vertical"
             android:layout_marginTop="8dp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAddSet"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Set"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:textColor="@color/primary"
+            app:icon="@android:drawable/ic_input_add"
+            app:iconTint="@color/primary"
+            app:iconSize="16dp" />
+
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
