@@ -21,6 +21,7 @@ import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.databinding.FragmentLogWorkoutBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseLogAdapter
 import com.repsyncdemo.workout.ui.dialogs.ShowExercisePickerDialog
+import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -31,6 +32,7 @@ class LogWorkoutFragment : Fragment() {
     private var _binding: FragmentLogWorkoutBinding? = null
     private val binding get() = _binding!!
     private val viewModel: WorkoutViewModel by activityViewModels()
+    private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     private lateinit var exerciseLogAdapter: ExerciseLogAdapter
     private var startCalendar = Calendar.getInstance()
@@ -58,6 +60,7 @@ class LogWorkoutFragment : Fragment() {
             override fun handleOnBackPressed() {
                 if (hasUnsavedChanges()) {
                     showUnsavedChangesDialog {
+                        navigationLockViewModel.setLocked(false)
                         isEnabled = false
                         requireActivity().onBackPressedDispatcher.onBackPressed()
                     }
@@ -69,7 +72,10 @@ class LogWorkoutFragment : Fragment() {
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
 
-        exerciseLogAdapter = ExerciseLogAdapter()
+        exerciseLogAdapter = ExerciseLogAdapter(onDataChanged = {
+            isWorkoutModified = true
+            updateLockState()
+        })
 
         binding.rvExerciseLogs.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -128,6 +134,7 @@ class LogWorkoutFragment : Fragment() {
                     if (!exerciseName.isNullOrEmpty()) {
                         exerciseLogAdapter.addExercise(exerciseName)
                         isWorkoutModified = true
+                        updateLockState()
                         viewModel.clearSelectedExercises()
                     }
                 }
@@ -143,9 +150,12 @@ class LogWorkoutFragment : Fragment() {
         }
     }
 
+    private fun updateLockState() {
+        navigationLockViewModel.setLocked(hasUnsavedChanges())
+    }
+
     private fun hasUnsavedChanges(): Boolean {
-        // Simple modification check for now
-        // In a full implementation, you'd compare the current adapter data against the original data
+        // Workout is modified if any field is changed or exercises added/removed
         return isWorkoutModified || 
                binding.etNotes.text.toString().isNotEmpty() || 
                exerciseLogAdapter.itemCount > 0
@@ -153,8 +163,8 @@ class LogWorkoutFragment : Fragment() {
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Discard Workout?")
-            .setMessage("You have unsaved changes. Are you sure you want to discard this workout log?")
+            .setTitle("Discard Changes?")
+            .setMessage("You have unsaved changes. Are you sure you want to discard them?")
             .setPositiveButton("Discard") { _, _ -> onDiscard() }
             .setNegativeButton("Keep Editing", null)
             .show()
@@ -194,6 +204,7 @@ class LogWorkoutFragment : Fragment() {
                 endCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
                 updateDateTimeDisplays()
                 isWorkoutModified = true
+                updateLockState()
             },
             startCalendar.get(Calendar.YEAR),
             startCalendar.get(Calendar.MONTH),
@@ -209,6 +220,7 @@ class LogWorkoutFragment : Fragment() {
                 calendar.set(Calendar.MINUTE, minute)
                 updateDateTimeDisplays()
                 isWorkoutModified = true
+                updateLockState()
             },
             calendar.get(Calendar.HOUR_OF_DAY),
             calendar.get(Calendar.MINUTE),
@@ -233,6 +245,7 @@ class LogWorkoutFragment : Fragment() {
             notes = binding.etNotes.text.toString().trim()
         )
 
+        navigationLockViewModel.setLocked(false)
         viewModel.logWorkout(log)
         Toast.makeText(requireContext(), if (existingLogId == null) "Workout logged!" else "Workout updated!", Toast.LENGTH_SHORT).show()
         viewModel.clearSelection()

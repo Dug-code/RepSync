@@ -14,7 +14,9 @@ import com.repsyncdemo.workout.data.model.ExerciseLog
 import com.repsyncdemo.workout.data.model.SetLog
 import com.repsyncdemo.workout.databinding.ItemExerciseLogBinding
 
-class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>() {
+class ExerciseLogAdapter(
+    private val onDataChanged: () -> Unit = {}
+) : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>() {
 
     private val exercises = mutableListOf<String>()
     private val setData = mutableMapOf<Int, MutableList<SetLogData>>()
@@ -53,6 +55,7 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
         exercises.add(exerciseName)
         setData[exercises.size - 1] = mutableListOf(SetLogData())
         notifyItemInserted(exercises.size - 1)
+        onDataChanged()
     }
 
     fun getExerciseLogs(): List<ExerciseLog> {
@@ -94,6 +97,7 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
             binding.btnAddSet.setOnClickListener {
                 setData[exerciseIndex]?.add(SetLogData())
                 updateSets(exerciseIndex)
+                onDataChanged()
             }
         }
 
@@ -121,6 +125,7 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                     override fun afterTextChanged(s: android.text.Editable?) {
                         data.reps = s.toString()
+                        onDataChanged()
                     }
                 })
 
@@ -129,16 +134,19 @@ class ExerciseLogAdapter : RecyclerView.Adapter<ExerciseLogAdapter.ViewHolder>()
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
                     override fun afterTextChanged(s: android.text.Editable?) {
                         data.weight = s.toString()
+                        onDataChanged()
                     }
                 })
 
                 cbCompleted.setOnCheckedChangeListener { _, isChecked ->
                     data.completed = isChecked
+                    onDataChanged()
                 }
 
                 btnRemoveSet.setOnClickListener {
                     sets.removeAt(setIndex)
                     updateSets(exerciseIndex)
+                    onDataChanged()
                 }
 
                 binding.layoutSets.addView(setView)

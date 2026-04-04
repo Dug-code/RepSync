@@ -3,6 +3,8 @@ package com.repsyncdemo.workout.ui.profile
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +21,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentSettingsBinding
 import com.repsyncdemo.workout.ui.auth.LoginActivity
+import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 
 class SettingsFragment : Fragment() {
@@ -26,6 +29,7 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
     private val profileViewModel: ProfileViewModel by activityViewModels()
+    private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,6 +48,7 @@ class SettingsFragment : Fragment() {
             override fun handleOnBackPressed() {
                 if (hasUnsavedChanges()) {
                     showUnsavedChangesDialog {
+                        navigationLockViewModel.setLocked(false)
                         isEnabled = false
                         requireActivity().onBackPressedDispatcher.onBackPressed()
                     }
@@ -54,6 +59,8 @@ class SettingsFragment : Fragment() {
             }
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+
+        setupChangeListeners()
 
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
@@ -126,6 +133,7 @@ class SettingsFragment : Fragment() {
 
         profileViewModel.profileResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess {
+                navigationLockViewModel.setLocked(false)
                 Toast.makeText(requireContext(), "Settings saved", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
             }
@@ -142,8 +150,36 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private fun setupChangeListeners() {
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateLockState()
+            }
+        }
+
+        binding.etUsername.addTextChangedListener(watcher)
+        binding.etBio.addTextChangedListener(watcher)
+        binding.etProfilePicUrl.addTextChangedListener(watcher)
+        binding.etInstagramUrl.addTextChangedListener(watcher)
+        binding.etFacebookUrl.addTextChangedListener(watcher)
+        binding.etTwitterUrl.addTextChangedListener(watcher)
+        binding.etHeightFeet.addTextChangedListener(watcher)
+        binding.etHeightInches.addTextChangedListener(watcher)
+
+        binding.toggleTheme.addOnButtonCheckedListener { _, _, _ -> updateLockState() }
+        binding.switchHeightPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
+        binding.switchWeightPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
+        binding.switchWorkoutsPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
+    }
+
+    private fun updateLockState() {
+        navigationLockViewModel.setLocked(hasUnsavedChanges())
+    }
+
     private fun hasUnsavedChanges(): Boolean {
-        val original = profileViewModel.currentProfile.value ?: return false
+        val original = profileViewModel.myProfile.value ?: return false
         
         val currentFeet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
         val currentInches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
@@ -209,7 +245,7 @@ class SettingsFragment : Fragment() {
             return
         }
 
-        val currentProfile = profileViewModel.currentProfile.value
+        val currentProfile = profileViewModel.myProfile.value
         currentProfile?.let {
             val updatedProfile = it.copy(
                 username = username,

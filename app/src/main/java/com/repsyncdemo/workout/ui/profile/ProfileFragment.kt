@@ -89,14 +89,9 @@ class ProfileFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        binding.btnBack.setOnClickListener {
-            findNavController().popBackStack()
-        }
-
         if (targetUserId == null) {
             binding.btnSettings.visibility = View.VISIBLE
             binding.btnTrophyShelf.visibility = View.VISIBLE
-            binding.btnBack.visibility = View.GONE
             binding.btnFriendAction.visibility = View.GONE
             
             binding.btnSettings.setOnClickListener {
@@ -108,7 +103,6 @@ class ProfileFragment : Fragment() {
         } else {
             binding.btnSettings.visibility = View.GONE
             binding.btnTrophyShelf.visibility = View.GONE
-            binding.btnBack.visibility = View.VISIBLE
             binding.btnFriendAction.visibility = View.VISIBLE
         }
     }

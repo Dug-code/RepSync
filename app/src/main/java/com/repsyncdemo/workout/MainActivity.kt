@@ -2,6 +2,8 @@ package com.repsyncdemo.workout
 
 import android.os.Bundle
 import android.view.View
+import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -9,10 +11,12 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.ActivityMainBinding
+import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private val navigationLockViewModel: NavigationLockViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,11 +47,34 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.bottomNav.setupWithNavController(navController)
+
+        // Prevent tab switching when locked with a confirmation dialog
+        binding.bottomNav.setOnItemSelectedListener { item ->
+            if (navigationLockViewModel.isLocked.value == true) {
+                AlertDialog.Builder(this)
+                    .setTitle("Unsaved Changes")
+                    .setMessage("You have unsaved changes. Are you sure you want to discard them?")
+                    .setPositiveButton("Discard") { _, _ ->
+                        navigationLockViewModel.setLocked(false)
+                        navController.navigate(item.itemId)
+                    }
+                    .setNegativeButton("Keep Editing", null)
+                    .show()
+                false
+            } else {
+                if (item.itemId != navController.currentDestination?.id) {
+                    navController.navigate(item.itemId)
+                }
+                true
+            }
+        }
+
+        navigationLockViewModel.isLocked.observe(this) { isLocked ->
+            binding.bottomNav.alpha = if (isLocked) 0.5f else 1.0f
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        // This ensures that the Action Bar back button triggers the OnBackPressedDispatcher
-        // which will catch our "Unsaved Changes" warnings in fragments.
         onBackPressedDispatcher.onBackPressed()
         return true
     }

@@ -2,6 +2,8 @@ package com.repsyncdemo.workout.ui.workout
 
 import android.app.AlertDialog
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +26,7 @@ import com.repsyncdemo.workout.ui.adapter.ExerciseInputAdapter
 import com.repsyncdemo.workout.ui.dialogs.ShowExercisePickerDialog
 import com.repsyncdemo.workout.util.DragToReorderCallBack
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
+import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import kotlinx.coroutines.launch
@@ -41,6 +44,7 @@ class CreateWorkoutFragment : Fragment() {
     private val workoutViewModel: WorkoutViewModel by activityViewModels()
     private val feedViewModel: FeedViewModel by activityViewModels()
     private val profileViewModel: ProfileViewModel by activityViewModels()
+    private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     private lateinit var exerciseInputAdapter: ExerciseInputAdapter
 
@@ -61,6 +65,7 @@ class CreateWorkoutFragment : Fragment() {
             override fun handleOnBackPressed() {
                 if (hasUnsavedChanges()) {
                     showUnsavedChangesDialog {
+                        navigationLockViewModel.setLocked(false)
                         isEnabled = false
                         requireActivity().onBackPressedDispatcher.onBackPressed()
                     }
@@ -71,6 +76,8 @@ class CreateWorkoutFragment : Fragment() {
             }
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+
+        setupChangeListeners()
 
         // Initialize user profile to ensure username is available for sharing
         profileViewModel.loadProfile()
@@ -89,6 +96,7 @@ class CreateWorkoutFragment : Fragment() {
                 fromPosition,
                 toPosition
             )
+            updateLockState()
         }
 
         //attaches drag controller to the RecyclerView
@@ -105,6 +113,7 @@ class CreateWorkoutFragment : Fragment() {
         // Button listeners
         binding.btnAddExercise.setOnClickListener {
             exerciseInputAdapter.addExercise()
+            updateLockState()
         }
 
         //Click listener that passes info to the exercise picker dialog
@@ -120,6 +129,7 @@ class CreateWorkoutFragment : Fragment() {
         // Observe results of the save operation from the ViewModel
         workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess { workoutId ->
+                navigationLockViewModel.setLocked(false)
                 // If the workout is public, create a feed post automatically
                 if (binding.switchPublic.isChecked) {
                     val username = profileViewModel.currentProfile.value?.username ?: ""
@@ -147,11 +157,30 @@ class CreateWorkoutFragment : Fragment() {
                 workoutViewModel.selectedExercises.collect { exerciseName ->
                     if (!exerciseName.isNullOrEmpty()) {
                         exerciseInputAdapter.addExerciseFromLibrary(exerciseName)
+                        updateLockState()
                         workoutViewModel.clearSelectedExercises() // Prevent re-triggering
                     }
                 }
             }
         }
+    }
+
+    private fun setupChangeListeners() {
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateLockState()
+            }
+        }
+
+        binding.etName.addTextChangedListener(watcher)
+        binding.etDescription.addTextChangedListener(watcher)
+        binding.switchPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
+    }
+
+    private fun updateLockState() {
+        navigationLockViewModel.setLocked(hasUnsavedChanges())
     }
 
     private fun hasUnsavedChanges(): Boolean {
