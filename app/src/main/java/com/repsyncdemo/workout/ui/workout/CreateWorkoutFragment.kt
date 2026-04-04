@@ -1,10 +1,12 @@
 package com.repsyncdemo.workout.ui.workout
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -13,6 +15,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
 import com.repsyncdemo.workout.data.model.Workout
@@ -53,6 +56,22 @@ class CreateWorkoutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Handle Back Navigation with Warning
+        val backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasUnsavedChanges()) {
+                    showUnsavedChangesDialog {
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                    }
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+
         // Initialize user profile to ensure username is available for sharing
         profileViewModel.loadProfile()
 
@@ -79,7 +98,9 @@ class CreateWorkoutFragment : Fragment() {
 
 
         // Add an initial empty exercise row
-        exerciseInputAdapter.addExercise()
+        if (exerciseInputAdapter.itemCount == 0) {
+            exerciseInputAdapter.addExercise()
+        }
 
         // Button listeners
         binding.btnAddExercise.setOnClickListener {
@@ -131,6 +152,23 @@ class CreateWorkoutFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun hasUnsavedChanges(): Boolean {
+        val name = binding.etName.text.toString().trim()
+        val description = binding.etDescription.text.toString().trim()
+        val exercises = exerciseInputAdapter.getExercises().filter { it.name.isNotEmpty() }
+        
+        return name.isNotEmpty() || description.isNotEmpty() || exercises.isNotEmpty()
+    }
+
+    private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Discard Workout?")
+            .setMessage("You have unsaved changes. Are you sure you want to discard this workout?")
+            .setPositiveButton("Discard") { _, _ -> onDiscard() }
+            .setNegativeButton("Keep Editing", null)
+            .show()
     }
 
     /**

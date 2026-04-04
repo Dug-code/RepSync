@@ -7,6 +7,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -36,6 +38,22 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Handle Back Navigation with Warning
+        val backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (hasUnsavedChanges()) {
+                    showUnsavedChangesDialog {
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                    }
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
 
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
@@ -103,73 +121,7 @@ class SettingsFragment : Fragment() {
         }
 
         binding.btnSaveSettings.setOnClickListener {
-            val username = binding.etUsername.text.toString().trim()
-            val bio = binding.etBio.text.toString().trim()
-            val picUrl = binding.etProfilePicUrl.text.toString().trim()
-            
-            val instagramUrl = binding.etInstagramUrl.text.toString().trim()
-            val facebookUrl = binding.etFacebookUrl.text.toString().trim()
-            val twitterUrl = binding.etTwitterUrl.text.toString().trim()
-            
-            val feet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
-            val inches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
-            val totalHeightInches = (feet * 12) + inches
-
-            val themePreference = if (binding.toggleTheme.checkedButtonId == R.id.btnLightTheme) "light" else "dark"
-            
-            val isHeightPublic = binding.switchHeightPublic.isChecked
-            val isWeightPublic = binding.switchWeightPublic.isChecked
-            val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
-
-            if (username.isEmpty()) {
-                binding.etUsername.error = "Username required"
-                return@setOnClickListener
-            }
-
-            if (!isValidUrl(instagramUrl, listOf("instagram.com"))) {
-                binding.etInstagramUrl.error = "Invalid Instagram URL"
-                return@setOnClickListener
-            }
-            if (!isValidUrl(facebookUrl, listOf("facebook.com"))) {
-                binding.etFacebookUrl.error = "Invalid Facebook URL"
-                return@setOnClickListener
-            }
-            if (!isValidUrl(twitterUrl, listOf("x.com", "twitter.com"))) {
-                binding.etTwitterUrl.error = "Invalid X/Twitter URL"
-                return@setOnClickListener
-            }
-
-            val currentProfile = profileViewModel.currentProfile.value
-            currentProfile?.let {
-                val updatedProfile = it.copy(
-                    username = username,
-                    bio = bio,
-                    profilePictureUrl = picUrl,
-                    instagramUrl = instagramUrl,
-                    facebookUrl = facebookUrl,
-                    twitterUrl = twitterUrl,
-                    heightInches = totalHeightInches,
-                    preferredUnit = "lbs",
-                    theme = themePreference,
-                    isHeightPublic = isHeightPublic,
-                    isWeightPublic = isWeightPublic,
-                    isWorkoutsPublic = isWorkoutsPublic
-                )
-                
-                // 1. Save theme to local preferences for instant startup next time
-                val prefs = requireContext().getSharedPreferences("settings", Context.MODE_PRIVATE)
-                prefs.edit().putString("theme", themePreference).apply()
-
-                // 2. Apply theme immediately
-                if (themePreference == "light") {
-                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-                } else {
-                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-                }
-
-                // 3. Sync to Firebase
-                profileViewModel.updateProfile(updatedProfile)
-            }
+            saveChanges()
         }
 
         profileViewModel.profileResult.observe(viewLifecycleOwner) { result ->
@@ -187,6 +139,106 @@ class SettingsFragment : Fragment() {
             val intent = Intent(requireContext(), LoginActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
+        }
+    }
+
+    private fun hasUnsavedChanges(): Boolean {
+        val original = profileViewModel.currentProfile.value ?: return false
+        
+        val currentFeet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
+        val currentInches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
+        val currentHeight = (currentFeet * 12) + currentInches
+
+        return binding.etUsername.text.toString() != original.username ||
+               binding.etBio.text.toString() != original.bio ||
+               binding.etProfilePicUrl.text.toString() != original.profilePictureUrl ||
+               binding.etInstagramUrl.text.toString() != original.instagramUrl ||
+               binding.etFacebookUrl.text.toString() != original.facebookUrl ||
+               binding.etTwitterUrl.text.toString() != original.twitterUrl ||
+               currentHeight != original.heightInches ||
+               binding.switchHeightPublic.isChecked != original.isHeightPublic ||
+               binding.switchWeightPublic.isChecked != original.isWeightPublic ||
+               binding.switchWorkoutsPublic.isChecked != original.isWorkoutsPublic ||
+               (binding.toggleTheme.checkedButtonId == R.id.btnLightTheme && original.theme != "light") ||
+               (binding.toggleTheme.checkedButtonId == R.id.btnDarkTheme && original.theme != "dark")
+    }
+
+    private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Unsaved Changes")
+            .setMessage("You have unsaved changes. Are you sure you want to discard them?")
+            .setPositiveButton("Discard") { _, _ -> onDiscard() }
+            .setNegativeButton("Keep Editing", null)
+            .show()
+    }
+
+    private fun saveChanges() {
+        val username = binding.etUsername.text.toString().trim()
+        val bio = binding.etBio.text.toString().trim()
+        val picUrl = binding.etProfilePicUrl.text.toString().trim()
+        
+        val instagramUrl = binding.etInstagramUrl.text.toString().trim()
+        val facebookUrl = binding.etFacebookUrl.text.toString().trim()
+        val twitterUrl = binding.etTwitterUrl.text.toString().trim()
+        
+        val feet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
+        val inches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
+        val totalHeightInches = (feet * 12) + inches
+
+        val themePreference = if (binding.toggleTheme.checkedButtonId == R.id.btnLightTheme) "light" else "dark"
+        
+        val isHeightPublic = binding.switchHeightPublic.isChecked
+        val isWeightPublic = binding.switchWeightPublic.isChecked
+        val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
+
+        if (username.isEmpty()) {
+            binding.etUsername.error = "Username required"
+            return
+        }
+
+        if (!isValidUrl(instagramUrl, listOf("instagram.com"))) {
+            binding.etInstagramUrl.error = "Invalid Instagram URL"
+            return
+        }
+        if (!isValidUrl(facebookUrl, listOf("facebook.com"))) {
+            binding.etFacebookUrl.error = "Invalid Facebook URL"
+            return
+        }
+        if (!isValidUrl(twitterUrl, listOf("x.com", "twitter.com"))) {
+            binding.etTwitterUrl.error = "Invalid X/Twitter URL"
+            return
+        }
+
+        val currentProfile = profileViewModel.currentProfile.value
+        currentProfile?.let {
+            val updatedProfile = it.copy(
+                username = username,
+                bio = bio,
+                profilePictureUrl = picUrl,
+                instagramUrl = instagramUrl,
+                facebookUrl = facebookUrl,
+                twitterUrl = twitterUrl,
+                heightInches = totalHeightInches,
+                preferredUnit = "lbs",
+                theme = themePreference,
+                isHeightPublic = isHeightPublic,
+                isWeightPublic = isWeightPublic,
+                isWorkoutsPublic = isWorkoutsPublic
+            )
+            
+            // 1. Save theme locally
+            val prefs = requireContext().getSharedPreferences("settings", Context.MODE_PRIVATE)
+            prefs.edit().putString("theme", themePreference).apply()
+
+            // 2. Apply theme
+            if (themePreference == "light") {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
+            } else {
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+            }
+
+            // 3. Sync to Firebase
+            profileViewModel.updateProfile(updatedProfile)
         }
     }
 
