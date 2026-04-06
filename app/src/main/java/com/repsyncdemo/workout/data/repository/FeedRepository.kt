@@ -103,6 +103,15 @@ class FeedRepository {
         }
     }
 
+    suspend fun updatePost(postId: String, description: String): Result<Unit> {
+        return try {
+            feedCollection.document(postId).update("description", description).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun toggleLike(postId: String): Result<Unit> {
         return try {
             val docRef = feedCollection.document(postId)

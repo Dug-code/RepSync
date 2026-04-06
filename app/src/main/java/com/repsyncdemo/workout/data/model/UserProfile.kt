@@ -12,7 +12,7 @@ data class UserProfile(
     val usernameLowercase: String = "", // Added for case-insensitive search
     val bio: String = "",
     val email: String = "",
-    val profilePictureUrl: String = "",
+    val profilePictureUrl: String = "red",
     val heightInches: Int = 0,
     val weightLbs: Double = 0.0,
     val totalRestDays: Int = 0,

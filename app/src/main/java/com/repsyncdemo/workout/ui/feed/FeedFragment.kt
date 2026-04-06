@@ -6,7 +6,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -61,6 +64,12 @@ class FeedFragment : Fragment() {
             },
             onLikeClick = { postId ->
                 feedViewModel.toggleLike(postId)
+            },
+            onDeleteClick = { postId ->
+                feedViewModel.deletePost(postId)
+            },
+            onEditChatClick = { post ->
+                showEditChatDialog(post.id, post.description)
             }
         )
 
@@ -80,6 +89,10 @@ class FeedFragment : Fragment() {
             binding.progressBar.visibility = View.GONE
         }
 
+        feedViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
+            feedAdapter.updateProfiles(profiles)
+        }
+
         feedViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         }
@@ -91,6 +104,24 @@ class FeedFragment : Fragment() {
                 binding.etChatMessage.setText("")
             }
         }
+    }
+
+    private fun showEditChatDialog(postId: String, currentText: String) {
+        val input = EditText(requireContext())
+        input.setText(currentText)
+        input.setSelection(currentText.length)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Edit Chat Message")
+            .setView(input)
+            .setPositiveButton("Update") { _, _ ->
+                val newText = input.text.toString().trim()
+                if (newText.isNotEmpty()) {
+                    feedViewModel.updateChatMessage(postId, newText)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupTabs() {

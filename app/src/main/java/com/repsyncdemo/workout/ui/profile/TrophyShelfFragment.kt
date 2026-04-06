@@ -34,10 +34,6 @@ class TrophyShelfFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnBack.setOnClickListener {
-            findNavController().popBackStack()
-        }
-
         val trophyAdapter = TrophyAdapter { trophy ->
             // Pin Trophy logic
             profileViewModel.currentProfile.value?.let { profile ->

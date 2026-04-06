@@ -1,5 +1,6 @@
 package com.repsyncdemo.workout.ui.adapter
 
+import android.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
+import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.databinding.ItemFeedPostBinding
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -20,11 +22,21 @@ import java.util.Locale
 class FeedAdapter(
     private val onUserClick: (String) -> Unit,
     private val onLikeClick: (String) -> Unit,
-    private val onDeleteClick: ((String) -> Unit)? = null
+    private val onDeleteClick: (String) -> Unit,
+    private val onEditChatClick: ((FeedPost) -> Unit)? = null
 ) : ListAdapter<FeedPost, FeedAdapter.ViewHolder>(FeedDiffCallback()) {
 
     private val dateFormat = SimpleDateFormat("MMM dd 'at' h:mm a", Locale.getDefault())
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+    
+    private var userProfiles: Map<String, UserProfile> = mutableMapOf()
+
+    fun updateProfiles(profiles: Map<String, UserProfile>) {
+        val merged = userProfiles.toMutableMap()
+        merged.putAll(profiles)
+        this.userProfiles = merged
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFeedPostBinding.inflate(
@@ -42,21 +54,15 @@ class FeedAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(post: FeedPost) {
-            binding.tvUsername.text = "@${post.username}"
+            val latestProfile = userProfiles[post.userId]
+            val displayUsername = latestProfile?.username ?: post.username
+            val displayProfilePic = latestProfile?.profilePictureUrl ?: post.userProfilePicture
+
+            binding.tvUsername.text = "@$displayUsername"
             binding.tvUsername.setOnClickListener { onUserClick(post.userId) }
             binding.ivUserProfile.setOnClickListener { onUserClick(post.userId) }
 
-            // Load profile picture
-            if (post.userProfilePicture.isNotEmpty()) {
-                binding.ivUserProfile.load(post.userProfilePicture) {
-                    crossfade(true)
-                    placeholder(android.graphics.drawable.ColorDrawable(0xFFEEEEEE.toInt()))
-                    error(android.R.drawable.ic_menu_gallery)
-                    transformations(CircleCropTransformation())
-                }
-            } else {
-                binding.ivUserProfile.setImageResource(android.R.drawable.ic_menu_gallery)
-            }
+            loadProfilePicture(displayProfilePic)
 
             when (post.type) {
                 FeedPostType.WORKOUT_SHARED -> {
@@ -84,7 +90,6 @@ class FeedAdapter(
             binding.tvDescription.text = if (post.type == FeedPostType.CHAT_MESSAGE) "" else post.description
             binding.tvTimestamp.text = dateFormat.format(Date(post.createdAt))
 
-            // Likes
             binding.tvLikeCount.text = post.likes.size.toString()
             val isLiked = post.likes.contains(currentUserId)
             binding.ivLike.setImageResource(
@@ -92,12 +97,61 @@ class FeedAdapter(
             )
             binding.btnLikeArea.setOnClickListener { onLikeClick(post.id) }
 
-            // Delete button visibility
-            if (post.userId == currentUserId && onDeleteClick != null) {
-                binding.btnDelete.visibility = View.VISIBLE
-                binding.btnDelete.setOnClickListener { onDeleteClick.invoke(post.id) }
+            // Handle Long Press for Delete/Edit
+            binding.postRoot.setOnLongClickListener {
+                if (post.userId == currentUserId) {
+                    showPostOptions(post)
+                }
+                true
+            }
+        }
+
+        private fun showPostOptions(post: FeedPost) {
+            val options = if (post.type == FeedPostType.CHAT_MESSAGE) {
+                arrayOf("Edit Chat", "Delete Post")
             } else {
-                binding.btnDelete.visibility = View.GONE
+                arrayOf("Delete Post")
+            }
+
+            AlertDialog.Builder(binding.root.context)
+                .setTitle("Post Options")
+                .setItems(options) { _, which ->
+                    when (options[which]) {
+                        "Delete Post" -> {
+                            AlertDialog.Builder(binding.root.context)
+                                .setTitle("Delete Post")
+                                .setMessage("Are you sure you want to delete this post?")
+                                .setPositiveButton("Delete") { _, _ -> onDeleteClick(post.id) }
+                                .setNegativeButton("Cancel", null)
+                                .show()
+                        }
+                        "Edit Chat" -> {
+                            onEditChatClick?.invoke(post)
+                        }
+                    }
+                }
+                .show()
+        }
+
+        private fun loadProfilePicture(url: String) {
+            if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
+                binding.ivUserProfile.load(url) {
+                    crossfade(true)
+                    placeholder(R.drawable.ic_profile_red)
+                    error(R.drawable.ic_profile_red)
+                    transformations(CircleCropTransformation())
+                }
+            } else {
+                val resId = when(url) {
+                    "red" -> R.drawable.ic_profile_red
+                    "blue" -> R.drawable.ic_profile_blue
+                    "green" -> R.drawable.ic_profile_green
+                    "yellow" -> R.drawable.ic_profile_yellow
+                    "purple" -> R.drawable.ic_profile_purple
+                    "grey" -> R.drawable.ic_profile_grey
+                    else -> R.drawable.ic_profile_red
+                }
+                binding.ivUserProfile.setImageResource(resId)
             }
         }
     }

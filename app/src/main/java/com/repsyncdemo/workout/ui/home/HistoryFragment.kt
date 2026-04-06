@@ -41,10 +41,6 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnBack.setOnClickListener {
-            findNavController().popBackStack()
-        }
-
         historyAdapter = HistoryAdapter { log ->
             val bundle = Bundle().apply { 
                 putString("workoutId", log.workoutId)

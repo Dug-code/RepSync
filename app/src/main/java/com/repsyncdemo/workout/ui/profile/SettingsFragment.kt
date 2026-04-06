@@ -8,15 +8,19 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.transform.CircleCropTransformation
+import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentSettingsBinding
@@ -62,7 +66,7 @@ class SettingsFragment : Fragment() {
 
         setupChangeListeners()
 
-        profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
+        profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.etUsername.setText(it.username)
                 binding.etBio.setText(it.bio)
@@ -103,13 +107,16 @@ class SettingsFragment : Fragment() {
                 binding.switchWeightPublic.isChecked = it.isWeightPublic
                 binding.switchWorkoutsPublic.isChecked = it.isWorkoutsPublic
                 
-                if (it.profilePictureUrl.isNotEmpty()) {
-                    binding.ivProfilePic.load(it.profilePictureUrl) {
-                        crossfade(true)
-                        transformations(CircleCropTransformation())
-                    }
-                }
+                updateProfilePicturePreview(it.profilePictureUrl)
             }
+        }
+
+        binding.btnChangePic.setOnClickListener {
+            showProfilePictureDialog()
+        }
+
+        binding.btnUseCustomUrl.setOnClickListener {
+            binding.tilProfilePicUrl.visibility = View.VISIBLE
         }
 
         binding.btnEnableInstagram.setOnClickListener {
@@ -150,6 +157,67 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private fun updateProfilePicturePreview(url: String) {
+        if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
+            binding.ivProfilePic.load(url) {
+                crossfade(true)
+                transformations(CircleCropTransformation())
+            }
+        } else {
+            // Handle local resource URLs or defaults
+            val resId = when(url) {
+                "red" -> R.drawable.ic_profile_red
+                "blue" -> R.drawable.ic_profile_blue
+                "green" -> R.drawable.ic_profile_green
+                "yellow" -> R.drawable.ic_profile_yellow
+                "purple" -> R.drawable.ic_profile_purple
+                else -> R.drawable.ic_profile_grey
+            }
+            binding.ivProfilePic.setImageResource(resId)
+        }
+    }
+
+    private fun showProfilePictureDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_profile_picture_picker, null)
+        val builder = AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog).setView(dialogView)
+        val dialog = builder.create()
+
+        val currentSelection = binding.etProfilePicUrl.text.toString()
+
+        val icons = mapOf(
+            dialogView.findViewById<ShapeableImageView>(R.id.iconRed) to "red",
+            dialogView.findViewById<ShapeableImageView>(R.id.iconBlue) to "blue",
+            dialogView.findViewById<ShapeableImageView>(R.id.iconGreen) to "green",
+            dialogView.findViewById<ShapeableImageView>(R.id.iconYellow) to "yellow",
+            dialogView.findViewById<ShapeableImageView>(R.id.iconPurple) to "purple",
+            dialogView.findViewById<ShapeableImageView>(R.id.iconGrey) to "grey"
+        )
+
+        // Highlight the currently selected icon
+        icons.forEach { (view, color) ->
+            if (color == currentSelection) {
+                view.strokeWidth = resources.getDimension(R.dimen.selected_stroke_width)
+            } else {
+                view.strokeWidth = 0f
+            }
+
+            view.setOnClickListener {
+                binding.etProfilePicUrl.setText(color)
+                binding.tilProfilePicUrl.visibility = View.GONE
+                updateProfilePicturePreview(color)
+                updateLockState()
+                dialog.dismiss()
+            }
+        }
+
+        dialogView.findViewById<View>(R.id.btnUseUrl).setOnClickListener {
+            binding.tilProfilePicUrl.visibility = View.VISIBLE
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
     private fun setupChangeListeners() {
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -169,9 +237,9 @@ class SettingsFragment : Fragment() {
         binding.etHeightInches.addTextChangedListener(watcher)
 
         binding.toggleTheme.addOnButtonCheckedListener { _, _, _ -> updateLockState() }
-        binding.switchHeightPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
-        binding.switchWeightPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
-        binding.switchWorkoutsPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
+        binding.switchHeightPublic.setOnClickListener { updateLockState() }
+        binding.switchWeightPublic.setOnClickListener { updateLockState() }
+        binding.switchWorkoutsPublic.setOnClickListener { updateLockState() }
     }
 
     private fun updateLockState() {

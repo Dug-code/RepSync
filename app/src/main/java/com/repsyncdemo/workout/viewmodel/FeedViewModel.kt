@@ -9,9 +9,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.GeoPoint
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
+import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.data.repository.FeedRepository
 import com.repsyncdemo.workout.data.repository.ProfileRepository
 import com.repsyncdemo.workout.data.repository.SocialRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -26,15 +28,19 @@ class FeedViewModel : ViewModel() {
     private val _feedPosts = MutableLiveData<List<FeedPost>>()
     val feedPosts: LiveData<List<FeedPost>> = _feedPosts
 
+    private val _userProfiles = MutableLiveData<Map<String, UserProfile>>(emptyMap())
+    val userProfiles: LiveData<Map<String, UserProfile>> = _userProfiles
+
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
     private var userLocation: GeoPoint? = null
+    private var profileObservationJob: Job? = null
     
     data class FeedFilters(
         val showChat: Boolean = true,
         val onlyFriends: Boolean = false,
-        val radius: Double? = null, // null means Global
+        val radius: Double? = null,
         val showMyPosts: Boolean = true
     )
     
@@ -80,11 +86,24 @@ class FeedViewModel : ViewModel() {
                     emit(emptyList())
                 }.collect { posts ->
                     _feedPosts.value = posts
+                    observeUserProfiles(posts)
                     _isLoading.value = false
                 }
             } catch (e: Exception) {
                 Log.e("FeedViewModel", "Failed to load feed", e)
                 _isLoading.value = false
+            }
+        }
+    }
+
+    private fun observeUserProfiles(posts: List<FeedPost>) {
+        val userIds = posts.map { it.userId }.distinct()
+        if (userIds.isEmpty()) return
+
+        profileObservationJob?.cancel()
+        profileObservationJob = viewModelScope.launch {
+            profileRepository.observeProfiles(userIds).collect { profiles ->
+                _userProfiles.value = profiles
             }
         }
     }
@@ -96,12 +115,18 @@ class FeedViewModel : ViewModel() {
             val post = FeedPost(
                 userId = currentUserId,
                 username = profile?.username ?: "User",
-                userProfilePicture = profile?.profilePictureUrl ?: "",
+                userProfilePicture = profile?.profilePictureUrl ?: "red",
                 description = message,
                 type = FeedPostType.CHAT_MESSAGE,
                 location = userLocation
             )
             repository.createPost(post)
+        }
+    }
+
+    fun updateChatMessage(postId: String, newText: String) {
+        viewModelScope.launch {
+            repository.updatePost(postId, newText)
         }
     }
 
@@ -117,7 +142,7 @@ class FeedViewModel : ViewModel() {
             val profile = profileRepository.getProfile().getOrNull()
             val postWithExtras = post.copy(
                 location = userLocation,
-                userProfilePicture = profile?.profilePictureUrl ?: ""
+                userProfilePicture = profile?.profilePictureUrl ?: "red"
             )
             repository.createPost(postWithExtras)
             _isLoading.value = false
@@ -128,5 +153,10 @@ class FeedViewModel : ViewModel() {
         viewModelScope.launch {
             repository.deletePost(postId)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        profileObservationJob?.cancel()
     }
 }

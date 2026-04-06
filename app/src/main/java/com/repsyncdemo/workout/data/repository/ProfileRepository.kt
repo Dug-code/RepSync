@@ -68,6 +68,30 @@ class ProfileRepository {
         awaitClose { listener.remove() }
     }
 
+    fun observeProfiles(userIds: List<String>): Flow<Map<String, UserProfile>> = callbackFlow {
+        if (userIds.isEmpty()) {
+            trySend(emptyMap())
+            return@callbackFlow
+        }
+
+        // Limit to 10 at a time for 'whereIn' (Firestore limit)
+        val batches = userIds.chunked(10)
+        val profileMap = mutableMapOf<String, UserProfile>()
+
+        val listeners = batches.map { batch ->
+            profilesCollection.whereIn("userId", batch)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) return@addSnapshotListener
+                    snapshot?.toObjects(UserProfile::class.java)?.forEach { profile ->
+                        profileMap[profile.userId] = profile
+                    }
+                    trySend(profileMap.toMap())
+                }
+        }
+
+        awaitClose { listeners.forEach { it.remove() } }
+    }
+
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
             profilesCollection.document(currentUserId).set(

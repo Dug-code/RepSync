@@ -9,7 +9,9 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
@@ -100,10 +102,16 @@ class ProfileFragment : Fragment() {
             binding.btnTrophyShelf.setOnClickListener {
                 findNavController().navigate(R.id.action_profile_to_trophyShelf)
             }
+            
+            // Set "My Posts" tab text
+            binding.profileTabs.getTabAt(0)?.text = "My Posts"
         } else {
             binding.btnSettings.visibility = View.GONE
             binding.btnTrophyShelf.visibility = View.GONE
             binding.btnFriendAction.visibility = View.VISIBLE
+            
+            // Default "Posts" tab text for others
+            binding.profileTabs.getTabAt(0)?.text = "Posts"
         }
     }
 
@@ -124,13 +132,17 @@ class ProfileFragment : Fragment() {
     private fun setupAdapters() {
         feedAdapter = FeedAdapter(
             onUserClick = { userId ->
-                if (userId != targetUserId) {
+                // Don't navigate if it's already the user's profile
+                if (userId != currentUserId && userId != targetUserId) {
                     val bundle = Bundle().apply { putString("userId", userId) }
                     findNavController().navigate(R.id.profileFragment, bundle)
                 }
             },
             onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
-            onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
+            onDeleteClick = { postId -> feedViewModel.deletePost(postId) },
+            onEditChatClick = { post ->
+                showEditChatDialog(post.id, post.description)
+            }
         )
         
         friendsAdapter = FriendAdapter { friendship -> 
@@ -149,7 +161,7 @@ class ProfileFragment : Fragment() {
         searchAdapter = UserSearchAdapter(
             currentUserId = currentUserId,
             onUserClick = { user ->
-                if (user.userId != targetUserId) {
+                if (user.userId != currentUserId && user.userId != targetUserId) {
                     val bundle = Bundle().apply { putString("userId", user.userId) }
                     findNavController().navigate(R.id.profileFragment, bundle)
                 }
@@ -192,6 +204,24 @@ class ProfileFragment : Fragment() {
             },
             onDelete = { goal -> goalViewModel.deleteGoal(goal.id) }
         )
+    }
+
+    private fun showEditChatDialog(postId: String, currentText: String) {
+        val input = EditText(requireContext())
+        input.setText(currentText)
+        input.setSelection(currentText.length)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Edit Chat Message")
+            .setView(input)
+            .setPositiveButton("Update") { _, _ ->
+                val newText = input.text.toString().trim()
+                if (newText.isNotEmpty()) {
+                    feedViewModel.updateChatMessage(postId, newText)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupSearch() {
@@ -292,11 +322,6 @@ class ProfileFragment : Fragment() {
                     binding.tvEmptyProfile.visibility = View.VISIBLE
                 }
             }
-            4 -> { // Analytics
-                binding.rvProfileContent.adapter = null
-                binding.tvEmptyProfile.text = "Analytics coming soon."
-                binding.tvEmptyProfile.visibility = View.VISIBLE
-            }
         }
     }
 
@@ -306,16 +331,7 @@ class ProfileFragment : Fragment() {
                 binding.tvUsername.text = "@${it.username}"
                 binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
                 
-                if (it.profilePictureUrl.isNotEmpty()) {
-                    binding.ivProfilePic.load(it.profilePictureUrl) {
-                        crossfade(true)
-                        placeholder(android.R.drawable.ic_menu_gallery)
-                        error(android.R.drawable.ic_menu_gallery)
-                        transformations(CircleCropTransformation())
-                    }
-                } else {
-                    binding.ivProfilePic.setImageResource(android.R.drawable.ic_menu_gallery)
-                }
+                updateProfilePicture(it.profilePictureUrl)
 
                 updateTrophyUI()
 
@@ -328,12 +344,8 @@ class ProfileFragment : Fragment() {
                 setupSocialIcon(binding.btnFacebook, it.facebookUrl)
                 setupSocialIcon(binding.btnTwitter, it.twitterUrl)
                 
-                // Hide Analytics tab if it's someone else's profile
-                if (targetUserId != null) {
-                    binding.profileTabs.getTabAt(4)?.view?.visibility = View.GONE
-                } else {
-                    binding.profileTabs.getTabAt(4)?.view?.visibility = View.VISIBLE
-                }
+                // Update feed adapter with the profile to ensure current picture is shown
+                feedAdapter.updateProfiles(mapOf(it.userId to it))
                 
                 if (binding.profileTabs.selectedTabPosition == 2) refreshCurrentTab()
             }
@@ -388,6 +400,33 @@ class ProfileFragment : Fragment() {
         // Observe workout logs and profile to update trophy
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
         profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
+        
+        // Observe user profiles from feed view model to ensure latest pictures are shown in profile feed tab
+        feedViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
+            feedAdapter.updateProfiles(profiles)
+        }
+    }
+
+    private fun updateProfilePicture(url: String) {
+        if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
+            binding.ivProfilePic.load(url) {
+                crossfade(true)
+                placeholder(android.R.drawable.ic_menu_gallery)
+                error(android.R.drawable.ic_menu_gallery)
+                transformations(CircleCropTransformation())
+            }
+        } else {
+            // Handle local resource URLs or defaults
+            val resId = when(url) {
+                "red" -> R.drawable.ic_profile_red
+                "blue" -> R.drawable.ic_profile_blue
+                "green" -> R.drawable.ic_profile_green
+                "yellow" -> R.drawable.ic_profile_yellow
+                "purple" -> R.drawable.ic_profile_purple
+                else -> R.drawable.ic_profile_grey
+            }
+            binding.ivProfilePic.setImageResource(resId)
+        }
     }
 
     private fun updateTrophyUI() {
