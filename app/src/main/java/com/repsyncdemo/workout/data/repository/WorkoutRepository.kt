@@ -1,9 +1,9 @@
 package com.repsyncdemo.workout.data.repository
 
-import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.repsyncdemo.workout.data.model.ExerciseDefinition
 import com.repsyncdemo.workout.data.model.RestDay
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.data.model.WorkoutLog
@@ -11,33 +11,26 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import java.util.*
 
 class WorkoutRepository {
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+    private val workoutCollection = db.collection("workouts")
+    private val logsCollection = db.collection("workout_logs")
+    private val restDaysCollection = db.collection("rest_days")
+    private val customExercisesCollection = db.collection("custom_exercises")
 
-    private val currentUserId: String
+    private val userId: String
         get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
 
-    private val workoutsCollection
-        get() = db.collection("workouts")
-
-    private val logsCollection
-        get() = db.collection("workout_logs")
-
-    private val restDaysCollection
-        get() = db.collection("rest_days")
-
-    fun getWorkouts(userId: String? = null): Flow<List<Workout>> = callbackFlow {
-        val id = userId ?: currentUserId
-        val listener = workoutsCollection
+    fun getWorkouts(targetUserId: String? = null): Flow<List<Workout>> = callbackFlow {
+        val id = targetUserId ?: userId
+        val listener = workoutCollection
             .whereEqualTo("userId", id)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.e("WorkoutRepository", "Error fetching workouts", error)
-                    trySend(emptyList())
+                    close(error)
                     return@addSnapshotListener
                 }
                 val workouts = snapshot?.toObjects(Workout::class.java) ?: emptyList()
@@ -48,7 +41,7 @@ class WorkoutRepository {
 
     suspend fun getWorkout(workoutId: String): Result<Workout> {
         return try {
-            val doc = workoutsCollection.document(workoutId).get().await()
+            val doc = workoutCollection.document(workoutId).get().await()
             val workout = doc.toObject(Workout::class.java)
             if (workout != null) Result.success(workout)
             else Result.failure(Exception("Workout not found"))
@@ -59,8 +52,8 @@ class WorkoutRepository {
 
     suspend fun addWorkout(workout: Workout): Result<String> {
         return try {
-            val workoutWithUser = workout.copy(userId = currentUserId)
-            val doc = workoutsCollection.add(workoutWithUser).await()
+            val workoutWithUser = workout.copy(userId = userId)
+            val doc = workoutCollection.add(workoutWithUser).await()
             Result.success(doc.id)
         } catch (e: Exception) {
             Result.failure(e)
@@ -69,7 +62,7 @@ class WorkoutRepository {
 
     suspend fun updateWorkout(workout: Workout): Result<Unit> {
         return try {
-            workoutsCollection.document(workout.id).set(workout.copy(userId = currentUserId)).await()
+            workoutCollection.document(workout.id).set(workout).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -78,15 +71,15 @@ class WorkoutRepository {
 
     suspend fun deleteWorkout(workoutId: String): Result<Unit> {
         return try {
-            workoutsCollection.document(workoutId).delete().await()
+            workoutCollection.document(workoutId).delete().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    fun getWorkoutLogs(userId: String? = null): Flow<List<WorkoutLog>> = callbackFlow {
-        val id = userId ?: currentUserId
+    fun getWorkoutLogs(targetUserId: String? = null): Flow<List<WorkoutLog>> = callbackFlow {
+        val id = targetUserId ?: userId
         val listener = logsCollection
             .whereEqualTo("userId", id)
             .addSnapshotListener { snapshot, error ->
@@ -100,63 +93,6 @@ class WorkoutRepository {
         awaitClose { listener.remove() }
     }
 
-    fun getRestDays(userId: String? = null): Flow<List<RestDay>> = callbackFlow {
-        val id = userId ?: currentUserId
-        val listener = restDaysCollection
-            .whereEqualTo("userId", id)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                val restDays = snapshot?.toObjects(RestDay::class.java) ?: emptyList()
-                trySend(restDays)
-            }
-        awaitClose { listener.remove() }
-    }
-
-    suspend fun addRestDay(restDay: RestDay): Result<Unit> {
-        return try {
-            val startOfDay = getStartOfDay(restDay.date)
-            val existing = restDaysCollection
-                .whereEqualTo("userId", currentUserId)
-                .whereEqualTo("date", startOfDay)
-                .get().await()
-            
-            if (existing.isEmpty) {
-                restDaysCollection.add(restDay.copy(userId = currentUserId, date = startOfDay)).await()
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun removeRestDay(timestamp: Long): Result<Unit> {
-        return try {
-            val startOfDay = getStartOfDay(timestamp)
-            val snapshot = restDaysCollection
-                .whereEqualTo("userId", currentUserId)
-                .whereEqualTo("date", startOfDay)
-                .get().await()
-            
-            snapshot.documents.forEach { it.reference.delete() }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    private fun getStartOfDay(timestamp: Long): Long {
-        val cal = Calendar.getInstance()
-        cal.timeInMillis = timestamp
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        return cal.timeInMillis
-    }
-
     suspend fun getWorkoutLog(logId: String): Result<WorkoutLog> {
         return try {
             val doc = logsCollection.document(logId).get().await()
@@ -168,22 +104,20 @@ class WorkoutRepository {
         }
     }
 
-    suspend fun updateWorkoutLog(log: WorkoutLog): Result<Unit> {
+    suspend fun addWorkoutLog(log: WorkoutLog): Result<String> {
         return try {
-            val logWithUser = log.copy(userId = currentUserId)
-            logsCollection.document(log.id).set(logWithUser).await()
-            Result.success(Unit)
+            val logWithUser = log.copy(userId = userId)
+            val doc = logsCollection.add(logWithUser).await()
+            Result.success(doc.id)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun addWorkoutLog(log: WorkoutLog): Result<String> {
+    suspend fun updateWorkoutLog(log: WorkoutLog): Result<Unit> {
         return try {
-            removeRestDay(log.completedAt)
-            val logWithUser = log.copy(userId = currentUserId)
-            val doc = logsCollection.add(logWithUser).await()
-            Result.success(doc.id)
+            logsCollection.document(log.id).set(log).await()
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -200,15 +134,58 @@ class WorkoutRepository {
 
     suspend fun deleteAllWorkoutLogs(): Result<Unit> {
         return try {
-            val snapshot = logsCollection
-                .whereEqualTo("userId", currentUserId)
-                .get().await()
-
+            val snapshot = logsCollection.whereEqualTo("userId", userId).get().await()
             val batch = db.batch()
-            for (doc in snapshot.documents) {
-                batch.delete(doc.reference)
-            }
+            snapshot.documents.forEach { batch.delete(it.reference) }
             batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getRestDays(): Flow<List<RestDay>> = callbackFlow {
+        val listener = restDaysCollection
+            .whereEqualTo("userId", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val days = snapshot?.toObjects(RestDay::class.java) ?: emptyList()
+                trySend(days)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun addRestDay(restDay: RestDay): Result<Unit> {
+        return try {
+            restDaysCollection.add(restDay.copy(userId = userId)).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // --- Custom Exercises ---
+
+    fun getCustomExercises(): Flow<List<ExerciseDefinition>> = callbackFlow {
+        val listener = customExercisesCollection
+            .whereEqualTo("userId", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val exercises = snapshot?.toObjects(ExerciseDefinition::class.java) ?: emptyList()
+                trySend(exercises)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun addCustomExercise(exercise: ExerciseDefinition): Result<Unit> {
+        return try {
+            customExercisesCollection.add(exercise.copy(userId = userId, isCustom = true)).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

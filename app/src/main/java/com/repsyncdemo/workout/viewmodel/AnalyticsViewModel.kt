@@ -41,9 +41,8 @@ class AnalyticsViewModel : ViewModel() {
         logs.sumOf { log ->
             log.exercises.sumOf { exercise ->
                 exercise.sets.sumOf { set ->
-                    // Logic check: ensure we are multiplying reps * weight
-                    // If you want to ONLY count checked boxes:
-                    if (set.completed) {
+                    // Logic check: ensure we are multiplying reps * weight for strength sets
+                    if (set.completed && set.weight != null && set.reps != null) {
                         set.weight * set.reps.toDouble()
                     } else {
                         0.0

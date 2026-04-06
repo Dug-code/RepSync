@@ -7,6 +7,9 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
@@ -18,6 +21,8 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.ExerciseDatabase
+import com.repsyncdemo.workout.data.model.ExerciseType
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
 import com.repsyncdemo.workout.data.model.Workout
@@ -31,11 +36,6 @@ import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import kotlinx.coroutines.launch
 
-/**
- * Fragment responsible for creating a new workout.
- * It allows users to input a name, description, and a list of exercises.
- * Users can also choose to share the workout publicly to the feed.
- */
 class CreateWorkoutFragment : Fragment() {
 
     private var _binding: FragmentCreateWorkoutBinding? = null
@@ -79,60 +79,44 @@ class CreateWorkoutFragment : Fragment() {
 
         setupChangeListeners()
 
-        // Initialize user profile to ensure username is available for sharing
         profileViewModel.loadProfile()
 
-        // Setup RecyclerView for exercise inputs
-        exerciseInputAdapter = ExerciseInputAdapter()
+        exerciseInputAdapter = ExerciseInputAdapter(onDataChanged = {
+            updateLockState()
+        })
 
         binding.rvExercises.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = exerciseInputAdapter
         }
 
-        //Initializes Drag controller to the RecyclerView
         val dragHandler = DragToReorderCallBack { fromPosition, toPosition ->
-            exerciseInputAdapter.notifyItemMoved(
-                fromPosition,
-                toPosition
-            )
-            updateLockState()
+            exerciseInputAdapter.moveExercise(fromPosition, toPosition)
         }
-
-        //attaches drag controller to the RecyclerView
         val itemTouchHelper = ItemTouchHelper(dragHandler)
         itemTouchHelper.attachToRecyclerView(binding.rvExercises)
 
-
-
-        // Add an initial empty exercise row
         if (exerciseInputAdapter.itemCount == 0) {
             exerciseInputAdapter.addExercise()
         }
 
-        // Button listeners
         binding.btnAddExercise.setOnClickListener {
-            exerciseInputAdapter.addExercise()
-            updateLockState()
+            showCustomExerciseDialog()
         }
 
-        //Click listener that passes info to the exercise picker dialog
         binding.btnPickExercise.setOnClickListener {
             ShowExercisePickerDialog().show(parentFragmentManager, "exercise_picker")
         }
-
 
         binding.btnSave.setOnClickListener {
             saveWorkout()
         }
 
-        // Observe results of the save operation from the ViewModel
         workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess { workoutId ->
                 navigationLockViewModel.setLocked(false)
-                // If the workout is public, create a feed post automatically
                 if (binding.switchPublic.isChecked) {
-                    val username = profileViewModel.currentProfile.value?.username ?: ""
+                    val username = profileViewModel.myProfile.value?.username ?: ""
                     val post = FeedPost(
                         username = username,
                         type = FeedPostType.WORKOUT_SHARED,
@@ -143,7 +127,6 @@ class CreateWorkoutFragment : Fragment() {
                     feedViewModel.createPost(post)
                 }
                 Toast.makeText(requireContext(), "Workout saved!", Toast.LENGTH_SHORT).show()
-                // Return to the previous screen on success
                 findNavController().popBackStack()
             }
             result.onFailure { e ->
@@ -151,18 +134,50 @@ class CreateWorkoutFragment : Fragment() {
             }
         }
 
-        // Observe exercise selection from library
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 workoutViewModel.selectedExercises.collect { exerciseName ->
                     if (!exerciseName.isNullOrEmpty()) {
                         exerciseInputAdapter.addExerciseFromLibrary(exerciseName)
                         updateLockState()
-                        workoutViewModel.clearSelectedExercises() // Prevent re-triggering
+                        workoutViewModel.clearSelectedExercises()
                     }
                 }
             }
         }
+    }
+
+    private fun showCustomExerciseDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_create_custom_exercise, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etCustomName)
+        val spinnerType = dialogView.findViewById<Spinner>(R.id.spinnerType)
+        val spinnerPrimary = dialogView.findViewById<Spinner>(R.id.spinnerPrimaryMuscle)
+        val spinnerSecondary = dialogView.findViewById<Spinner>(R.id.spinnerSecondaryMuscle)
+
+        val typeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, ExerciseType.values())
+        spinnerType.adapter = typeAdapter
+
+        val muscleGroups = listOf("None") + ExerciseDatabase.bodyParts
+        val muscleAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, muscleGroups)
+        spinnerPrimary.adapter = muscleAdapter
+        spinnerSecondary.adapter = muscleAdapter
+
+        AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("New Custom Exercise")
+            .setView(dialogView)
+            .setPositiveButton("Add") { _, _ ->
+                val name = etName.text.toString().trim()
+                val type = spinnerType.selectedItem as ExerciseType
+                val primary = spinnerPrimary.selectedItem.toString()
+                val secondary = spinnerSecondary.selectedItem.toString()
+                
+                if (name.isNotEmpty()) {
+                    exerciseInputAdapter.addExercise(name, type, primary, secondary)
+                    updateLockState()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupChangeListeners() {
@@ -186,13 +201,13 @@ class CreateWorkoutFragment : Fragment() {
     private fun hasUnsavedChanges(): Boolean {
         val name = binding.etName.text.toString().trim()
         val description = binding.etDescription.text.toString().trim()
-        val exercises = exerciseInputAdapter.getExercises().filter { it.name.isNotEmpty() }
+        val exercises = exerciseInputAdapter.getExercises()
         
         return name.isNotEmpty() || description.isNotEmpty() || exercises.isNotEmpty()
     }
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
-        AlertDialog.Builder(requireContext())
+        AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Discard Workout?")
             .setMessage("You have unsaved changes. Are you sure you want to discard this workout?")
             .setPositiveButton("Discard") { _, _ -> onDiscard() }
@@ -200,20 +215,15 @@ class CreateWorkoutFragment : Fragment() {
             .show()
     }
 
-    /**
-     * Gathers input from the UI, validates it, and requests the ViewModel to save the workout.
-     */
     private fun saveWorkout() {
         val name = binding.etName.text.toString().trim()
         val description = binding.etDescription.text.toString().trim()
 
-        // Basic validation for workout name
         if (name.isEmpty()) {
             binding.etName.error = "Name is required"
             return
         }
 
-        // Extract exercises from the adapter, ignoring any that haven't been named
         val exercises = exerciseInputAdapter.getExercises().filter { it.name.isNotEmpty() }
 
         if (exercises.isEmpty()) {
@@ -221,7 +231,6 @@ class CreateWorkoutFragment : Fragment() {
             return
         }
 
-        // Construct the workout object
         val workout = Workout(
             name = name,
             description = description,
@@ -229,13 +238,11 @@ class CreateWorkoutFragment : Fragment() {
             isPublic = binding.switchPublic.isChecked
         )
 
-        // Trigger the database save
         workoutViewModel.addWorkout(workout)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Clear binding reference to prevent memory leaks
         _binding = null
     }
 }

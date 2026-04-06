@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -16,23 +15,80 @@
         android:textSize="14sp"
         android:textColor="@color/text_secondary" />
 
-    <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/etReps"
-        android:layout_width="60dp"
+    <!-- Strength Inputs -->
+    <LinearLayout
+        android:id="@+id/layoutStrengthInputs"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="Reps"
-        android:inputType="number"
-        android:textSize="14sp"
-        android:layout_marginHorizontal="4dp" />
+        android:orientation="horizontal">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etReps"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:hint="Reps"
+            android:inputType="number"
+            android:textSize="14sp"
+            android:layout_marginHorizontal="4dp" />
 
-    <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/etWeight"
-        android:layout_width="60dp"
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etWeight"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:hint="Lbs"
+            android:inputType="numberDecimal"
+            android:textSize="14sp"
+            android:layout_marginEnd="4dp" />
+    </LinearLayout>
+
+    <!-- Cardio Inputs -->
+    <LinearLayout
+        android:id="@+id/layoutCardioInputs"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="Lbs"
-        android:inputType="numberDecimal"
-        android:textSize="14sp"
-        android:layout_marginEnd="4dp" />
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTimer"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
+            app:icon="@android:drawable/ic_media_play"
+            app:iconPadding="0dp"
+            app:iconSize="20dp"
+            app:iconTint="@color/primary" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etDuration"
+            android:layout_width="70dp"
+            android:layout_height="wrap_content"
+            android:hint="Time"
+            android:inputType="number"
+            android:textSize="14sp"
+            android:layout_marginHorizontal="4dp" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etDistance"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:hint="Dist"
+            android:inputType="numberDecimal"
+            android:textSize="14sp"
+            android:layout_marginEnd="4dp" />
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etFloors"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:hint="Floors"
+            android:inputType="number"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <CheckBox
         android:id="@+id/cbCompleted"

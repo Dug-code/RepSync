@@ -1,15 +1,20 @@
 package com.repsyncdemo.workout.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
+import coil.transform.CircleCropTransformation
 import com.google.firebase.auth.FirebaseAuth
+import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.Friendship
 import com.repsyncdemo.workout.databinding.ItemFriendBinding
 
 class FriendAdapter(
+    private val isMyProfile: Boolean,
     private val onRemove: (Friendship) -> Unit
 ) : ListAdapter<Friendship, FriendAdapter.ViewHolder>(FriendDiffCallback()) {
 
@@ -31,12 +36,27 @@ class FriendAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(friendship: Friendship) {
-            binding.tvUsername.text = if (friendship.requesterId == currentUserId) {
+            val isRequester = friendship.requesterId == currentUserId
+            
+            // Logic to determine which user in the friendship is the "friend" relative to currentUserId
+            // or relative to the profile owner being viewed.
+            // For simplicity, we show the username that is NOT the profile owner if we can identify it.
+            
+            binding.tvUsername.text = if (isRequester) {
                 friendship.receiverUsername
             } else {
                 friendship.requesterUsername
             }
-            binding.btnAction.setOnClickListener { onRemove(friendship) }
+
+            // Load default icon (placeholder) - in a full implementation, you'd fetch the actual profile here
+            binding.ivProfilePic.setImageResource(R.drawable.ic_profile_red)
+
+            if (isMyProfile) {
+                binding.btnAction.visibility = View.VISIBLE
+                binding.btnAction.setOnClickListener { onRemove(friendship) }
+            } else {
+                binding.btnAction.visibility = View.GONE
+            }
         }
     }
 

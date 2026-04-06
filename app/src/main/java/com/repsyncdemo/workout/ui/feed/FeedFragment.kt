@@ -84,7 +84,7 @@ class FeedFragment : Fragment() {
 
         feedViewModel.feedPosts.observe(viewLifecycleOwner) { posts ->
             feedAdapter.submitList(posts)
-            binding.tvEmpty.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
+            binding.layoutEmpty.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
             binding.rvFeed.visibility = if (posts.isEmpty()) View.GONE else View.VISIBLE
             binding.progressBar.visibility = View.GONE
         }
@@ -97,6 +97,11 @@ class FeedFragment : Fragment() {
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         }
         
+        binding.btnEmptyAction.setOnClickListener {
+            // "Discover Friends" button in empty state
+            binding.feedTabs.getTabAt(1)?.select()
+        }
+
         binding.btnSendChat.setOnClickListener {
             val message = binding.etChatMessage.text.toString()
             if (message.isNotBlank()) {

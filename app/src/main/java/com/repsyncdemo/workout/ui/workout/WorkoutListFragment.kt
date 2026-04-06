@@ -47,9 +47,13 @@ class WorkoutListFragment : Fragment() {
             findNavController().navigate(R.id.action_workoutList_to_createWorkout)
         }
 
+        binding.btnEmptyAction.setOnClickListener {
+            findNavController().navigate(R.id.action_workoutList_to_createWorkout)
+        }
+
         viewModel.workouts.observe(viewLifecycleOwner) { workouts ->
             workoutAdapter.submitList(workouts)
-            binding.tvEmpty.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
+            binding.layoutEmpty.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
             binding.rvWorkouts.visibility = if (workouts.isEmpty()) View.GONE else View.VISIBLE
         }
     }

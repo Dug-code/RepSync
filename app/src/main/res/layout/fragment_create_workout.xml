@@ -3,12 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
-    android:fillViewport="false">
+    android:background="?attr/android:windowBackground"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="20dp">
 
@@ -28,8 +28,8 @@
                 android:id="@+id/etName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/workout_name"
-                android:textColor="@color/text_primary"
+                android:hint="Workout Name"
+                android:textColor="?attr/colorOnBackground"
                 android:textStyle="bold" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -38,7 +38,7 @@
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusTopEnd="12dp"
@@ -50,89 +50,81 @@
                 android:id="@+id/etDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/workout_description"
+                android:hint="Workout Description (Optional)"
                 android:minLines="2"
-                android:textColor="@color/text_primary" />
+                android:textColor="?attr/colorOnBackground" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchPublic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Share to feed (Public)"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
+            android:layout_marginTop="12dp"
+            android:text="Share to community feed"
+            android:textColor="?attr/colorOnBackground"
             app:thumbTint="@color/primary"
             app:trackTint="@color/primary_dark" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="Exercises"
-                android:textColor="@color/text_primary"
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/textView2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginVertical="24dp"
-                android:text=" - Drag and drop to reorder exercises"
-                android:textColor="@color/text_primary" />
-        </LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Exercises"
+            android:textColor="?attr/colorOnBackground"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvExercises"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:nestedScrollingEnabled="false" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnAddExercise"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Add Exercise Manually"
-            android:textAllCaps="false"
-            android:textColor="@color/primary"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/primary" />
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnPickExercise"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Pick from Exercise Library"
-            android:textAllCaps="false"
-            android:textColor="@color/primary"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/primary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddExercise"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:text="+ Custom"
+                android:textAllCaps="false"
+                android:textColor="@color/primary"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/primary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPickExercise"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:text="Pick from Library"
+                android:textAllCaps="false"
+                android:textColor="@color/primary"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/primary" />
+        </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="32dp"
-            android:background="@drawable/bg_button_gradient"
+            android:backgroundTint="@color/primary"
             android:elevation="4dp"
-            android:text="@string/save"
+            android:text="Save Workout"
             android:textAllCaps="false"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:translationZ="2dp"
-            app:backgroundTint="@null"
             app:cornerRadius="16dp" />
 
     </LinearLayout>

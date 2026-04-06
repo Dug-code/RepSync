@@ -103,14 +103,11 @@ class ProfileFragment : Fragment() {
                 findNavController().navigate(R.id.action_profile_to_trophyShelf)
             }
             
-            // Set "My Posts" tab text
             binding.profileTabs.getTabAt(0)?.text = "My Posts"
         } else {
             binding.btnSettings.visibility = View.GONE
             binding.btnTrophyShelf.visibility = View.GONE
             binding.btnFriendAction.visibility = View.VISIBLE
-            
-            // Default "Posts" tab text for others
             binding.profileTabs.getTabAt(0)?.text = "Posts"
         }
     }
@@ -145,7 +142,7 @@ class ProfileFragment : Fragment() {
             }
         )
         
-        friendsAdapter = FriendAdapter { friendship -> 
+        friendsAdapter = FriendAdapter(isMyProfile = targetUserId == null) { friendship ->
             socialViewModel.removeFriendship(friendship.id)
             Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
         }

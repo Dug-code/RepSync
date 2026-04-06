@@ -9,7 +9,7 @@ data class WorkoutLog(
     val workoutId: String = "",
     val workoutName: String = "",
     val exercises: List<ExerciseLog> = emptyList(),
-    val startedAt: Long = System.currentTimeMillis() - 3600000, // Default 1 hour ago
+    val startedAt: Long = System.currentTimeMillis() - 3600000,
     val completedAt: Long = System.currentTimeMillis(),
     val durationMinutes: Int = 60,
     val notes: String = ""
@@ -17,11 +17,19 @@ data class WorkoutLog(
 
 data class ExerciseLog(
     val exerciseName: String = "",
+    val type: ExerciseType = ExerciseType.STRENGTH,
     val sets: List<SetLog> = emptyList()
 )
 
 data class SetLog(
-    val reps: Int = 0,
-    val weight: Double = 0.0,
+    // Strength fields
+    val reps: Int? = null,
+    val weight: Double? = null,
+    
+    // Cardio fields
+    val durationSeconds: Int? = null,
+    val distance: Double? = null,
+    val floors: Int? = null,
+
     val completed: Boolean = false
 )

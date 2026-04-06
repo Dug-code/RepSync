@@ -2,6 +2,7 @@ package com.repsyncdemo.workout.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,11 +26,16 @@ class FeedViewModel : ViewModel() {
     private val profileRepository = ProfileRepository()
     private val auth = FirebaseAuth.getInstance()
 
-    private val _feedPosts = MutableLiveData<List<FeedPost>>()
-    val feedPosts: LiveData<List<FeedPost>> = _feedPosts
-
+    private val _rawPosts = MutableLiveData<List<FeedPost>>()
+    
     private val _userProfiles = MutableLiveData<Map<String, UserProfile>>(emptyMap())
     val userProfiles: LiveData<Map<String, UserProfile>> = _userProfiles
+
+    // The exposed feed is a combination of raw posts and real-time profile data
+    val feedPosts = MediatorLiveData<List<FeedPost>>().apply {
+        addSource(_rawPosts) { posts -> value = enrichPosts(posts, _userProfiles.value ?: emptyMap()) }
+        addSource(_userProfiles) { profiles -> value = enrichPosts(_rawPosts.value ?: emptyList(), profiles) }
+    }
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -48,6 +54,20 @@ class FeedViewModel : ViewModel() {
 
     private val currentUserId: String
         get() = auth.currentUser?.uid ?: ""
+
+    private fun enrichPosts(posts: List<FeedPost>, profiles: Map<String, UserProfile>): List<FeedPost> {
+        return posts.map { post ->
+            val profile = profiles[post.userId]
+            if (profile != null) {
+                post.copy(
+                    username = profile.username,
+                    userProfilePicture = profile.profilePictureUrl
+                )
+            } else {
+                post
+            }
+        }
+    }
 
     fun setUserLocation(latitude: Double, longitude: Double) {
         userLocation = GeoPoint(latitude, longitude)
@@ -85,7 +105,7 @@ class FeedViewModel : ViewModel() {
                     Log.e("FeedViewModel", "Error in feed", e)
                     emit(emptyList())
                 }.collect { posts ->
-                    _feedPosts.value = posts
+                    _rawPosts.value = posts
                     observeUserProfiles(posts)
                     _isLoading.value = false
                 }

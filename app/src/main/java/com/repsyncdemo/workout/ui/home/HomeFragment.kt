@@ -81,6 +81,14 @@ class HomeFragment : Fragment() {
         binding.btnRestDay.setOnClickListener {
             showRestDayConfirmation()
         }
+
+        binding.btnEmptyAction.setOnClickListener {
+            if (binding.homeTabs.selectedTabPosition == 0) {
+                showStartWorkoutDialog()
+            } else {
+                findNavController().navigate(R.id.action_home_to_createWorkout)
+            }
+        }
     }
 
     private fun showRestDayConfirmation() {
@@ -140,6 +148,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun refreshTabContent() {
+        if (_binding == null) return
         val position = binding.homeTabs.selectedTabPosition
         val logs = workoutViewModel.workoutLogs.value ?: emptyList()
         val workouts = workoutViewModel.workouts.value ?: emptyList()
@@ -148,13 +157,27 @@ class HomeFragment : Fragment() {
             binding.rvHomeContent.adapter = historyAdapter
             val sortedLogs = logs.take(10)
             historyAdapter.submitList(sortedLogs)
-            binding.tvEmpty.visibility = if (sortedLogs.isEmpty()) View.VISIBLE else View.GONE
-            binding.tvEmpty.text = "No recent workouts logged."
+            
+            if (sortedLogs.isEmpty()) {
+                binding.layoutEmpty.visibility = View.VISIBLE
+                binding.tvEmptyTitle.text = "No workouts yet"
+                binding.tvEmptySubtitle.text = "Time to get active! Log your first workout."
+                binding.btnEmptyAction.text = "Start a Workout"
+            } else {
+                binding.layoutEmpty.visibility = View.GONE
+            }
         } else {
             binding.rvHomeContent.adapter = workoutAdapter
             workoutAdapter.submitList(workouts)
-            binding.tvEmpty.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
-            binding.tvEmpty.text = "No saved workouts found."
+            
+            if (workouts.isEmpty()) {
+                binding.layoutEmpty.visibility = View.VISIBLE
+                binding.tvEmptyTitle.text = "No saved routines"
+                binding.tvEmptySubtitle.text = "Create a custom workout plan to stay consistent."
+                binding.btnEmptyAction.text = "Create Routine"
+            } else {
+                binding.layoutEmpty.visibility = View.GONE
+            }
         }
     }
 

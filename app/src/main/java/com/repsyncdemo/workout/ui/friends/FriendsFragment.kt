@@ -48,7 +48,8 @@ class FriendsFragment : Fragment() {
 
         profileViewModel.loadProfile()
 
-        friendAdapter = FriendAdapter { friendship ->
+        // Pass isMyProfile = true since this fragment is for the current user's social management
+        friendAdapter = FriendAdapter(isMyProfile = true) { friendship ->
             socialViewModel.removeFriendship(friendship.id)
             Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
         }
