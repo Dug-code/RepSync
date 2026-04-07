@@ -8,13 +8,9 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -94,13 +90,6 @@ class SettingsFragment : Fragment() {
                 if (it.heightInches > 0) {
                     binding.etHeightFeet.setText((it.heightInches / 12).toString())
                     binding.etHeightInches.setText((it.heightInches % 12).toString())
-                }
-
-                // Check correct theme button based on profile
-                if (it.theme == "light") {
-                    binding.toggleTheme.check(R.id.btnLightTheme)
-                } else {
-                    binding.toggleTheme.check(R.id.btnDarkTheme)
                 }
 
                 binding.switchHeightPublic.isChecked = it.isHeightPublic
@@ -236,7 +225,6 @@ class SettingsFragment : Fragment() {
         binding.etHeightFeet.addTextChangedListener(watcher)
         binding.etHeightInches.addTextChangedListener(watcher)
 
-        binding.toggleTheme.addOnButtonCheckedListener { _, _, _ -> updateLockState() }
         binding.switchHeightPublic.setOnClickListener { updateLockState() }
         binding.switchWeightPublic.setOnClickListener { updateLockState() }
         binding.switchWorkoutsPublic.setOnClickListener { updateLockState() }
@@ -262,9 +250,7 @@ class SettingsFragment : Fragment() {
                currentHeight != original.heightInches ||
                binding.switchHeightPublic.isChecked != original.isHeightPublic ||
                binding.switchWeightPublic.isChecked != original.isWeightPublic ||
-               binding.switchWorkoutsPublic.isChecked != original.isWorkoutsPublic ||
-               (binding.toggleTheme.checkedButtonId == R.id.btnLightTheme && original.theme != "light") ||
-               (binding.toggleTheme.checkedButtonId == R.id.btnDarkTheme && original.theme != "dark")
+               binding.switchWorkoutsPublic.isChecked != original.isWorkoutsPublic
     }
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
@@ -289,8 +275,6 @@ class SettingsFragment : Fragment() {
         val inches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
         val totalHeightInches = (feet * 12) + inches
 
-        val themePreference = if (binding.toggleTheme.checkedButtonId == R.id.btnLightTheme) "light" else "dark"
-        
         val isHeightPublic = binding.switchHeightPublic.isChecked
         val isWeightPublic = binding.switchWeightPublic.isChecked
         val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
@@ -324,24 +308,13 @@ class SettingsFragment : Fragment() {
                 twitterUrl = twitterUrl,
                 heightInches = totalHeightInches,
                 preferredUnit = "lbs",
-                theme = themePreference,
+                theme = "dark",
                 isHeightPublic = isHeightPublic,
                 isWeightPublic = isWeightPublic,
                 isWorkoutsPublic = isWorkoutsPublic
             )
             
-            // 1. Save theme locally
-            val prefs = requireContext().getSharedPreferences("settings", Context.MODE_PRIVATE)
-            prefs.edit().putString("theme", themePreference).apply()
-
-            // 2. Apply theme
-            if (themePreference == "light") {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            }
-
-            // 3. Sync to Firebase
+            // Sync to Firebase
             profileViewModel.updateProfile(updatedProfile)
         }
     }

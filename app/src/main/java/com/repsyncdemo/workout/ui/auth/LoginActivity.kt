@@ -45,6 +45,9 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Force Dark Mode
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+
         if (viewModel.isLoggedIn) {
             checkProfileAndNavigate()
             return
@@ -115,12 +118,9 @@ class LoginActivity : AppCompatActivity() {
             val profileRepo = ProfileRepository()
             val result = profileRepo.getProfile()
 
-            result.onSuccess { profile ->
-                if (profile.theme == "light") {
-                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-                } else {
-                    AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-                }
+            result.onSuccess {
+                // Always Dark Mode
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
 
                 startActivity(Intent(this@LoginActivity, MainActivity::class.java))
                 finish()
