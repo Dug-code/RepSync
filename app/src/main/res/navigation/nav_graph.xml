@@ -37,6 +37,11 @@
         android:name="com.repsyncdemo.workout.ui.workout.CreateWorkoutFragment"
         android:label="@string/create_workout"
         tools:layout="@layout/fragment_create_workout" >
+        <argument
+            android:name="workoutId"
+            app:argType="string"
+            android:defaultValue="@null"
+            app:nullable="true" />
         <action
             android:id="@+id/action_createWorkoutFragment_to_showExercisePickerDialog"
             app:destination="@id/showExercisePickerDialog" />
@@ -53,6 +58,9 @@
         <action
             android:id="@+id/action_workoutDetail_to_logWorkout"
             app:destination="@id/logWorkoutFragment" />
+        <action
+            android:id="@+id/action_workoutDetail_to_editWorkout"
+            app:destination="@id/createWorkoutFragment" />
     </fragment>
 
     <fragment

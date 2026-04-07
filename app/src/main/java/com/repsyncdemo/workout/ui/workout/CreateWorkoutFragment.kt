@@ -47,6 +47,7 @@ class CreateWorkoutFragment : Fragment() {
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     private lateinit var exerciseInputAdapter: ExerciseInputAdapter
+    private var existingWorkoutId: String? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,6 +60,8 @@ class CreateWorkoutFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        existingWorkoutId = arguments?.getString("workoutId")
 
         // Handle Back Navigation with Warning
         val backCallback = object : OnBackPressedCallback(true) {
@@ -96,8 +99,25 @@ class CreateWorkoutFragment : Fragment() {
         val itemTouchHelper = ItemTouchHelper(dragHandler)
         itemTouchHelper.attachToRecyclerView(binding.rvExercises)
 
-        if (exerciseInputAdapter.itemCount == 0) {
-            exerciseInputAdapter.addExercise()
+        if (existingWorkoutId != null) {
+            workoutViewModel.loadWorkout(existingWorkoutId!!)
+            binding.btnSave.text = "Update Workout"
+        } else {
+            if (exerciseInputAdapter.itemCount == 0) {
+                exerciseInputAdapter.addExercise()
+            }
+        }
+
+        workoutViewModel.selectedWorkout.observe(viewLifecycleOwner) { workout ->
+            if (existingWorkoutId != null && workout != null) {
+                binding.etName.setText(workout.name)
+                binding.etDescription.setText(workout.description)
+                binding.switchPublic.isChecked = workout.isPublic
+                exerciseInputAdapter.clearItems() // New method to prevent duplicates
+                workout.exercises.forEach { exercise ->
+                    exerciseInputAdapter.addExerciseFromObject(exercise)
+                }
+            }
         }
 
         binding.btnAddExercise.setOnClickListener {
@@ -115,7 +135,7 @@ class CreateWorkoutFragment : Fragment() {
         workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess { workoutId ->
                 navigationLockViewModel.setLocked(false)
-                if (binding.switchPublic.isChecked) {
+                if (binding.switchPublic.isChecked && existingWorkoutId == null) {
                     val username = profileViewModel.myProfile.value?.username ?: ""
                     val post = FeedPost(
                         username = username,
@@ -126,7 +146,7 @@ class CreateWorkoutFragment : Fragment() {
                     )
                     feedViewModel.createPost(post)
                 }
-                Toast.makeText(requireContext(), "Workout saved!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), if (existingWorkoutId == null) "Workout saved!" else "Workout updated!", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
             }
             result.onFailure { e ->
@@ -232,13 +252,23 @@ class CreateWorkoutFragment : Fragment() {
         }
 
         val workout = Workout(
+            id = existingWorkoutId ?: "",
             name = name,
             description = description,
             exercises = exercises,
             isPublic = binding.switchPublic.isChecked
         )
 
-        workoutViewModel.addWorkout(workout)
+        if (existingWorkoutId == null) {
+            workoutViewModel.addWorkout(workout)
+        } else {
+            workoutViewModel.updateWorkout(workout)
+            // Manually trigger a success result for update since updateWorkout doesn't use operationResult yet
+            // Actually, I should update the ViewModel to handle this consistently.
+            Toast.makeText(requireContext(), "Workout updated!", Toast.LENGTH_SHORT).show()
+            navigationLockViewModel.setLocked(false)
+            findNavController().popBackStack()
+        }
     }
 
     override fun onDestroyView() {

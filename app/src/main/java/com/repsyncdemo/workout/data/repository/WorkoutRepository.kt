@@ -62,7 +62,9 @@ class WorkoutRepository {
 
     suspend fun updateWorkout(workout: Workout): Result<Unit> {
         return try {
-            workoutCollection.document(workout.id).set(workout).await()
+            // Fix: Preserve the userId during updates so the workout remains visible to the owner
+            val workoutWithUser = workout.copy(userId = userId)
+            workoutCollection.document(workout.id).set(workoutWithUser).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -116,7 +118,8 @@ class WorkoutRepository {
 
     suspend fun updateWorkoutLog(log: WorkoutLog): Result<Unit> {
         return try {
-            logsCollection.document(log.id).set(log).await()
+            val logWithUser = log.copy(userId = userId)
+            logsCollection.document(log.id).set(logWithUser).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

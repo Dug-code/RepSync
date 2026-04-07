@@ -6,11 +6,14 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prolificinteractive.materialcalendarview.CalendarDay
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentAnalyticsBinding
+import com.repsyncdemo.workout.ui.adapter.VolumeBreakdownAdapter
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import com.repsyncdemo.workout.viewmodel.TimeRange
 import java.text.NumberFormat
@@ -67,7 +70,11 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
             }
         }
 
-        // Card Clicks for Calendars
+        // Card Clicks
+        binding.cardTotalVolume.setOnClickListener {
+            showVolumeBreakdownDialog()
+        }
+
         binding.cardWorkouts.setOnClickListener {
             showCalendarDialog("Workout History", isWorkouts = true)
         }
@@ -82,19 +89,34 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
         }
     }
 
+    private fun showVolumeBreakdownDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_volume_breakdown, null)
+        val rvBreakdown = dialogView.findViewById<RecyclerView>(R.id.rvVolumeBreakdown)
+        val adapter = VolumeBreakdownAdapter()
+
+        rvBreakdown.layoutManager = LinearLayoutManager(requireContext())
+        rvBreakdown.adapter = adapter
+
+        viewModel.volumeBreakdown.observe(viewLifecycleOwner) { breakdown ->
+            adapter.submitList(breakdown)
+        }
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Exercise Volume Breakdown")
+            .setView(dialogView)
+            .setPositiveButton("Close", null)
+            .show()
+    }
+
     private fun showCalendarDialog(title: String, isWorkouts: Boolean) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_analytics_calendar, null)
         val calendarView = dialogView.findViewById<MaterialCalendarView>(R.id.calendarView)
         
-        // Use standard styles
         calendarView.setHeaderTextAppearance(R.style.CalendarHeaderStyle)
         calendarView.setDateTextAppearance(R.style.CalendarDateStyle)
         calendarView.setWeekDayTextAppearance(R.style.CalendarWeekStyle)
-
-        // Disable selection/tapping
         calendarView.selectionMode = MaterialCalendarView.SELECTION_MODE_NONE
 
-        // Add Decorators
         if (isWorkouts) {
             viewModel.filteredWorkouts.value?.let { logs ->
                 val primaryColor = ContextCompat.getColor(requireContext(), R.color.primary)

@@ -23,6 +23,12 @@ enum class TimeRange(val days: Int?, val label: String) {
     LIFETIME(null, "All")
 }
 
+data class ExerciseVolumeBreakdown(
+    val name: String,
+    val totalVolume: Double,
+    val workoutCount: Int
+)
+
 class AnalyticsViewModel : ViewModel() {
 
     private val repository = WorkoutRepository()
@@ -83,18 +89,47 @@ class AnalyticsViewModel : ViewModel() {
     }
 
     /**
-     * Total Volume - Now uses filteredWorkouts to respect the selected time range
+     * Total Volume (Filtered)
      */
     val totalVolume: LiveData<Double> = filteredWorkouts.map { logs ->
-        logs.sumOf { log ->
-            log.exercises.sumOf { exercise ->
-                exercise.sets.sumOf { set ->
+        logs.sumOf { calculateLogVolume(it) }
+    }
+
+    /**
+     * Volume breakdown by exercise
+     */
+    val volumeBreakdown: LiveData<List<ExerciseVolumeBreakdown>> = filteredWorkouts.map { logs ->
+        val breakdownMap = mutableMapOf<String, Pair<Double, MutableSet<String>>>() // Name -> (Volume, Set of workout IDs)
+
+        logs.forEach { log ->
+            log.exercises.forEach { exercise ->
+                val exerciseVolume = exercise.sets.sumOf { set ->
                     if (set.completed && set.weight != null && set.reps != null) {
                         set.weight * set.reps.toDouble()
-                    } else {
-                        0.0
-                    }
+                    } else 0.0
                 }
+                
+                if (exerciseVolume > 0) {
+                    val current = breakdownMap.getOrDefault(exercise.exerciseName, Pair(0.0, mutableSetOf()))
+                    breakdownMap[exercise.exerciseName] = Pair(
+                        current.first + exerciseVolume,
+                        (current.second + log.id).toMutableSet()
+                    )
+                }
+            }
+        }
+
+        breakdownMap.map { (name, stats) ->
+            ExerciseVolumeBreakdown(name, stats.first, stats.second.size)
+        }.sortedByDescending { it.totalVolume }
+    }
+
+    private fun calculateLogVolume(log: WorkoutLog): Double {
+        return log.exercises.sumOf { exercise ->
+            exercise.sets.sumOf { set ->
+                if (set.completed && set.weight != null && set.reps != null) {
+                    set.weight * set.reps.toDouble()
+                } else 0.0
             }
         }
     }

@@ -63,6 +63,25 @@ class ExerciseInputAdapter(
         onDataChanged()
     }
 
+    fun addExerciseFromObject(exercise: Exercise) {
+        items.add(ExerciseInputItem(
+            name = exercise.name,
+            sets = exercise.sets.toString(),
+            reps = exercise.reps.toString(),
+            weight = exercise.weight.toString(),
+            isBodyweight = exercise.isBodyWeight,
+            type = exercise.type,
+            primaryMuscle = exercise.primaryMuscleGroup,
+            secondaryMuscle = exercise.secondaryMuscleGroup
+        ))
+        notifyItemInserted(items.size - 1)
+    }
+
+    fun clearItems() {
+        items.clear()
+        notifyDataSetChanged()
+    }
+
     fun getExercises(): List<Exercise> {
         return items.map { item ->
             Exercise(
