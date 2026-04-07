@@ -1,6 +1,5 @@
 package com.repsyncdemo.workout.ui.adapter
 
-import android.app.AlertDialog
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +8,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.transform.CircleCropTransformation
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.FeedPost
@@ -113,12 +113,12 @@ class FeedAdapter(
                 arrayOf("Delete Post")
             }
 
-            AlertDialog.Builder(binding.root.context)
+            MaterialAlertDialogBuilder(binding.root.context, R.style.ThemeOverlay_App_MaterialAlertDialog)
                 .setTitle("Post Options")
                 .setItems(options) { _, which ->
                     when (options[which]) {
                         "Delete Post" -> {
-                            AlertDialog.Builder(binding.root.context)
+                            MaterialAlertDialogBuilder(binding.root.context, R.style.ThemeOverlay_App_MaterialAlertDialog)
                                 .setTitle("Delete Post")
                                 .setMessage("Are you sure you want to delete this post?")
                                 .setPositiveButton("Delete") { _, _ -> onDeleteClick(post.id) }

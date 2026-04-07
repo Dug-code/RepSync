@@ -37,6 +37,10 @@ data class UserProfile(
     @set:PropertyName("isWorkoutsPublic")
     var isWorkoutsPublic: Boolean = true,
 
+    @get:PropertyName("isFriendsListPublic")
+    @set:PropertyName("isFriendsListPublic")
+    var isFriendsListPublic: Boolean = true,
+
     val instagramUrl: String = "",
     val facebookUrl: String = "",
     val twitterUrl: String = "",

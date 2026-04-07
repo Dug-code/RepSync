@@ -1,12 +1,7 @@
 package com.repsyncdemo.workout.viewmodel
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.map
-import androidx.lifecycle.switchMap
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
+import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.RestDay
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.data.repository.WorkoutRepository
@@ -23,6 +18,8 @@ enum class TimeRange(val days: Int?, val label: String) {
     LIFETIME(null, "All")
 }
 
+data class StatItem(val name: String, val count: Int)
+
 data class ExerciseVolumeBreakdown(
     val name: String,
     val totalVolume: Double,
@@ -36,23 +33,14 @@ class AnalyticsViewModel : ViewModel() {
     private val _selectedTimeRange = MutableLiveData(TimeRange.LAST_30)
     val selectedTimeRange: LiveData<TimeRange> = _selectedTimeRange
 
-    /**
-     * Observe the raw logs from the repository
-     */
     val workoutLogs: LiveData<List<WorkoutLog>> = repository.getWorkoutLogs()
         .catch { emit(emptyList()) }
         .asLiveData()
 
-    /**
-     * Observe the rest days from the repository
-     */
     val restDays: LiveData<List<RestDay>> = repository.getRestDays()
         .catch { emit(emptyList()) }
         .asLiveData()
 
-    /**
-     * Filtered Workouts based on range
-     */
     val filteredWorkouts: LiveData<List<WorkoutLog>> = _selectedTimeRange.switchMap { range ->
         workoutLogs.map { logs ->
             if (range.days == null) logs
@@ -69,9 +57,6 @@ class AnalyticsViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Filtered Rest Days based on range
-     */
     val filteredRestDays: LiveData<List<RestDay>> = _selectedTimeRange.switchMap { range ->
         restDays.map { days ->
             if (range.days == null) days
@@ -88,19 +73,12 @@ class AnalyticsViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Total Volume (Filtered)
-     */
     val totalVolume: LiveData<Double> = filteredWorkouts.map { logs ->
         logs.sumOf { calculateLogVolume(it) }
     }
 
-    /**
-     * Volume breakdown by exercise
-     */
     val volumeBreakdown: LiveData<List<ExerciseVolumeBreakdown>> = filteredWorkouts.map { logs ->
-        val breakdownMap = mutableMapOf<String, Pair<Double, MutableSet<String>>>() // Name -> (Volume, Set of workout IDs)
-
+        val breakdownMap = mutableMapOf<String, Pair<Double, MutableSet<String>>>()
         logs.forEach { log ->
             log.exercises.forEach { exercise ->
                 val exerciseVolume = exercise.sets.sumOf { set ->
@@ -108,7 +86,6 @@ class AnalyticsViewModel : ViewModel() {
                         set.weight * set.reps.toDouble()
                     } else 0.0
                 }
-                
                 if (exerciseVolume > 0) {
                     val current = breakdownMap.getOrDefault(exercise.exerciseName, Pair(0.0, mutableSetOf()))
                     breakdownMap[exercise.exerciseName] = Pair(
@@ -118,18 +95,54 @@ class AnalyticsViewModel : ViewModel() {
                 }
             }
         }
-
-        breakdownMap.map { (name, stats) ->
-            ExerciseVolumeBreakdown(name, stats.first, stats.second.size)
-        }.sortedByDescending { it.totalVolume }
+        breakdownMap.map { ExerciseVolumeBreakdown(it.key, it.value.first, it.value.second.size) }
+            .sortedByDescending { it.totalVolume }
     }
 
-    private fun calculateLogVolume(log: WorkoutLog): Double {
-        return log.exercises.sumOf { exercise ->
-            exercise.sets.sumOf { set ->
-                if (set.completed && set.weight != null && set.reps != null) {
-                    set.weight * set.reps.toDouble()
-                } else 0.0
+    // --- Favorites Logic ---
+
+    val topWorkouts: LiveData<List<StatItem>> = filteredWorkouts.map { logs ->
+        logs.groupingBy { it.workoutName }.eachCount()
+            .map { StatItem(it.key, it.value) }
+            .sortedByDescending { it.count }
+            .take(10)
+    }
+
+    val topMuscleGroups: LiveData<List<StatItem>> = filteredWorkouts.map { logs ->
+        logs.flatMap { log -> 
+            log.exercises.mapNotNull { exercise ->
+                // Try to find muscle group from the static database if it's not in the log
+                ExerciseDatabase.getExerciseByName(exercise.exerciseName)?.primaryBodyPart
+            }
+        }.groupingBy { it }.eachCount()
+            .map { StatItem(it.key, it.value) }
+            .sortedByDescending { it.count }
+            .take(10)
+    }
+
+    val favoriteWorkout: LiveData<StatItem?> = topWorkouts.map { it.firstOrNull() }
+    val favoriteMuscle: LiveData<StatItem?> = topMuscleGroups.map { it.firstOrNull() }
+
+    // --- PR Tracking Logic ---
+
+    private val _selectedExerciseForPR = MutableLiveData<String?>(null)
+    val selectedExerciseForPR: LiveData<String?> = _selectedExerciseForPR
+
+    val availableExercises: LiveData<List<String>> = workoutLogs.map { logs ->
+        logs.flatMap { log -> log.exercises.map { it.exerciseName } }.distinct().sorted()
+    }
+
+    val prHistory: LiveData<List<Pair<Long, Double>>> = _selectedExerciseForPR.switchMap { exerciseName ->
+        workoutLogs.map { logs ->
+            if (exerciseName == null) emptyList()
+            else {
+                logs.filter { log -> log.exercises.any { it.exerciseName == exerciseName } }
+                    .map { log ->
+                        val maxWeight = log.exercises.find { it.exerciseName == exerciseName }
+                            ?.sets?.mapNotNull { it.weight }?.maxOrNull() ?: 0.0
+                        log.completedAt to maxWeight
+                    }
+                    .sortedBy { it.first }
             }
         }
     }
@@ -147,13 +160,17 @@ class AnalyticsViewModel : ViewModel() {
         }
     }
 
-    fun setTimeRange(range: TimeRange) {
-        _selectedTimeRange.value = range
-    }
-
-    fun clearAllHistory() {
-        viewModelScope.launch {
-            repository.deleteAllWorkoutLogs()
+    private fun calculateLogVolume(log: WorkoutLog): Double {
+        return log.exercises.sumOf { exercise ->
+            exercise.sets.sumOf { set ->
+                if (set.completed && set.weight != null && set.reps != null) {
+                    set.weight * set.reps.toDouble()
+                } else 0.0
+            }
         }
     }
+
+    fun setTimeRange(range: TimeRange) { _selectedTimeRange.value = range }
+    fun selectExerciseForPR(name: String) { _selectedExerciseForPR.value = name }
+    fun clearAllHistory() { viewModelScope.launch { repository.deleteAllWorkoutLogs() } }
 }

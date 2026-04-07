@@ -1,22 +1,25 @@
 package com.repsyncdemo.workout.ui.home
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.material.tabs.TabLayout
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayoutMediator
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentHomeBinding
-import com.repsyncdemo.workout.ui.adapter.HistoryAdapter
-import com.repsyncdemo.workout.ui.adapter.WorkoutAdapter
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class HomeFragment : Fragment() {
 
@@ -25,8 +28,8 @@ class HomeFragment : Fragment() {
     private val workoutViewModel: WorkoutViewModel by activityViewModels()
     private val profileViewModel: ProfileViewModel by activityViewModels()
 
-    private lateinit var workoutAdapter: WorkoutAdapter
-    private lateinit var historyAdapter: HistoryAdapter
+    private var logoClickCount = 0
+    private var lastClickTime: Long = 0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,29 +43,24 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setupAdapters()
+        setupViewPager()
         setupListeners()
-        setupTabs()
         observeData()
+        setupEasterEgg()
     }
 
-    private fun setupAdapters() {
-        workoutAdapter = WorkoutAdapter { workout ->
-            val bundle = Bundle().apply { putString("workoutId", workout.id) }
-            findNavController().navigate(R.id.action_home_to_workoutDetail, bundle)
-        }
-        
-        historyAdapter = HistoryAdapter { log ->
-            val bundle = Bundle().apply { 
-                putString("workoutId", log.workoutId)
-                putString("logId", log.id)
+    private fun setupViewPager() {
+        val adapter = object : FragmentStateAdapter(this) {
+            override fun getItemCount(): Int = 2
+            override fun createFragment(position: Int): Fragment {
+                return if (position == 0) HomeRecentFragment() else HomeSavedFragment()
             }
-            findNavController().navigate(R.id.logWorkoutFragment, bundle)
         }
+        binding.viewPager.adapter = adapter
 
-        binding.rvHomeContent.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-        }
+        TabLayoutMediator(binding.homeTabs, binding.viewPager) { tab, position ->
+            tab.text = if (position == 0) "Recent" else "Saved"
+        }.attach()
     }
 
     private fun setupListeners() {
@@ -81,18 +79,41 @@ class HomeFragment : Fragment() {
         binding.btnRestDay.setOnClickListener {
             showRestDayConfirmation()
         }
+    }
 
-        binding.btnEmptyAction.setOnClickListener {
-            if (binding.homeTabs.selectedTabPosition == 0) {
-                showStartWorkoutDialog()
+    private fun setupEasterEgg() {
+        binding.ivLogo.setOnClickListener {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastClickTime < 1000) { // Must click within 1 second of last click
+                logoClickCount++
             } else {
-                findNavController().navigate(R.id.action_home_to_createWorkout)
+                logoClickCount = 1
+            }
+            lastClickTime = currentTime
+
+            if (logoClickCount >= 5) {
+                triggerConfetti()
+                logoClickCount = 0
             }
         }
     }
 
+    private fun triggerConfetti() {
+        val primaryColor = ContextCompat.getColor(requireContext(), R.color.primary)
+        val party = Party(
+            speed = 0f,
+            maxSpeed = 30f,
+            damping = 0.9f,
+            spread = 360,
+            colors = listOf(primaryColor, 0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
+            position = Position.Relative(0.5, -0.1),
+            emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
+        )
+        binding.konfettiView.start(party)
+    }
+
     private fun showRestDayConfirmation() {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Log Rest Day")
             .setMessage("Ready to take a break? This will mark today as a rest day on your calendar and count towards your Recovery trophy.")
             .setPositiveButton("Confirm") { _, _ ->
@@ -103,16 +124,6 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    private fun setupTabs() {
-        binding.homeTabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab?) {
-                refreshTabContent()
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
-        })
-    }
-
     private fun observeData() {
         profileViewModel.myProfile.observe(viewLifecycleOwner) {
             updateCongratsMessage()
@@ -120,11 +131,6 @@ class HomeFragment : Fragment() {
         
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) {
             updateCongratsMessage()
-            refreshTabContent()
-        }
-
-        workoutViewModel.workouts.observe(viewLifecycleOwner) {
-            refreshTabContent()
         }
     }
 
@@ -141,57 +147,30 @@ class HomeFragment : Fragment() {
             }.timeInMillis
             
             val count = logs.count { it.completedAt >= thirtyDaysAgo }
-            binding.tvCongrats.text = "$greeting You worked out $count times in the last 30 days"
+            val timeText = if (count == 1) "time" else "times"
+            binding.tvCongrats.text = "$greeting You worked out $count $timeText in the last 30 days"
         } else {
             binding.tvCongrats.text = if (username.isNotEmpty()) "Congrats $username! Checking your progress..." else "Loading your progress..."
         }
     }
 
-    private fun refreshTabContent() {
-        if (_binding == null) return
-        val position = binding.homeTabs.selectedTabPosition
-        val logs = workoutViewModel.workoutLogs.value ?: emptyList()
-        val workouts = workoutViewModel.workouts.value ?: emptyList()
-
-        if (position == 0) {
-            binding.rvHomeContent.adapter = historyAdapter
-            val sortedLogs = logs.take(10)
-            historyAdapter.submitList(sortedLogs)
-            
-            if (sortedLogs.isEmpty()) {
-                binding.layoutEmpty.visibility = View.VISIBLE
-                binding.tvEmptyTitle.text = "No workouts yet"
-                binding.tvEmptySubtitle.text = "Time to get active! Log your first workout."
-                binding.btnEmptyAction.text = "Start a Workout"
-            } else {
-                binding.layoutEmpty.visibility = View.GONE
-            }
-        } else {
-            binding.rvHomeContent.adapter = workoutAdapter
-            workoutAdapter.submitList(workouts)
-            
-            if (workouts.isEmpty()) {
-                binding.layoutEmpty.visibility = View.VISIBLE
-                binding.tvEmptyTitle.text = "No saved routines"
-                binding.tvEmptySubtitle.text = "Create a custom workout plan to stay consistent."
-                binding.btnEmptyAction.text = "Create Routine"
-            } else {
-                binding.layoutEmpty.visibility = View.GONE
-            }
-        }
-    }
-
     private fun showStartWorkoutDialog() {
-        val options = arrayOf("Start Saved Workout", "Create New Workout")
-        AlertDialog.Builder(requireContext())
-            .setTitle("Start Workout")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> binding.homeTabs.getTabAt(1)?.select()
-                    1 -> findNavController().navigate(R.id.action_home_to_createWorkout)
-                }
-            }
-            .show()
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_start_workout, null)
+        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setView(dialogView)
+            .create()
+
+        dialogView.findViewById<View>(R.id.btnSavedWorkout).setOnClickListener {
+            binding.homeTabs.getTabAt(1)?.select()
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<View>(R.id.btnCreateNew).setOnClickListener {
+            findNavController().navigate(R.id.action_home_to_createWorkout)
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     override fun onDestroyView() {

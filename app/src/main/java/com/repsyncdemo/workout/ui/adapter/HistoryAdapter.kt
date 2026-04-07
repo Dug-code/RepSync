@@ -36,7 +36,8 @@ class HistoryAdapter(
             binding.tvWorkoutName.text = log.workoutName
             binding.tvDate.text = dateFormat.format(Date(log.completedAt))
             binding.tvDuration.text = "${log.durationMinutes} min"
-            binding.tvExerciseCount.text = "${log.exercises.size} exercises"
+            val count = log.exercises.size
+            binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
             binding.btnEdit.setOnClickListener { onEditClick(log) }
         }
     }

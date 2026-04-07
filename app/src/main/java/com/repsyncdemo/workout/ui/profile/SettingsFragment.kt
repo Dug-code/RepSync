@@ -8,19 +8,25 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.transform.CircleCropTransformation
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentSettingsBinding
 import com.repsyncdemo.workout.ui.auth.LoginActivity
+import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 
@@ -29,7 +35,10 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
     private val profileViewModel: ProfileViewModel by activityViewModels()
+    private val analyticsViewModel: AnalyticsViewModel by activityViewModels()
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
+
+    private var isInitialLoad = true
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -86,7 +95,6 @@ class SettingsFragment : Fragment() {
                     binding.btnEnableTwitter.visibility = View.GONE
                 }
 
-                // Load height
                 if (it.heightInches > 0) {
                     binding.etHeightFeet.setText((it.heightInches / 12).toString())
                     binding.etHeightInches.setText((it.heightInches % 12).toString())
@@ -95,8 +103,13 @@ class SettingsFragment : Fragment() {
                 binding.switchHeightPublic.isChecked = it.isHeightPublic
                 binding.switchWeightPublic.isChecked = it.isWeightPublic
                 binding.switchWorkoutsPublic.isChecked = it.isWorkoutsPublic
+                binding.switchFriendsPublic.isChecked = it.isFriendsListPublic
                 
                 updateProfilePicturePreview(it.profilePictureUrl)
+                
+                // Mark initial load as finished so listeners can start tracking changes
+                isInitialLoad = false
+                navigationLockViewModel.setLocked(false)
             }
         }
 
@@ -127,6 +140,14 @@ class SettingsFragment : Fragment() {
             saveChanges()
         }
 
+        binding.btnClearHistory.setOnClickListener {
+            showClearHistoryConfirmation()
+        }
+
+        binding.btnDeleteAccount.setOnClickListener {
+            showDeleteAccountFlow()
+        }
+
         profileViewModel.profileResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess {
                 navigationLockViewModel.setLocked(false)
@@ -153,7 +174,6 @@ class SettingsFragment : Fragment() {
                 transformations(CircleCropTransformation())
             }
         } else {
-            // Handle local resource URLs or defaults
             val resId = when(url) {
                 "red" -> R.drawable.ic_profile_red
                 "blue" -> R.drawable.ic_profile_blue
@@ -168,8 +188,11 @@ class SettingsFragment : Fragment() {
 
     private fun showProfilePictureDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_profile_picture_picker, null)
-        val builder = AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog).setView(dialogView)
-        val dialog = builder.create()
+        
+        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Choose Profile Picture")
+            .setView(dialogView)
+            .create()
 
         val currentSelection = binding.etProfilePicUrl.text.toString()
 
@@ -182,7 +205,6 @@ class SettingsFragment : Fragment() {
             dialogView.findViewById<ShapeableImageView>(R.id.iconGrey) to "grey"
         )
 
-        // Highlight the currently selected icon
         icons.forEach { (view, color) ->
             if (color == currentSelection) {
                 view.strokeWidth = resources.getDimension(R.dimen.selected_stroke_width)
@@ -207,12 +229,78 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
+    private fun showClearHistoryConfirmation() {
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Clear All Data?")
+            .setMessage("This will permanently delete all your workout logs and reset your stats. This cannot be undone.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Clear Everything") { _, _ ->
+                analyticsViewModel.clearAllHistory()
+                Toast.makeText(requireContext(), "History cleared", Toast.LENGTH_SHORT).show()
+            }
+            .show()
+    }
+
+    private fun showDeleteAccountFlow() {
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Delete Account?")
+            .setMessage("This action is permanent and will delete all your workout data, routines, and profile information. Are you sure you want to continue?")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Continue") { _, _ ->
+                showDeleteVerificationDialog()
+            }
+            .show()
+    }
+
+    private fun showDeleteVerificationDialog() {
+        val input = EditText(requireContext())
+        input.hint = "Type DELETE here"
+        input.setPadding(64, 32, 64, 32)
+
+        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Final Confirmation")
+            .setMessage("Please type the word \"DELETE\" below to confirm permanent account removal.")
+            .setView(input)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Delete Permanently", null)
+            .create()
+
+        dialog.setOnShowListener {
+            val deleteButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            deleteButton.isEnabled = false
+            deleteButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.error))
+
+            input.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: Editable?) {
+                    deleteButton.isEnabled = s.toString() == "DELETE"
+                }
+            })
+
+            deleteButton.setOnClickListener {
+                FirebaseAuth.getInstance().currentUser?.delete()?.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Toast.makeText(requireContext(), "Account deleted", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(requireContext(), LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(requireContext(), "Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
     private fun setupChangeListeners() {
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                updateLockState()
+                if (!isInitialLoad) updateLockState()
             }
         }
 
@@ -225,9 +313,10 @@ class SettingsFragment : Fragment() {
         binding.etHeightFeet.addTextChangedListener(watcher)
         binding.etHeightInches.addTextChangedListener(watcher)
 
-        binding.switchHeightPublic.setOnClickListener { updateLockState() }
-        binding.switchWeightPublic.setOnClickListener { updateLockState() }
-        binding.switchWorkoutsPublic.setOnClickListener { updateLockState() }
+        binding.switchHeightPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
+        binding.switchWeightPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
+        binding.switchWorkoutsPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
+        binding.switchFriendsPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
     }
 
     private fun updateLockState() {
@@ -235,6 +324,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun hasUnsavedChanges(): Boolean {
+        if (isInitialLoad) return false
         val original = profileViewModel.myProfile.value ?: return false
         
         val currentFeet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
@@ -250,11 +340,12 @@ class SettingsFragment : Fragment() {
                currentHeight != original.heightInches ||
                binding.switchHeightPublic.isChecked != original.isHeightPublic ||
                binding.switchWeightPublic.isChecked != original.isWeightPublic ||
-               binding.switchWorkoutsPublic.isChecked != original.isWorkoutsPublic
+               binding.switchWorkoutsPublic.isChecked != original.isWorkoutsPublic ||
+               binding.switchFriendsPublic.isChecked != original.isFriendsListPublic
     }
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Unsaved Changes")
             .setMessage("You have unsaved changes. Are you sure you want to discard them?")
             .setPositiveButton("Discard") { _, _ -> onDiscard() }
@@ -278,6 +369,7 @@ class SettingsFragment : Fragment() {
         val isHeightPublic = binding.switchHeightPublic.isChecked
         val isWeightPublic = binding.switchWeightPublic.isChecked
         val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
+        val isFriendsPublic = binding.switchFriendsPublic.isChecked
 
         if (username.isEmpty()) {
             binding.etUsername.error = "Username required"
@@ -311,10 +403,10 @@ class SettingsFragment : Fragment() {
                 theme = "dark",
                 isHeightPublic = isHeightPublic,
                 isWeightPublic = isWeightPublic,
-                isWorkoutsPublic = isWorkoutsPublic
+                isWorkoutsPublic = isWorkoutsPublic,
+                isFriendsListPublic = isFriendsPublic
             )
             
-            // Sync to Firebase
             profileViewModel.updateProfile(updatedProfile)
         }
     }

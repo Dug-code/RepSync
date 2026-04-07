@@ -83,6 +83,12 @@ dependencies {
     // Calendar View
     implementation("com.github.prolificinteractive:material-calendarview:2.0.1")
 
+    // Charts
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // Confetti
+    implementation("nl.dionsegijn:konfetti-xml:2.0.4")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

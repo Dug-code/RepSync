@@ -30,7 +30,8 @@ class WorkoutAdapter(
         fun bind(workout: Workout) {
             binding.tvName.text = workout.name
             binding.tvDescription.text = workout.description
-            binding.tvExerciseCount.text = "${workout.exercises.size} exercises"
+            val count = workout.exercises.size
+            binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
             binding.root.setOnClickListener { onClick(workout) }
         }
     }

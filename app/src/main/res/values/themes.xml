@@ -34,7 +34,7 @@
         <!-- Button styling -->
         <item name="materialButtonStyle">@style/Widget.App.Button</item>
 
-        <!-- Dialog styling - Explicitly forced dark -->
+        <!-- Dialog styling - Enhanced for soft edges and modern look -->
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
     </style>
 
@@ -55,13 +55,32 @@
         <item name="strokeColor">?attr/colorDivider</item>
     </style>
 
+    <!-- Modern Material Alert Dialog Styling -->
     <style name="ThemeOverlay.App.MaterialAlertDialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
         <item name="android:background">@color/card_background</item>
         <item name="android:windowBackground">@color/card_background</item>
         <item name="colorPrimary">@color/primary</item>
         <item name="colorSurface">@color/card_background</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.Dialog.Medium</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.App.Button.Dialog</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.App.Button.Dialog.Text</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Widget.App.Button.Dialog.Text</item>
+    </style>
+
+    <style name="Widget.App.Button.Dialog" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/primary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="rippleColor">@color/primary_light</item>
+    </style>
+
+    <style name="Widget.App.Button.Dialog.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="rippleColor">?attr/colorButtonInactive</item>
+    </style>
+
+    <style name="ShapeAppearance.App.Dialog.Medium" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerSize">28dp</item>
     </style>
 
     <style name="Theme.RepSync.NoActionBar" parent="Theme.RepSync">

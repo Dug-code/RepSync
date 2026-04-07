@@ -1,6 +1,8 @@
 package com.repsyncdemo.workout.ui.workout
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +11,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.databinding.FragmentWorkoutListBinding
 import com.repsyncdemo.workout.ui.adapter.WorkoutAdapter
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
@@ -20,6 +23,7 @@ class WorkoutListFragment : Fragment() {
     private val viewModel: WorkoutViewModel by activityViewModels()
 
     private lateinit var workoutAdapter: WorkoutAdapter
+    private var allWorkouts: List<Workout> = emptyList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,11 +55,36 @@ class WorkoutListFragment : Fragment() {
             findNavController().navigate(R.id.action_workoutList_to_createWorkout)
         }
 
+        setupSearch()
+
         viewModel.workouts.observe(viewLifecycleOwner) { workouts ->
-            workoutAdapter.submitList(workouts)
-            binding.layoutEmpty.visibility = if (workouts.isEmpty()) View.VISIBLE else View.GONE
-            binding.rvWorkouts.visibility = if (workouts.isEmpty()) View.GONE else View.VISIBLE
+            allWorkouts = workouts
+            filterWorkouts(binding.etSearch.text.toString())
         }
+    }
+
+    private fun setupSearch() {
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                filterWorkouts(s.toString())
+            }
+        })
+    }
+
+    private fun filterWorkouts(query: String) {
+        val filteredList = if (query.isEmpty()) {
+            allWorkouts
+        } else {
+            allWorkouts.filter { it.name.contains(query, ignoreCase = true) }
+        }
+        
+        workoutAdapter.submitList(filteredList)
+        
+        val isEmpty = filteredList.isEmpty()
+        binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+        binding.rvWorkouts.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
 
     override fun onDestroyView() {
