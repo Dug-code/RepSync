@@ -19,6 +19,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.repsyncdemo.workout.R
 
 class LoginActivity : AppCompatActivity() {
 
@@ -93,6 +94,17 @@ class LoginActivity : AppCompatActivity() {
         binding.tvRegister.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
+
+        // --- FORGOT PASSWORD: Click Listener ---
+        binding.tvForgotPassword.setOnClickListener {
+            val email = binding.etEmail.text.toString().trim()
+            if (email.isEmpty()) {
+                binding.etEmail.error = "Please enter your email to reset password"
+                return@setOnClickListener
+            }
+            // Trigger password reset via ViewModel
+            viewModel.resetPassword(email)
+        }
     }
 
     private fun observeViewModel() {
@@ -101,6 +113,8 @@ class LoginActivity : AppCompatActivity() {
             binding.btnLogin.isEnabled = !isLoading
             // --- CONTINUE WITH GOOGLE: Disable while loading ---
             binding.btnGoogle.isEnabled = !isLoading
+            // Disable forgot password while loading
+            binding.tvForgotPassword.isEnabled = !isLoading
         }
 
         viewModel.loginResult.observe(this) { result ->
@@ -109,6 +123,16 @@ class LoginActivity : AppCompatActivity() {
             }
             result.onFailure { e ->
                 Toast.makeText(this, e.message ?: "Login failed", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Observe password reset result
+        viewModel.resetPasswordResult.observe(this) { result ->
+            result.onSuccess {
+                Toast.makeText(this, getString(R.string.reset_password_sent), Toast.LENGTH_LONG).show()
+            }
+            result.onFailure { e ->
+                Toast.makeText(this, e.message ?: getString(R.string.reset_password_error), Toast.LENGTH_SHORT).show()
             }
         }
     }

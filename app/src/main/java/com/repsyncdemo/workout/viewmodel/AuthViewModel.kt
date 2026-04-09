@@ -14,7 +14,6 @@ class AuthViewModel : ViewModel() {
 
     private val repository = AuthRepository()
 
-
     private val auth = FirebaseAuth.getInstance()
 
     private val _loginResult = MutableLiveData<Result<FirebaseUser>>()
@@ -22,6 +21,10 @@ class AuthViewModel : ViewModel() {
 
     private val _registerResult = MutableLiveData<Result<FirebaseUser>>()
     val registerResult: LiveData<Result<FirebaseUser>> = _registerResult
+
+    // LiveData to observe the result of a password reset request
+    private val _resetPasswordResult = MutableLiveData<Result<Unit>>()
+    val resetPasswordResult: LiveData<Result<Unit>> = _resetPasswordResult
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -47,6 +50,18 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Initiates a password reset process by sending an email to the user via the AuthRepository.
+     * The result is posted to [resetPasswordResult].
+     */
+    fun resetPassword(email: String) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            val result = repository.sendPasswordResetEmail(email)
+            _resetPasswordResult.value = result
+            _isLoading.value = false
+        }
+    }
 
     fun signInWithGoogle(idToken: String) {
         _isLoading.value = true
