@@ -41,6 +41,16 @@ data class UserProfile(
     @set:PropertyName("isFriendsListPublic")
     var isFriendsListPublic: Boolean = true,
 
+    //isAdmin Distinction
+    @get:PropertyName("isAdmin")
+    @set:PropertyName("isAdmin")
+    var isAdmin: Boolean = false,
+
+    //is Moderator Distinction
+    @get:PropertyName("isModerator")
+    @set:PropertyName("isModerator")
+    var isModerator: Boolean = false,
+
     val instagramUrl: String = "",
     val facebookUrl: String = "",
     val twitterUrl: String = "",
