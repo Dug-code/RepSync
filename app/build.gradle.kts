@@ -88,6 +88,7 @@ dependencies {
 
     // Confetti
     implementation("nl.dionsegijn:konfetti-xml:2.0.4")
+    implementation("androidx.cardview:cardview:1.0.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

@@ -156,6 +156,12 @@ class FeedViewModel : ViewModel() {
         }
     }
 
+    fun toggleReaction(postId: String?, emoji: String) {
+        viewModelScope.launch {
+            repository.toggleReaction(postId, emoji)
+        }
+    }
+
     fun createPost(post: FeedPost) {
         _isLoading.value = true
         viewModelScope.launch {

@@ -1,17 +1,19 @@
 package com.repsyncdemo.workout.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
-import com.google.firebase.firestore.Query
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import kotlin.math.*
+import kotlin.math.asin
+import kotlin.math.cos
+import kotlin.math.pow
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class FeedRepository {
 
@@ -125,6 +127,31 @@ class FeedRepository {
                 updatedLikes.add(userId)
             }
             docRef.update("likes", updatedLikes).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun toggleReaction(postId: String?, emoji: String): Result<Unit> {
+        if (postId == null) return Result.failure(Exception("Post ID is null"))
+        return try {
+            val docRef = feedCollection.document(postId)
+            val doc = docRef.get().await()
+            val post = doc.toObject(FeedPost::class.java) ?: return Result.failure(Exception("Post not found"))
+
+            // Reactions are stored as Map<UserId, ReactionEmoji>
+            val updatedReactions = post.reactions.toMutableMap()
+            
+            if (updatedReactions[userId] == emoji) {
+                // If user already reacted with the same emoji removes it
+                updatedReactions.remove(userId)
+            } else {
+                // If user hasn't reacted or used a different emoji update it
+                updatedReactions[userId] = emoji
+            }
+            
+            docRef.update("reactions", updatedReactions).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

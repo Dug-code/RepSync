@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentFeedExploreBinding
 import com.repsyncdemo.workout.ui.adapter.FeedAdapter
+import com.repsyncdemo.workout.ui.dialogs.ReactionDialogFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 
 class FeedExploreFragment : Fragment() {
@@ -26,13 +27,17 @@ class FeedExploreFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         feedAdapter = FeedAdapter(
             onUserClick = { userId ->
                 val bundle = Bundle().apply { putString("userId", userId) }
                 findNavController().navigate(R.id.action_feed_to_profile, bundle)
             },
             onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
+            onReactionClick = { view, postId -> // Open the ReactionDialogFragment
+                val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
+                reactionDialog.show(childFragmentManager, "ReactionDialog")
+            },
             onDeleteClick = { postId -> feedViewModel.deletePost(postId) },
             onEditChatClick = { post ->
                 // Note: The parent FeedFragment handles the dialog, or we can add local handling if needed

@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.LayoutTabListBinding
 import com.repsyncdemo.workout.ui.adapter.FeedAdapter
+import com.repsyncdemo.workout.ui.dialogs.ReactionDialogFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 
@@ -40,6 +41,10 @@ class ProfilePostsFragment : Fragment() {
                     val bundle = Bundle().apply { putString("userId", userId) }
                     findNavController().navigate(R.id.profileFragment, bundle)
                 }
+            },
+            onReactionClick = { view, postId -> // Open the ReactionDialogFragment
+                val reactionDialog = ReactionDialogFragment.newInstance(postId)
+                reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
             onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
             onDeleteClick = { postId -> feedViewModel.deletePost(postId) }

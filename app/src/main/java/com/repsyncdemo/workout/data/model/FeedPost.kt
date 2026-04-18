@@ -18,7 +18,8 @@ data class FeedPost(
     val imageUrl: String = "",
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),
-    val likes: List<String> = emptyList()
+    val likes: List<String> = emptyList(),
+    val reactions: Map<String, String> = emptyMap()
 )
 
 enum class FeedPostType {

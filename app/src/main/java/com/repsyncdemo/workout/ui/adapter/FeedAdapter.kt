@@ -22,6 +22,8 @@ import java.util.Locale
 class FeedAdapter(
     private val onUserClick: (String) -> Unit,
     private val onLikeClick: (String) -> Unit,
+    //add onReactionClick to handle the call back from the feed fragment
+    private val onReactionClick: (View, String) -> Unit,
     private val onDeleteClick: (String) -> Unit,
     private val onEditChatClick: ((FeedPost) -> Unit)? = null
 ) : ListAdapter<FeedPost, FeedAdapter.ViewHolder>(FeedDiffCallback()) {
@@ -96,6 +98,27 @@ class FeedAdapter(
                 if (isLiked) android.R.drawable.btn_star_big_on else android.R.drawable.btn_star_big_off
             )
             binding.btnLikeArea.setOnClickListener { onLikeClick(post.id) }
+
+            binding.tvReactionCount.text = post.reactions.size.toString()
+            
+            // Display first 3 unique reactions
+            val recentEmojis = post.reactions.values.distinct().take(3)
+            if (recentEmojis.isNotEmpty()) {
+                binding.llRecentReactions.visibility = View.VISIBLE
+                binding.tvReaction1.text = recentEmojis.getOrNull(0) ?: ""
+                binding.tvReaction2.text = recentEmojis.getOrNull(1) ?: ""
+                binding.tvReaction3.text = recentEmojis.getOrNull(2) ?: ""
+                
+                binding.tvReaction1.visibility = if (recentEmojis.size >= 1) View.VISIBLE else View.GONE
+                binding.tvReaction2.visibility = if (recentEmojis.size >= 2) View.VISIBLE else View.GONE
+                binding.tvReaction3.visibility = if (recentEmojis.size >= 3) View.VISIBLE else View.GONE
+            } else {
+                binding.llRecentReactions.visibility = View.GONE
+            }
+            binding.btnReactionArea.setOnClickListener { onReactionClick(it, post.id) }
+
+
+
 
             // Handle Long Press for Delete/Edit
             binding.postRoot.setOnLongClickListener {
