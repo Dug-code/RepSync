@@ -46,7 +46,6 @@ class ProfilePostsFragment : Fragment() {
                 val reactionDialog = ReactionDialogFragment.newInstance(postId)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
             onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
         )
 

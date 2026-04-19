@@ -33,15 +33,11 @@ class FeedExploreFragment : Fragment() {
                 val bundle = Bundle().apply { putString("userId", userId) }
                 findNavController().navigate(R.id.action_feed_to_profile, bundle)
             },
-            onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
-            onReactionClick = { view, postId -> // Open the ReactionDialogFragment
+            onReactionClick = { view, postId -> 
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onDeleteClick = { postId -> feedViewModel.deletePost(postId) },
-            onEditChatClick = { post ->
-                // Note: The parent FeedFragment handles the dialog, or we can add local handling if needed
-            }
+            onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
         )
 
         binding.rvFeed.apply {
@@ -65,7 +61,6 @@ class FeedExploreFragment : Fragment() {
 
         binding.radiusSlider.addOnChangeListener { _, _, _ -> updateFilters() }
 
-        // Fix: Trigger initial load so the tab isn't empty on first open
         updateFilters()
     }
 

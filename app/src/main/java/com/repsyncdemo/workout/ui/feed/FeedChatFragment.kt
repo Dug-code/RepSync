@@ -33,11 +33,10 @@ class FeedChatFragment : Fragment() {
                 val bundle = Bundle().apply { putString("userId", userId) }
                 findNavController().navigate(R.id.action_feed_to_profile, bundle)
             },
-            onReactionClick = { view, postId -> // Open the ReactionDialogFragment
+            onReactionClick = { view, postId -> 
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
             onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
         )
 

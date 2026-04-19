@@ -21,8 +21,6 @@ import java.util.Locale
 
 class FeedAdapter(
     private val onUserClick: (String) -> Unit,
-    private val onLikeClick: (String) -> Unit,
-    //add onReactionClick to handle the call back from the feed fragment
     private val onReactionClick: (View, String) -> Unit,
     private val onDeleteClick: (String) -> Unit,
     private val onEditChatClick: ((FeedPost) -> Unit)? = null
@@ -92,35 +90,33 @@ class FeedAdapter(
             binding.tvDescription.text = if (post.type == FeedPostType.CHAT_MESSAGE) "" else post.description
             binding.tvTimestamp.text = dateFormat.format(Date(post.createdAt))
 
-            binding.tvLikeCount.text = post.likes.size.toString()
-            val isLiked = post.likes.contains(currentUserId)
-            binding.ivLike.setImageResource(
-                if (isLiked) android.R.drawable.btn_star_big_on else android.R.drawable.btn_star_big_off
-            )
-            binding.btnLikeArea.setOnClickListener { onLikeClick(post.id) }
-
-            binding.tvReactionCount.text = post.reactions.size.toString()
+            // Reaction Logic: Group identical reactions and show counts
+            val reactionCounts = post.reactions.values.groupingBy { it }.eachCount()
+            val uniqueReactions = reactionCounts.keys.toList().take(3)
             
-            // Display first 3 unique reactions
-            val recentEmojis = post.reactions.values.distinct().take(3)
-            if (recentEmojis.isNotEmpty()) {
+            if (uniqueReactions.isNotEmpty()) {
                 binding.llRecentReactions.visibility = View.VISIBLE
-                binding.tvReaction1.text = recentEmojis.getOrNull(0) ?: ""
-                binding.tvReaction2.text = recentEmojis.getOrNull(1) ?: ""
-                binding.tvReaction3.text = recentEmojis.getOrNull(2) ?: ""
+                binding.tvReactionCount.text = post.reactions.size.toString()
                 
-                binding.tvReaction1.visibility = if (recentEmojis.size >= 1) View.VISIBLE else View.GONE
-                binding.tvReaction2.visibility = if (recentEmojis.size >= 2) View.VISIBLE else View.GONE
-                binding.tvReaction3.visibility = if (recentEmojis.size >= 3) View.VISIBLE else View.GONE
+                val views = listOf(binding.tvReaction1, binding.tvReaction2, binding.tvReaction3)
+                views.forEach { it.visibility = View.GONE }
+                
+                uniqueReactions.forEachIndexed { index, emoji ->
+                    val count = reactionCounts[emoji] ?: 0
+                    // Display like: 🔥2 or just 🔥
+                    val display = if (count > 1) "$emoji$count" else emoji
+                    views[index].apply {
+                        text = display
+                        visibility = View.VISIBLE
+                    }
+                }
             } else {
                 binding.llRecentReactions.visibility = View.GONE
+                binding.tvReactionCount.text = "React"
             }
+            
             binding.btnReactionArea.setOnClickListener { onReactionClick(it, post.id) }
 
-
-
-
-            // Handle Long Press for Delete/Edit
             binding.postRoot.setOnLongClickListener {
                 if (post.userId == currentUserId) {
                     showPostOptions(post)

@@ -30,7 +30,7 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:scaleType="centerCrop"
-                android:src="@android:drawable/ic_menu_gallery"
+                android:src="@drawable/ic_profile_red"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
                 app:strokeColor="?attr/colorDivider"
                 app:strokeWidth="1dp" />
@@ -102,33 +102,6 @@
             android:paddingTop="8dp">
 
             <LinearLayout
-                android:id="@+id/btnLikeArea"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackground"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="4dp">
-
-                <ImageView
-                    android:id="@+id/ivLike"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@android:drawable/btn_star_big_off"
-                    app:tint="?attr/colorTextSecondary" />
-
-                <TextView
-                    android:id="@+id/tvLikeCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:text="0"
-                    android:textColor="?attr/colorTextSecondary"
-                    android:textSize="13sp" />
-
-            </LinearLayout>
-
-            <LinearLayout
                 android:id="@+id/btnReactionArea"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -171,21 +144,22 @@
                     android:id="@+id/tvReaction1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="16sp" />
+                    android:textSize="15sp"
+                    android:paddingHorizontal="4dp" />
 
                 <TextView
                     android:id="@+id/tvReaction2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="-6dp"
-                    android:textSize="16sp" />
+                    android:textSize="15sp"
+                    android:paddingHorizontal="4dp" />
 
                 <TextView
                     android:id="@+id/tvReaction3"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="-6dp"
-                    android:textSize="16sp" />
+                    android:textSize="15sp"
+                    android:paddingHorizontal="4dp" />
             </LinearLayout>
 
         </LinearLayout>

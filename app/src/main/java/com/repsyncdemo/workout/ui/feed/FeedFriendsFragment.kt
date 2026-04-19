@@ -27,17 +27,16 @@ class FeedFriendsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
+        
         feedAdapter = FeedAdapter(
             onUserClick = { userId ->
                 val bundle = Bundle().apply { putString("userId", userId) }
                 findNavController().navigate(R.id.action_feed_to_profile, bundle)
             },
-            onReactionClick = { view, postId -> // Open the ReactionDialogFragment
+            onReactionClick = { view, postId -> 
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onLikeClick = { postId -> feedViewModel.toggleLike(postId) },
             onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
         )
 
@@ -47,7 +46,6 @@ class FeedFriendsFragment : Fragment() {
         }
 
         feedViewModel.feedPosts.observe(viewLifecycleOwner) { posts ->
-            // In a real app, filtering might happen in ViewModel, but we reuse the shared list here if filtered
             feedAdapter.submitList(posts)
             binding.layoutEmpty.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
         }
@@ -63,7 +61,6 @@ class FeedFriendsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Ensure filters are applied when this tab is selected
         feedViewModel.applyFilters(showChat = false, onlyFriends = true, showMyPosts = binding.cbShowMyPosts.isChecked)
     }
 
