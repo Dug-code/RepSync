@@ -81,29 +81,37 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
     private fun updateCalendarDecorators() {
         binding.calendarView.removeDecorators()
         
-        // 1. Draw Workout Dots (Red)
+        // 1. Draw Workout Icons (Red)
         val workoutDays = allLogs.map { log ->
             val cal = Calendar.getInstance()
             cal.timeInMillis = log.completedAt
             CalendarDay.from(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
         }.distinct()
 
-        val primaryColor = ContextCompat.getColor(requireContext(), R.color.primary)
+        val workoutDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.ic_workouts)?.mutate()
+        workoutDrawable?.setTint(ContextCompat.getColor(requireContext(), R.color.primary))
+        
         workoutDays.forEach { day ->
-            binding.calendarView.addDecorator(WorkoutCountDecorator(primaryColor, day))
+            workoutDrawable?.let {
+                binding.calendarView.addDecorator(WorkoutIconDecorator(it, day))
+            }
         }
 
-        // 2. Draw Rest Day Dots (Light Blue)
+        // 2. Draw Rest Day Icons (ZZZ) - Filter out days that already have workouts
         val restDays = viewModel.restDays.value ?: emptyList()
-        val restDayDates = restDays.map { 
+        val restDayDates = restDays.map {
             val cal = Calendar.getInstance()
             cal.timeInMillis = it.date
             CalendarDay.from(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
-        }
+        }.filter { !workoutDays.contains(it) }
 
         val blueColor = android.graphics.Color.parseColor("#81D4FA")
         restDayDates.forEach { day ->
-            binding.calendarView.addDecorator(WorkoutCountDecorator(blueColor, day))
+            val restDayDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.ic_rest_day)?.mutate()
+            restDayDrawable?.setTint(blueColor)
+            restDayDrawable?.let {
+                binding.calendarView.addDecorator(WorkoutIconDecorator(it, day))
+            }
         }
     }
 
@@ -131,7 +139,21 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
             historyAdapter.submitList(emptyList())
             binding.rvHistory.visibility = View.GONE
             binding.tvEmpty.visibility = View.VISIBLE
-            binding.tvEmpty.text = "Hope you enjoyed the day off\nDon't make it a habit"
+            
+            val restDayMessages = listOf(
+                "Hope you enjoyed the day off\nDon't make it a habit",
+                "Recovery is part of the process.\nEnjoy your rest!",
+                "Rest today, crush it tomorrow.",
+                "Listen to your body.\nRest is well deserved.",
+                "Charging up for your next session...",
+                "Even legends need a break sometimes.",
+                "Your muscles are growing while you rest!",
+                "Enjoy the peace and quiet before the grind."
+            )
+            // Use the date as a seed so the message is consistent for the same day
+            val seed = selectedDate.year * 10000 + selectedDate.month * 100 + selectedDate.day
+            val messageIndex = Random(seed.toLong()).nextInt(restDayMessages.size)
+            binding.tvEmpty.text = restDayMessages[messageIndex]
         } else {
             historyAdapter.submitList(emptyList())
             binding.rvHistory.visibility = View.GONE

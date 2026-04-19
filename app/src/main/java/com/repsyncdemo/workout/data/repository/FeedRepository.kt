@@ -141,7 +141,7 @@ class FeedRepository {
             val post = doc.toObject(FeedPost::class.java) ?: return Result.failure(Exception("Post not found"))
 
             // Reactions are stored as Map<UserId, ReactionEmoji>
-            val updatedReactions = post.reactions.toMutableMap()
+            val updatedReactions = post.reactionsMap.toMutableMap()
             
             if (updatedReactions[userId] == emoji) {
                 // If user already reacted with the same emoji removes it

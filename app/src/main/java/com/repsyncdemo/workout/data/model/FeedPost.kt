@@ -1,6 +1,7 @@
 package com.repsyncdemo.workout.data.model
 
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.GeoPoint
 
 data class FeedPost(
@@ -19,8 +20,12 @@ data class FeedPost(
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val likes: List<String> = emptyList(),
-    val reactions: Map<String, String> = emptyMap()
-)
+    val reactions: Any? = emptyMap<String, String>()
+) {
+    @get:Exclude
+    val reactionsMap: Map<String, String>
+        get() = (reactions as? Map<*, *>)?.map { it.key.toString() to it.value.toString() }?.toMap() ?: emptyMap()
+}
 
 enum class FeedPostType {
     WORKOUT_SHARED,

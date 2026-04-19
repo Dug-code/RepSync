@@ -91,12 +91,12 @@ class FeedAdapter(
             binding.tvTimestamp.text = dateFormat.format(Date(post.createdAt))
 
             // Reaction Logic: Group identical reactions and show counts
-            val reactionCounts = post.reactions.values.groupingBy { it }.eachCount()
+            val reactionCounts = post.reactionsMap.values.groupingBy { it }.eachCount()
             val uniqueReactions = reactionCounts.keys.toList().take(3)
             
             if (uniqueReactions.isNotEmpty()) {
                 binding.llRecentReactions.visibility = View.VISIBLE
-                binding.tvReactionCount.text = post.reactions.size.toString()
+                binding.tvReactionCount.text = post.reactionsMap.size.toString()
                 
                 val views = listOf(binding.tvReaction1, binding.tvReaction2, binding.tvReaction3)
                 views.forEach { it.visibility = View.GONE }
