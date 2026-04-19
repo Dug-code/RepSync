@@ -2,6 +2,7 @@ package com.repsyncdemo.workout.data.model
 
 import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.Exclude
 
 data class FeedPost(
     @DocumentId
@@ -19,7 +20,10 @@ data class FeedPost(
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val likes: List<String> = emptyList(),
-    val reactions: Map<String, String> = emptyMap()
+    val reactions: Map<String, String> = emptyMap(),
+    
+    @get:Exclude
+    var distanceMiles: Double? = null // Transient field for UI display
 )
 
 enum class FeedPostType {

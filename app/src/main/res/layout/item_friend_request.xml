@@ -18,11 +18,22 @@
         android:padding="16dp"
         android:gravity="center_vertical">
 
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivProfilePic"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_profile_red"
+            app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
+            app:strokeColor="?attr/colorDivider"
+            app:strokeWidth="1dp" />
+
         <TextView
             android:id="@+id/tvUsername"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="12dp"
             android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface" />

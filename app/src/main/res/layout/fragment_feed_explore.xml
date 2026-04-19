@@ -95,4 +95,51 @@
             android:gravity="center" />
     </LinearLayout>
 
+    <!-- Location Required Overlay -->
+    <LinearLayout
+        android:id="@+id/layoutLocationRequired"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:background="?attr/android:windowBackground"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/layoutRadiusFilter"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@android:drawable/ic_menu_mylocation"
+            app:tint="@color/primary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Location Access Required"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold"
+            android:textSize="18sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Please enable location services to use the radius feature."
+            android:textColor="?attr/colorOnSurface"
+            android:alpha="0.6"
+            android:textSize="14sp"
+            android:gravity="center" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEnableLocation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Enable Location"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -9,11 +9,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import kotlin.math.asin
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.*
 
 class FeedRepository {
 
@@ -41,11 +37,11 @@ class FeedRepository {
                 }
                 var posts = snapshot?.toObjects(FeedPost::class.java) ?: emptyList()
 
-                // Filter by type: Chat only if requested, or everything else
-                if (showChat) {
-                    posts = posts.filter { it.type == FeedPostType.CHAT_MESSAGE }
+                // Filter by type
+                posts = if (showChat) {
+                    posts.filter { it.type == FeedPostType.CHAT_MESSAGE }
                 } else {
-                    posts = posts.filter { it.type != FeedPostType.CHAT_MESSAGE }
+                    posts.filter { it.type != FeedPostType.CHAT_MESSAGE }
                 }
 
                 // Filter by my posts
@@ -55,20 +51,25 @@ class FeedRepository {
 
                 // Filter by friends
                 if (onlyFriends) {
-                    // When in friends tab, always show my own posts unless explicitly hidden by showMyPosts
                     val targetIds = friendIds + if (showMyPosts) listOf(userId) else emptyList()
                     posts = posts.filter { targetIds.contains(it.userId) }
                 }
 
-                // Filter by distance (only if not global)
-                if (radius != null && userLocation != null) {
-                    posts = posts.filter { post ->
-                        if (post.location == null) return@filter false
-                        distanceMiles(userLocation, post.location) <= radius
+                // Filter by distance and calculate transient distance field
+                if (userLocation != null) {
+                    posts.forEach { post ->
+                        if (post.location != null) {
+                            post.distanceMiles = distanceMiles(userLocation, post.location)
+                        }
+                    }
+                    
+                    if (radius != null) {
+                        posts = posts.filter { 
+                            it.distanceMiles != null && it.distanceMiles!! <= radius 
+                        }
                     }
                 }
 
-                // Sort in memory
                 trySend(posts.sortedByDescending { it.createdAt })
             }
         awaitClose { listener.remove() }
@@ -140,14 +141,10 @@ class FeedRepository {
             val doc = docRef.get().await()
             val post = doc.toObject(FeedPost::class.java) ?: return Result.failure(Exception("Post not found"))
 
-            // Reactions are stored as Map<UserId, ReactionEmoji>
             val updatedReactions = post.reactions.toMutableMap()
-            
             if (updatedReactions[userId] == emoji) {
-                // If user already reacted with the same emoji removes it
                 updatedReactions.remove(userId)
             } else {
-                // If user hasn't reacted or used a different emoji update it
                 updatedReactions[userId] = emoji
             }
             

@@ -50,8 +50,14 @@ class ProfileGoalsFragment : Fragment() {
             goalAdapter.submitList(goals)
             val isEmpty = goals.isNullOrEmpty()
             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
-            binding.tvEmptyTitle.text = "No goals set."
-            binding.tvEmptySubtitle.text = ""
+            
+            if (targetUserId != null) {
+                binding.tvEmptyTitle.text = "No public goals."
+                binding.tvEmptySubtitle.text = "This user currently has no public goals."
+            } else {
+                binding.tvEmptyTitle.text = "No goals set."
+                binding.tvEmptySubtitle.text = "Set your first goal to start tracking progress!"
+            }
             binding.btnEmptyAction.visibility = View.GONE
         }
     }
