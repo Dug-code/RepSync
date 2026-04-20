@@ -13,11 +13,13 @@ import com.repsyncdemo.workout.databinding.FragmentFeedFriendsBinding
 import com.repsyncdemo.workout.ui.adapter.FeedAdapter
 import com.repsyncdemo.workout.ui.dialogs.ReactionDialogFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
+import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 
 class FeedFriendsFragment : Fragment() {
     private var _binding: FragmentFeedFriendsBinding? = null
     private val binding get() = _binding!!
     private val feedViewModel: FeedViewModel by activityViewModels()
+    private val profileViewModel: ProfileViewModel by activityViewModels()
     private lateinit var feedAdapter: FeedAdapter
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -52,6 +54,10 @@ class FeedFriendsFragment : Fragment() {
 
         feedViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
             feedAdapter.updateProfiles(profiles)
+        }
+
+        profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
+            feedAdapter.setCurrentUserProfile(profile)
         }
 
         binding.cbShowMyPosts.setOnCheckedChangeListener { _, isChecked ->

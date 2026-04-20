@@ -19,6 +19,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Adapter for the main social feed. Handles different post types, reactions,
+ * and moderator capabilities.
+ */
 class FeedAdapter(
     private val onUserClick: (String) -> Unit,
     private val onReactionClick: (View, String) -> Unit,
@@ -29,12 +33,26 @@ class FeedAdapter(
     private val dateFormat = SimpleDateFormat("MMM dd 'at' h:mm a", Locale.getDefault())
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
     
+    //Cache for user profiles to avoid repeated Firestore lookups for post headers
     private var userProfiles: Map<String, UserProfile> = mutableMapOf()
+    //Current user's profile to determine moderation permissions
+    private var currentUserProfile: UserProfile? = null
 
+    /**
+     * Updates the local profile cache with new data from the ViewModel.
+     */
     fun updateProfiles(profiles: Map<String, UserProfile>) {
         val merged = userProfiles.toMutableMap()
         merged.putAll(profiles)
         this.userProfiles = merged
+        notifyDataSetChanged()
+    }
+
+    /**
+     * Sets the logged-in user's profile to enable role-based UI features (like moderation).
+     */
+    fun setCurrentUserProfile(profile: UserProfile?) {
+        this.currentUserProfile = profile
         notifyDataSetChanged()
     }
 
@@ -53,6 +71,9 @@ class FeedAdapter(
         private val binding: ItemFeedPostBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        /**
+         * Binds post data to the UI, including user info, content, and reaction counts.
+         */
         fun bind(post: FeedPost) {
             val latestProfile = userProfiles[post.userId]
             val displayUsername = latestProfile?.username ?: post.username
@@ -64,6 +85,7 @@ class FeedAdapter(
 
             loadProfilePicture(displayProfilePic)
 
+            // Customize display text based on post type
             when (post.type) {
                 FeedPostType.WORKOUT_SHARED -> {
                     binding.tvPostType.text = "Workout"
@@ -90,7 +112,7 @@ class FeedAdapter(
             binding.tvDescription.text = if (post.type == FeedPostType.CHAT_MESSAGE) "" else post.description
             binding.tvTimestamp.text = dateFormat.format(Date(post.createdAt))
 
-            // Display distance away if available (calculated in repository)
+            // Display distance away if location services are active for this post
             post.distanceMiles?.let { distance ->
                 binding.tvDistanceAway.text = String.format(Locale.getDefault(), "• %.1f mi away", distance)
                 binding.tvDistanceAway.visibility = View.VISIBLE
@@ -98,7 +120,7 @@ class FeedAdapter(
                 binding.tvDistanceAway.visibility = View.GONE
             }
 
-            // Reaction Logic: Group identical reactions and show counts
+            // Reaction Logic: Group identical reactions and show counts (e.g., "🔥 3")
             val reactionCounts = post.reactions.values.groupingBy { it }.eachCount()
             val uniqueReactions = reactionCounts.keys.toList().take(3)
             
@@ -124,29 +146,41 @@ class FeedAdapter(
             
             binding.btnReactionArea.setOnClickListener { onReactionClick(it, post.id) }
 
+            // MODERATION: Check if current user has staff permissions
+            val canModerate = currentUserProfile?.isAdmin == true || currentUserProfile?.isModerator == true
             binding.postRoot.setOnLongClickListener {
-                if (post.userId == currentUserId) {
-                    showPostOptions(post)
+                // Allow long-press options if it's the user's own post OR if they are a moderator
+                if (post.userId == currentUserId || canModerate) {
+                    showPostOptions(post, canModerate && post.userId != currentUserId)
                 }
                 true
             }
         }
 
-        private fun showPostOptions(post: FeedPost) {
-            val options = if (post.type == FeedPostType.CHAT_MESSAGE) {
-                arrayOf("Edit Chat", "Delete Post")
-            } else {
-                arrayOf("Delete Post")
+        /**
+         * Shows context menu for a post (Edit/Delete).
+         * @param isModerating If true, the user is deleting someone else's post via staff perms.
+         */
+        private fun showPostOptions(post: FeedPost, isModerating: Boolean) {
+            val options = mutableListOf<String>()
+            
+            // Only owners can edit chat messages
+            if (post.type == FeedPostType.CHAT_MESSAGE && post.userId == currentUserId) {
+                options.add("Edit Chat")
             }
+            
+            // Distinguish delete action for transparency
+            val deleteLabel = if (isModerating) "Delete Post (Moderator)" else "Delete Post"
+            options.add(deleteLabel)
 
             MaterialAlertDialogBuilder(binding.root.context, R.style.ThemeOverlay_App_MaterialAlertDialog)
-                .setTitle("Post Options")
-                .setItems(options) { _, which ->
+                .setTitle(if (isModerating) "Moderation Options" else "Post Options")
+                .setItems(options.toTypedArray()) { _, which ->
                     when (options[which]) {
-                        "Delete Post" -> {
+                        deleteLabel -> {
                             MaterialAlertDialogBuilder(binding.root.context, R.style.ThemeOverlay_App_MaterialAlertDialog)
                                 .setTitle("Delete Post")
-                                .setMessage("Are you sure you want to delete this post?")
+                                .setMessage(if (isModerating) "As a moderator, are you sure you want to delete this user's post?" else "Are you sure you want to delete this post?")
                                 .setPositiveButton("Delete") { _, _ -> onDeleteClick(post.id) }
                                 .setNegativeButton("Cancel", null)
                                 .show()

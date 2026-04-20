@@ -100,9 +100,13 @@ class ProfileFragment : Fragment() {
             binding.btnTrophyShelf.setOnClickListener {
                 findNavController().navigate(R.id.action_profile_to_trophyShelf)
             }
+            binding.btnAdminDashboard.setOnClickListener {
+                findNavController().navigate(R.id.action_profile_to_adminDashboard)
+            }
         } else {
             binding.btnSettings.visibility = View.GONE
             binding.btnTrophyShelf.visibility = View.GONE
+            binding.btnAdminDashboard.visibility = View.GONE
             binding.btnFriendAction.visibility = View.VISIBLE
         }
 
@@ -144,6 +148,13 @@ class ProfileFragment : Fragment() {
             }
         }
 
+        profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
+            if (targetUserId == null) {
+                binding.btnAdminDashboard.visibility = if (profile?.isAdmin == true) View.VISIBLE else View.GONE
+            }
+            updateTrophyUI()
+        }
+
         socialViewModel.friendshipWithTarget.observe(viewLifecycleOwner) { friendship ->
             updateFriendButtonUI(friendship)
         }
@@ -157,7 +168,6 @@ class ProfileFragment : Fragment() {
         }
 
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
-        profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
     }
 
     private fun updateFriendButtonUI(friendship: Friendship?) {
