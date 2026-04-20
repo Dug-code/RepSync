@@ -24,6 +24,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.ContactMessage
 import com.repsyncdemo.workout.databinding.FragmentSettingsBinding
 import com.repsyncdemo.workout.ui.auth.LoginActivity
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
@@ -146,6 +147,10 @@ class SettingsFragment : Fragment() {
 
         binding.btnDeleteAccount.setOnClickListener {
             showDeleteAccountFlow()
+        }
+
+        binding.btnContactUs.setOnClickListener {
+            showContactUsDialog()
         }
 
         profileViewModel.profileResult.observe(viewLifecycleOwner) { result ->
@@ -293,6 +298,43 @@ class SettingsFragment : Fragment() {
             }
         }
         dialog.show()
+    }
+
+    private fun showContactUsDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_contact_us, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etContactName)
+        val etEmail = dialogView.findViewById<EditText>(R.id.etContactEmail)
+        val etMessage = dialogView.findViewById<EditText>(R.id.etContactMessage)
+
+        // Pre-fill with user info if available
+        profileViewModel.myProfile.value?.let { profile ->
+            etName.setText(profile.username)
+            etEmail.setText(profile.email)
+        }
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setView(dialogView)
+            .setPositiveButton("Submit") { dialog, _ ->
+                val name = etName.text.toString().trim()
+                val email = etEmail.text.toString().trim()
+                val message = etMessage.text.toString().trim()
+
+                if (name.isNotEmpty() && email.isNotEmpty() && message.isNotEmpty()) {
+                    val contactMessage = ContactMessage(
+                        userId = FirebaseAuth.getInstance().currentUser?.uid ?: "",
+                        name = name,
+                        email = email,
+                        message = message,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    profileViewModel.submitContactMessage(contactMessage)
+                    Toast.makeText(requireContext(), "Sending message...", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "Please fill out all fields", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun setupChangeListeners() {

@@ -436,6 +436,16 @@
                     android:gravity="start"
                     android:textAllCaps="false"
                     android:textColor="@color/error" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnContactUs"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Contact Us"
+                    android:gravity="start"
+                    android:textAllCaps="false"
+                    android:textColor="?attr/colorOnSurface" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

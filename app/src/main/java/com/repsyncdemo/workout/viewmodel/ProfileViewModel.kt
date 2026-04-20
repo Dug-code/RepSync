@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.repsyncdemo.workout.data.model.ContactMessage
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.data.repository.FeedRepository
@@ -117,6 +118,12 @@ class ProfileViewModel : ViewModel() {
     fun updateLocation(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             repository.updateLocation(latitude, longitude)
+        }
+    }
+
+    fun submitContactMessage(message: ContactMessage) {
+        viewModelScope.launch {
+            _profileResult.value = repository.submitContactMessage(message)
         }
     }
 

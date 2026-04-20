@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.repsyncdemo.workout.data.model.ContactMessage
 import com.repsyncdemo.workout.data.model.UserProfile
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -156,6 +157,15 @@ class ProfileRepository {
             Result.success(filteredResults)
         } catch (e: Exception) {
             Log.e("ProfileRepository", "Search failed", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun submitContactMessage(message: ContactMessage): Result<Unit> {
+        return try {
+            db.collection("contact_messages").add(message).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
             Result.failure(e)
         }
     }
