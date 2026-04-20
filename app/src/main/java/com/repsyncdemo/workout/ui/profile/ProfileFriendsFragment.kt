@@ -58,14 +58,27 @@ class ProfileFriendsFragment : Fragment() {
     }
 
     private fun setupAdapters() {
-        friendsAdapter = FriendAdapter(isMyProfile = targetUserId == null) { friendship ->
-            socialViewModel.removeFriendship(friendship.id)
-            Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
-        }
+        friendsAdapter = FriendAdapter(
+            isMyProfile = targetUserId == null,
+            onRemove = { friendship ->
+                socialViewModel.removeFriendship(friendship.id)
+                Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
+            },
+            onUserClick = { userId ->
+                if (userId != targetUserId) {
+                    val bundle = Bundle().apply { putString("userId", userId) }
+                    findNavController().navigate(R.id.profileFragment, bundle)
+                }
+            }
+        )
 
         requestAdapter = FriendRequestAdapter(
             onAccept = { request -> socialViewModel.acceptRequest(request.id) },
-            onDecline = { request -> socialViewModel.declineRequest(request.id) }
+            onDecline = { request -> socialViewModel.declineRequest(request.id) },
+            onUserClick = { userId ->
+                val bundle = Bundle().apply { putString("userId", userId) }
+                findNavController().navigate(R.id.profileFragment, bundle)
+            }
         )
 
         searchAdapter = UserSearchAdapter(
@@ -106,6 +119,11 @@ class ProfileFriendsFragment : Fragment() {
     }
 
     private fun observeData() {
+        socialViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
+            friendsAdapter.updateProfiles(profiles)
+            requestAdapter.updateProfiles(profiles)
+        }
+
         if (targetUserId == null) {
             socialViewModel.friends.observe(viewLifecycleOwner) { 
                 friendsAdapter.submitList(it)

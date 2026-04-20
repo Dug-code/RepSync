@@ -1,6 +1,9 @@
 package com.repsyncdemo.workout.ui.feed
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -47,28 +50,74 @@ class FeedExploreFragment : Fragment() {
 
         feedViewModel.feedPosts.observe(viewLifecycleOwner) { posts ->
             feedAdapter.submitList(posts)
-            binding.layoutEmpty.visibility = if (posts.isNullOrEmpty()) View.VISIBLE else View.GONE
+            updateEmptyState(posts.isNullOrEmpty())
         }
 
         feedViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
             feedAdapter.updateProfiles(profiles)
         }
 
+        // Observe location status to block/unblock the feature
+        feedViewModel.isLocationAvailable.observe(viewLifecycleOwner) { available ->
+            if (available) {
+                binding.layoutLocationRequired.visibility = View.GONE
+                binding.rvFeed.visibility = if (feedAdapter.itemCount > 0) View.VISIBLE else View.GONE
+                binding.layoutRadiusFilter.alpha = 1.0f
+                binding.radiusSlider.isEnabled = true
+                binding.switchGlobal.isEnabled = true
+            } else {
+                // Only block if they aren't in "Global" mode
+                if (!binding.switchGlobal.isChecked) {
+                    binding.layoutLocationRequired.visibility = View.VISIBLE
+                    binding.rvFeed.visibility = View.GONE
+                    binding.layoutEmpty.visibility = View.GONE
+                }
+            }
+        }
+
         binding.switchGlobal.setOnCheckedChangeListener { _, isChecked ->
             binding.radiusSlider.visibility = if (isChecked) View.GONE else View.VISIBLE
-            updateFilters()
+            
+            // If turning off global, check if we have location
+            if (!isChecked && feedViewModel.isLocationAvailable.value == false) {
+                binding.layoutLocationRequired.visibility = View.VISIBLE
+                binding.rvFeed.visibility = View.GONE
+            } else {
+                binding.layoutLocationRequired.visibility = View.GONE
+                updateFilters()
+            }
         }
 
         binding.radiusSlider.addOnChangeListener { _, _, _ -> updateFilters() }
+
+        binding.btnEnableLocation.setOnClickListener {
+            // Open App Settings so user can enable location
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            val uri = Uri.fromParts("package", requireContext().packageName, null)
+            intent.data = uri
+            startActivity(intent)
+        }
 
         updateFilters()
     }
 
     private fun updateFilters() {
         if (_binding == null) return
-        val radius = if (binding.switchGlobal.isChecked) null else binding.radiusSlider.value.toDouble()
-        binding.tvRadiusLabel.text = if (radius == null) "Radius: Global" else "Radius: ${radius.toInt()} miles"
-        feedViewModel.applyFilters(showChat = false, onlyFriends = false, radius = radius)
+        val isGlobal = binding.switchGlobal.isChecked
+        val radius = if (isGlobal) null else binding.radiusSlider.value.toDouble()
+        
+        binding.tvRadiusLabel.text = if (isGlobal) "Radius: Global" else "Radius: ${radius?.toInt()} miles"
+        
+        feedViewModel.applyFilters(radius = radius)
+    }
+
+    private fun updateEmptyState(isEmpty: Boolean) {
+        if (feedViewModel.isLocationAvailable.value == false && !binding.switchGlobal.isChecked) {
+            binding.layoutEmpty.visibility = View.GONE
+            return
+        }
+        binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+        binding.rvFeed.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
 
     override fun onDestroyView() {

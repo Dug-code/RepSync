@@ -50,12 +50,29 @@
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
-                <TextView
-                    android:id="@+id/tvTimestamp"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textColor="?attr/colorTextSecondary" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tvTimestamp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="11sp"
+                        android:textColor="?attr/colorTextSecondary" />
+
+                    <TextView
+                        android:id="@+id/tvDistanceAway"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:textSize="11sp"
+                        android:textStyle="italic"
+                        android:textColor="@color/primary"
+                        android:visibility="gone" />
+                </LinearLayout>
             </LinearLayout>
 
             <TextView
@@ -122,7 +139,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
-                    android:text="0"
+                    android:text="React"
                     android:textColor="?attr/colorTextSecondary"
                     android:textSize="13sp" />
 

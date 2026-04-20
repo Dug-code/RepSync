@@ -48,12 +48,20 @@ class FriendsFragment : Fragment() {
 
         profileViewModel.loadProfile()
 
-        // Pass isMyProfile = true since this fragment is for the current user's social management
-        friendAdapter = FriendAdapter(isMyProfile = true) { friendship ->
-            socialViewModel.removeFriendship(friendship.id)
-            Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
-        }
+        // Updated FriendAdapter to match the new constructor
+        friendAdapter = FriendAdapter(
+            isMyProfile = true,
+            onRemove = { friendship ->
+                socialViewModel.removeFriendship(friendship.id)
+                Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
+            },
+            onUserClick = { userId ->
+                val bundle = Bundle().apply { putString("userId", userId) }
+                findNavController().navigate(R.id.profileFragment, bundle)
+            }
+        )
 
+        // Updated FriendRequestAdapter to match the new constructor
         requestAdapter = FriendRequestAdapter(
             onAccept = { request ->
                 socialViewModel.acceptRequest(request.id)
@@ -61,6 +69,10 @@ class FriendsFragment : Fragment() {
             },
             onDecline = { request ->
                 socialViewModel.declineRequest(request.id)
+            },
+            onUserClick = { userId ->
+                val bundle = Bundle().apply { putString("userId", userId) }
+                findNavController().navigate(R.id.profileFragment, bundle)
             }
         )
 

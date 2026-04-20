@@ -1,19 +1,19 @@
 package com.repsyncdemo.workout.viewmodel
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.repsyncdemo.workout.data.model.Friendship
+import com.repsyncdemo.workout.data.model.UserProfile
+import com.repsyncdemo.workout.data.repository.ProfileRepository
 import com.repsyncdemo.workout.data.repository.SocialRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 class SocialViewModel : ViewModel() {
 
     private val repository = SocialRepository()
+    private val profileRepository = ProfileRepository()
 
     val friends: LiveData<List<Friendship>> = repository.getFriends()
         .catch { e ->
@@ -22,7 +22,6 @@ class SocialViewModel : ViewModel() {
         }
         .asLiveData()
 
-    // Real-time observation of all friendships (Pending and Accepted)
     val myFriendships: LiveData<List<Friendship>> = repository.getMyFriendships()
         .catch { e ->
             Log.e("SocialViewModel", "Error in myFriendships flow", e)
@@ -43,8 +42,28 @@ class SocialViewModel : ViewModel() {
     private val _friendshipWithTarget = MutableLiveData<Friendship?>()
     val friendshipWithTarget: LiveData<Friendship?> = _friendshipWithTarget
 
-    private val _isLoading = MutableLiveData(false)
-    val isLoading: LiveData<Boolean> = _isLoading
+    private val _userProfiles = MutableLiveData<Map<String, UserProfile>>(emptyMap())
+    val userProfiles: LiveData<Map<String, UserProfile>> = _userProfiles
+
+    private var profileObservationJob: Job? = null
+
+    init {
+        // Observe profiles for the current user's friends/requests
+        friends.observeForever { updateProfileObservation(it, pendingRequests.value ?: emptyList()) }
+        pendingRequests.observeForever { updateProfileObservation(friends.value ?: emptyList(), it) }
+    }
+
+    private fun updateProfileObservation(friends: List<Friendship>, requests: List<Friendship>) {
+        val userIds = (friends + requests).flatMap { listOf(it.requesterId, it.receiverId) }.distinct()
+        if (userIds.isEmpty()) return
+
+        profileObservationJob?.cancel()
+        profileObservationJob = viewModelScope.launch {
+            profileRepository.observeProfiles(userIds).collect { profiles ->
+                _userProfiles.value = profiles
+            }
+        }
+    }
 
     fun loadFriendsForUser(userId: String) {
         viewModelScope.launch {

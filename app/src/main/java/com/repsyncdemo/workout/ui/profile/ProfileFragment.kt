@@ -6,12 +6,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
-import androidx.viewpager2.widget.ViewPager2
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -29,6 +30,7 @@ class ProfileFragment : Fragment() {
     private val binding get() = _binding!!
     
     private val profileViewModel: ProfileViewModel by activityViewModels()
+    private val socialViewModel: SocialViewModel by activityViewModels()
     private val workoutViewModel: WorkoutViewModel by activityViewModels()
     private val goalViewModel: GoalViewModel by activityViewModels()
     
@@ -114,6 +116,7 @@ class ProfileFragment : Fragment() {
     private fun loadData() {
         if (targetUserId != null) {
             profileViewModel.loadProfile(targetUserId)
+            socialViewModel.loadFriendshipWithUser(targetUserId!!)
             workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
         } else {
             profileViewModel.loadProfile()
@@ -141,6 +144,10 @@ class ProfileFragment : Fragment() {
             }
         }
 
+        socialViewModel.friendshipWithTarget.observe(viewLifecycleOwner) { friendship ->
+            updateFriendButtonUI(friendship)
+        }
+
         val activeGoalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
         activeGoalsSource.observe(viewLifecycleOwner) { goals ->
             val activeGoals = goals.filter { !it.isCompleted }.take(5)
@@ -151,6 +158,72 @@ class ProfileFragment : Fragment() {
 
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
         profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
+    }
+
+    private fun updateFriendButtonUI(friendship: Friendship?) {
+        if (targetUserId == null) return
+        
+        val button = binding.btnFriendAction
+        button.visibility = View.VISIBLE
+        
+        when {
+            friendship == null -> {
+                button.text = "Friend +"
+                button.setIconResource(R.drawable.ic_plus_simple)
+                button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.primary)
+                button.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary))
+                button.setOnClickListener {
+                    val targetUser = profileViewModel.currentProfile.value
+                    val myProfile = profileViewModel.myProfile.value
+                    if (targetUser != null && myProfile != null) {
+                        socialViewModel.sendFriendRequest(targetUser.userId, targetUser.username, myProfile.username)
+                        Toast.makeText(requireContext(), "Friend request sent!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            friendship.status == FriendshipStatus.PENDING -> {
+                if (friendship.requesterId == currentUserId) {
+                    button.text = "Requested"
+                    button.setIconResource(R.drawable.ic_check_simple)
+                    button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.text_secondary)
+                    button.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+                    button.setOnClickListener {
+                        showUnfriendConfirmation(friendship, "Cancel friend request?")
+                    }
+                } else {
+                    button.text = "Accept"
+                    button.setIconResource(R.drawable.ic_check_simple)
+                    button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.success)
+                    button.setTextColor(ContextCompat.getColor(requireContext(), R.color.success))
+                    button.setOnClickListener {
+                        socialViewModel.acceptRequest(friendship.id)
+                        Toast.makeText(requireContext(), "Request accepted!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            friendship.status == FriendshipStatus.ACCEPTED -> {
+                button.text = "Friends"
+                button.setIconResource(R.drawable.ic_check_simple)
+                button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.primary)
+                button.setTextColor(ContextCompat.getColor(requireContext(), R.color.primary))
+                button.setOnClickListener {
+                    val username = profileViewModel.currentProfile.value?.username ?: "this user"
+                    showUnfriendConfirmation(friendship, "Are you sure you want to unfriend @$username?")
+                }
+            }
+        }
+    }
+
+    private fun showUnfriendConfirmation(friendship: Friendship, message: String) {
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Manage Friendship")
+            .setMessage(message)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Remove") { _, _ ->
+                socialViewModel.removeFriendship(friendship.id)
+                Toast.makeText(requireContext(), "Friendship updated", Toast.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     private fun updateProfilePicture(url: String) {

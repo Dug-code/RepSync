@@ -9,12 +9,15 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.databinding.FragmentWorkoutListBinding
 import com.repsyncdemo.workout.ui.adapter.WorkoutAdapter
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import java.util.Collections
 
 class WorkoutListFragment : Fragment() {
 
@@ -23,7 +26,7 @@ class WorkoutListFragment : Fragment() {
     private val viewModel: WorkoutViewModel by activityViewModels()
 
     private lateinit var workoutAdapter: WorkoutAdapter
-    private var allWorkouts: List<Workout> = emptyList()
+    private var allWorkouts: MutableList<Workout> = mutableListOf()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,6 +50,8 @@ class WorkoutListFragment : Fragment() {
             adapter = workoutAdapter
         }
 
+        setupDragAndDrop()
+
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_workoutList_to_createWorkout)
         }
@@ -58,9 +63,37 @@ class WorkoutListFragment : Fragment() {
         setupSearch()
 
         viewModel.workouts.observe(viewLifecycleOwner) { workouts ->
-            allWorkouts = workouts
+            allWorkouts = workouts.toMutableList()
             filterWorkouts(binding.etSearch.text.toString())
         }
+    }
+
+    private fun setupDragAndDrop() {
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val fromPos = viewHolder.bindingAdapterPosition
+                val toPos = target.bindingAdapterPosition
+                
+                Collections.swap(allWorkouts, fromPos, toPos)
+                workoutAdapter.notifyItemMoved(fromPos, toPos)
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                // Persistence would normally happen here by updating a 'position' field in Firestore
+                // For now, this reorders the local list.
+            }
+        })
+        itemTouchHelper.attachToRecyclerView(binding.rvWorkouts)
     }
 
     private fun setupSearch() {
@@ -80,7 +113,7 @@ class WorkoutListFragment : Fragment() {
             allWorkouts.filter { it.name.contains(query, ignoreCase = true) }
         }
         
-        workoutAdapter.submitList(filteredList)
+        workoutAdapter.submitList(filteredList.toList())
         
         val isEmpty = filteredList.isEmpty()
         binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE

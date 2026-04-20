@@ -90,6 +90,14 @@ class FeedAdapter(
             binding.tvDescription.text = if (post.type == FeedPostType.CHAT_MESSAGE) "" else post.description
             binding.tvTimestamp.text = dateFormat.format(Date(post.createdAt))
 
+            // Display distance away if available (calculated in repository)
+            post.distanceMiles?.let { distance ->
+                binding.tvDistanceAway.text = String.format(Locale.getDefault(), "• %.1f mi away", distance)
+                binding.tvDistanceAway.visibility = View.VISIBLE
+            } ?: run {
+                binding.tvDistanceAway.visibility = View.GONE
+            }
+
             // Reaction Logic: Group identical reactions and show counts
             val reactionCounts = post.reactionsMap.values.groupingBy { it }.eachCount()
             val uniqueReactions = reactionCounts.keys.toList().take(3)
@@ -103,7 +111,6 @@ class FeedAdapter(
                 
                 uniqueReactions.forEachIndexed { index, emoji ->
                     val count = reactionCounts[emoji] ?: 0
-                    // Display like: 🔥2 or just 🔥
                     val display = if (count > 1) "$emoji$count" else emoji
                     views[index].apply {
                         text = display
