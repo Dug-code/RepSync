@@ -4,12 +4,16 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.GeoPoint
 import com.google.firebase.firestore.PropertyName
 
+/**
+ * Data class representing a user's profile information.
+ * Stores personal details, privacy settings, social links, and administrative roles.
+ */
 data class UserProfile(
     @DocumentId
     val id: String = "",
     val userId: String = "",
     val username: String = "",
-    val usernameLowercase: String = "", // Added for case-insensitive search
+    val usernameLowercase: String = "", // Added for case-insensitive search in Firestore
     val bio: String = "",
     val email: String = "",
     val profilePictureUrl: String = "red",
@@ -41,12 +45,12 @@ data class UserProfile(
     @set:PropertyName("isFriendsListPublic")
     var isFriendsListPublic: Boolean = true,
 
-    //isAdmin Distinction
+    // Admin role: Grants full access to all moderation tools and the Admin Dashboard.
     @get:PropertyName("isAdmin")
     @set:PropertyName("isAdmin")
     var isAdmin: Boolean = false,
 
-    //is Moderator Distinction
+    // Moderator role: Grants access to content moderation tools (e.g., deleting any post).
     @get:PropertyName("isModerator")
     @set:PropertyName("isModerator")
     var isModerator: Boolean = false,
@@ -58,7 +62,7 @@ data class UserProfile(
     val preferredUnit: String = "lbs", // "lbs" or "kg"
     val theme: String = "dark", // "light" or "dark"
     
-    val pinnedTrophyId: String? = null, // ID of the pinned trophy
+    val pinnedTrophyId: String? = null, // ID of the pinned trophy displayed on profile
 
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),

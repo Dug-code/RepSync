@@ -24,6 +24,11 @@ import com.repsyncdemo.workout.databinding.FragmentProfileBinding
 import com.repsyncdemo.workout.ui.adapter.*
 import com.repsyncdemo.workout.viewmodel.*
 
+/**
+ * Fragment that displays a user's profile.
+ * Handles both the logged-in user's profile and other users' profiles.
+ * Includes integration for Admin features and Friend management.
+ */
 class ProfileFragment : Fragment() {
 
     private var _binding: FragmentProfileBinding? = null
@@ -51,6 +56,8 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // If userId is passed in arguments, we are viewing another user's profile.
+        // If null, we are viewing the logged-in user's own profile.
         targetUserId = arguments?.getString("userId")
 
         setupViewPager()
@@ -60,6 +67,9 @@ class ProfileFragment : Fragment() {
         loadData()
     }
 
+    /**
+     * Sets up the ViewPager with tabs for Posts, Friends, Workouts, and Goals.
+     */
     private fun setupViewPager() {
         val adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 4
@@ -88,8 +98,12 @@ class ProfileFragment : Fragment() {
         }.attach()
     }
 
+    /**
+     * Initializes click listeners for settings, trophy shelf, and admin dashboard.
+     */
     private fun setupListeners() {
         if (targetUserId == null) {
+            // UI elements only visible on the user's own profile
             binding.btnSettings.visibility = View.VISIBLE
             binding.btnTrophyShelf.visibility = View.VISIBLE
             binding.btnFriendAction.visibility = View.GONE
@@ -100,10 +114,12 @@ class ProfileFragment : Fragment() {
             binding.btnTrophyShelf.setOnClickListener {
                 findNavController().navigate(R.id.action_profile_to_trophyShelf)
             }
+            // ADMIN: Navigate to the management dashboard
             binding.btnAdminDashboard.setOnClickListener {
                 findNavController().navigate(R.id.action_profile_to_adminDashboard)
             }
         } else {
+            // UI elements for viewing another user
             binding.btnSettings.visibility = View.GONE
             binding.btnTrophyShelf.visibility = View.GONE
             binding.btnAdminDashboard.visibility = View.GONE
@@ -117,6 +133,9 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /**
+     * Triggers data loading from repositories based on the profile being viewed.
+     */
     private fun loadData() {
         if (targetUserId != null) {
             profileViewModel.loadProfile(targetUserId)
@@ -128,7 +147,11 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /**
+     * Sets up observers for ViewModel data to update the UI reactively.
+     */
     private fun observeViewModel() {
+        // Observes the profile of the user being viewed
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
@@ -148,8 +171,10 @@ class ProfileFragment : Fragment() {
             }
         }
 
+        // Observes the logged-in user's profile to handle specific permissions
         profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
             if (targetUserId == null) {
+                // ADMIN: Only show the dashboard button if the user is an admin
                 binding.btnAdminDashboard.visibility = if (profile?.isAdmin == true) View.VISIBLE else View.GONE
             }
             updateTrophyUI()
@@ -170,6 +195,9 @@ class ProfileFragment : Fragment() {
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
     }
 
+    /**
+     * Updates the Friend Action button based on the current friendship status (Accepted, Pending, None).
+     */
     private fun updateFriendButtonUI(friendship: Friendship?) {
         if (targetUserId == null) return
         
@@ -224,6 +252,9 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /**
+     * Shows a confirmation dialog before removing a friend or cancelling a request.
+     */
     private fun showUnfriendConfirmation(friendship: Friendship, message: String) {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Manage Friendship")
@@ -236,6 +267,9 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
+    /**
+     * Loads and displays the profile picture (either a URL or a built-in color avatar).
+     */
     private fun updateProfilePicture(url: String) {
         if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
             binding.ivProfilePic.load(url) {
@@ -257,6 +291,9 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /**
+     * Updates the UI for the pinned trophy based on user achievements and preferences.
+     */
     private fun updateTrophyUI() {
         val profile = profileViewModel.myProfile.value ?: return
         val workoutCount = workoutViewModel.workoutLogs.value?.size ?: 0
@@ -294,6 +331,9 @@ class ProfileFragment : Fragment() {
         binding.ivPinnedTrophy.background = null
     }
 
+    /**
+     * Sets up visibility and external link behavior for social media icons.
+     */
     private fun setupSocialIcon(button: View, url: String) {
         if (url.isNotEmpty()) {
             button.visibility = View.VISIBLE

@@ -15,6 +15,10 @@ import com.repsyncdemo.workout.ui.dialogs.ReactionDialogFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 
+/**
+ * Fragment that displays feed posts only from the user's accepted friends.
+ * Includes moderation tools and optional self-post visibility.
+ */
 class FeedFriendsFragment : Fragment() {
     private var _binding: FragmentFeedFriendsBinding? = null
     private val binding get() = _binding!!
@@ -47,6 +51,7 @@ class FeedFriendsFragment : Fragment() {
             adapter = feedAdapter
         }
 
+        // Observe filtered posts (Friends only)
         feedViewModel.feedPosts.observe(viewLifecycleOwner) { posts ->
             feedAdapter.submitList(posts)
             binding.layoutEmpty.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
@@ -56,10 +61,12 @@ class FeedFriendsFragment : Fragment() {
             feedAdapter.updateProfiles(profiles)
         }
 
+        // Enable moderation features if the user is staff
         profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
             feedAdapter.setCurrentUserProfile(profile)
         }
 
+        // Toggle to include/exclude the user's own posts in the friends feed
         binding.cbShowMyPosts.setOnCheckedChangeListener { _, isChecked ->
             feedViewModel.applyFilters(showChat = false, onlyFriends = true, showMyPosts = isChecked)
         }
@@ -67,6 +74,7 @@ class FeedFriendsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        // Ensure filters are correctly set for this tab when the user returns
         feedViewModel.applyFilters(showChat = false, onlyFriends = true, showMyPosts = binding.cbShowMyPosts.isChecked)
     }
 
