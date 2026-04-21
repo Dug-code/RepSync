@@ -18,10 +18,6 @@ import com.repsyncdemo.workout.ui.dialogs.ReactionDialogFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 
-/**
- * Fragment for exploring the global feed.
- * Supports distance filtering and moderation tools for staff members.
- */
 class FeedExploreFragment : Fragment() {
     private var _binding: FragmentFeedExploreBinding? = null
     private val binding get() = _binding!!
@@ -37,7 +33,6 @@ class FeedExploreFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize adapter with interaction callbacks
         feedAdapter = FeedAdapter(
             onUserClick = { userId ->
                 val bundle = Bundle().apply { putString("userId", userId) }
@@ -47,10 +42,7 @@ class FeedExploreFragment : Fragment() {
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onDeleteClick = { postId -> 
-                // Handles post deletion (works for owners and moderators)
-                feedViewModel.deletePost(postId) 
-            }
+            onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
         )
 
         binding.rvFeed.apply {
@@ -58,23 +50,20 @@ class FeedExploreFragment : Fragment() {
             adapter = feedAdapter
         }
 
-        // Observe feed posts from ViewModel
-        feedViewModel.feedPosts.observe(viewLifecycleOwner) { posts ->
+        // Use explorePosts specifically
+        feedViewModel.explorePosts.observe(viewLifecycleOwner) { posts ->
             feedAdapter.submitList(posts)
             updateEmptyState(posts.isNullOrEmpty())
         }
 
-        // Enrich feed items with user profile data (names/avatars)
         feedViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
             feedAdapter.updateProfiles(profiles)
         }
-
-        // MODERATION: Provide the adapter with the current user's profile to enable staff perms
+        
         profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
             feedAdapter.setCurrentUserProfile(profile)
         }
 
-        // Observe location status to block/unblock the distance-based feed
         feedViewModel.isLocationAvailable.observe(viewLifecycleOwner) { available ->
             if (available) {
                 binding.layoutLocationRequired.visibility = View.GONE
@@ -83,7 +72,6 @@ class FeedExploreFragment : Fragment() {
                 binding.radiusSlider.isEnabled = true
                 binding.switchGlobal.isEnabled = true
             } else {
-                // Only block if they aren't in "Global" mode
                 if (!binding.switchGlobal.isChecked) {
                     binding.layoutLocationRequired.visibility = View.VISIBLE
                     binding.rvFeed.visibility = View.GONE
@@ -92,11 +80,9 @@ class FeedExploreFragment : Fragment() {
             }
         }
 
-        // Handle the Global vs Local toggle
         binding.switchGlobal.setOnCheckedChangeListener { _, isChecked ->
             binding.radiusSlider.visibility = if (isChecked) View.GONE else View.VISIBLE
             
-            // If turning off global, check if we have location permission/hardware
             if (!isChecked && feedViewModel.isLocationAvailable.value == false) {
                 binding.layoutLocationRequired.visibility = View.VISIBLE
                 binding.rvFeed.visibility = View.GONE
@@ -106,11 +92,9 @@ class FeedExploreFragment : Fragment() {
             }
         }
 
-        // Refresh feed when distance radius changes
         binding.radiusSlider.addOnChangeListener { _, _, _ -> updateFilters() }
 
         binding.btnEnableLocation.setOnClickListener {
-            // Open App Settings so user can enable location permissions
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
             val uri = Uri.fromParts("package", requireContext().packageName, null)
             intent.data = uri
@@ -120,9 +104,6 @@ class FeedExploreFragment : Fragment() {
         updateFilters()
     }
 
-    /**
-     * Updates the ViewModel filters based on UI state (Global vs Radius).
-     */
     private fun updateFilters() {
         if (_binding == null) return
         val isGlobal = binding.switchGlobal.isChecked
@@ -130,12 +111,9 @@ class FeedExploreFragment : Fragment() {
         
         binding.tvRadiusLabel.text = if (isGlobal) "Radius: Global" else "Radius: ${radius?.toInt()} miles"
         
-        feedViewModel.applyFilters(radius = radius)
+        feedViewModel.applyExploreFilters(radius = radius)
     }
 
-    /**
-     * Manages empty state visibility based on feed content and location availability.
-     */
     private fun updateEmptyState(isEmpty: Boolean) {
         if (feedViewModel.isLocationAvailable.value == false && !binding.switchGlobal.isChecked) {
             binding.layoutEmpty.visibility = View.GONE

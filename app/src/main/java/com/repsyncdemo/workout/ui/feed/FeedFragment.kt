@@ -33,7 +33,7 @@ class FeedFragment : Fragment() {
         if (fineGranted || coarseGranted) {
             fetchLocation()
         } else {
-            feedViewModel.loadFeed()
+            feedViewModel.setLocationDisabled()
         }
     }
 
@@ -50,6 +50,10 @@ class FeedFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupViewPager()
         checkLocationPermission()
+        
+        // Initial load of the background tabs
+        feedViewModel.loadFriendsFeed()
+        feedViewModel.loadChatFeed()
     }
 
     private fun checkLocationPermission() {
@@ -82,13 +86,13 @@ class FeedFragment : Fragment() {
                     feedViewModel.setUserLocation(location.latitude, location.longitude)
                     profileViewModel.updateLocation(location.latitude, location.longitude)
                 } else {
-                    feedViewModel.loadFeed()
+                    feedViewModel.setLocationDisabled()
                 }
             }.addOnFailureListener {
-                feedViewModel.loadFeed()
+                feedViewModel.setLocationDisabled()
             }
         } catch (e: SecurityException) {
-            feedViewModel.loadFeed()
+            feedViewModel.setLocationDisabled()
         }
     }
 

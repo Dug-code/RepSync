@@ -22,27 +22,50 @@
         <item name="colorTextSecondary">@color/text_secondary</item>
         <item name="colorDivider">@color/divider</item>
 
+        <!-- Global Shapes -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.App.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.App.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.App.LargeComponent</item>
+
         <!-- Status Bar -->
         <item name="android:statusBarColor">@color/background</item>
         <item name="android:windowLightStatusBar">false</item>
 
         <!-- Bottom Navigation styling -->
-        <item name="bottomNavigationStyle">@style/Widget.MaterialComponents.BottomNavigationView</item>
-        <item name="itemIconTint">@color/bottom_nav_colors</item>
-        <item name="itemTextColor">@color/bottom_nav_colors</item>
+        <item name="bottomNavigationStyle">@style/Widget.App.BottomNavigationView</item>
 
         <!-- Button styling -->
         <item name="materialButtonStyle">@style/Widget.App.Button</item>
+        <item name="materialCardViewStyle">@style/Widget.App.CardView</item>
 
         <!-- Dialog styling - Enhanced for soft edges and modern look -->
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
+    </style>
+
+    <!-- Global Shape Defs -->
+    <style name="ShapeAppearance.App.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerSize">16dp</item>
+    </style>
+    <style name="ShapeAppearance.App.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerSize">24dp</item>
+    </style>
+    <style name="ShapeAppearance.App.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerSize">32dp</item>
+    </style>
+
+    <style name="Widget.App.CardView" parent="Widget.MaterialComponents.CardView">
+        <item name="cardElevation">0dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurface</item>
+        <item name="strokeColor">?attr/colorDivider</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.MediumComponent</item>
     </style>
 
     <style name="Widget.App.Button" parent="Widget.MaterialComponents.Button">
         <item name="backgroundTint">@color/button_state_color</item>
         <item name="android:textColor">@color/button_text_state_color</item>
         <item name="android:textAllCaps">false</item>
-        <item name="cornerRadius">16dp</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.MediumComponent</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
     </style>
@@ -51,8 +74,16 @@
         <item name="backgroundTint">@color/button_state_color</item>
         <item name="android:textColor">@color/button_text_state_color</item>
         <item name="android:textAllCaps">false</item>
-        <item name="cornerRadius">12dp</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.SmallComponent</item>
         <item name="strokeColor">?attr/colorDivider</item>
+    </style>
+
+    <style name="Widget.App.BottomNavigationView" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="itemIconTint">@color/bottom_nav_colors</item>
+        <item name="itemTextColor">@color/bottom_nav_colors</item>
+        <item name="elevation">0dp</item>
+        <item name="backgroundTint">?attr/android:windowBackground</item>
+        <item name="itemRippleColor">@color/primary_light</item>
     </style>
 
     <!-- Modern Material Alert Dialog Styling -->
@@ -62,7 +93,7 @@
         <item name="colorPrimary">@color/primary</item>
         <item name="colorSurface">@color/card_background</item>
         <item name="colorOnSurface">@color/text_primary</item>
-        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.Dialog.Medium</item>
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.App.LargeComponent</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.App.Button.Dialog</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.App.Button.Dialog.Text</item>
         <item name="buttonBarNeutralButtonStyle">@style/Widget.App.Button.Dialog.Text</item>
@@ -77,10 +108,6 @@
     <style name="Widget.App.Button.Dialog.Text" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="android:textColor">@color/text_secondary</item>
         <item name="rippleColor">?attr/colorButtonInactive</item>
-    </style>
-
-    <style name="ShapeAppearance.App.Dialog.Medium" parent="ShapeAppearance.MaterialComponents.MediumComponent">
-        <item name="cornerSize">28dp</item>
     </style>
 
     <style name="Theme.RepSync.NoActionBar" parent="Theme.RepSync">

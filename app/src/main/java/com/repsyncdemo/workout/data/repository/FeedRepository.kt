@@ -57,13 +57,13 @@ class FeedRepository {
 
                 // Filter by distance and calculate transient distance field
                 if (userLocation != null) {
-                    posts.forEach { post ->
-                        if (post.location != null) {
-                            post.distanceMiles = distanceMiles(userLocation, post.location)
+                    if (radius != null && !showChat && !onlyFriends) {
+                        posts.forEach { post ->
+                            if (post.location != null) {
+                                post.distanceMiles = distanceMiles(userLocation, post.location)
+                            }
                         }
-                    }
-                    
-                    if (radius != null) {
+
                         posts = posts.filter { 
                             it.distanceMiles != null && it.distanceMiles!! <= radius 
                         }

@@ -22,18 +22,18 @@ class FeedViewModel : ViewModel() {
     private val profileRepository = ProfileRepository()
     private val auth = FirebaseAuth.getInstance()
 
-    private val _rawPosts = MutableLiveData<List<FeedPost>>()
+    private val _rawExplorePosts = MutableLiveData<List<FeedPost>>()
+    private val _rawFriendsPosts = MutableLiveData<List<FeedPost>>()
+    private val _rawChatPosts = MutableLiveData<List<FeedPost>>()
+
     private val _userProfiles = MutableLiveData<Map<String, UserProfile>>(emptyMap())
     val userProfiles: LiveData<Map<String, UserProfile>> = _userProfiles
 
-    /**
-     * The unified feed stream.
-     * Enriches raw posts with real-time profile data and filters distance display.
-     */
-    val feedPosts = MediatorLiveData<List<FeedPost>>().apply {
-        addSource(_rawPosts) { posts -> value = enrichAndFilter(posts, _userProfiles.value ?: emptyMap()) }
-        addSource(_userProfiles) { profiles -> value = enrichAndFilter(_rawPosts.value ?: emptyList(), profiles) }
-    }
+    // Expose raw posts directly to the UI. The FeedAdapter handles profile enrichment.
+    // This prevents continuous object recreation which breaks RecyclerView DiffUtil and causes glitching.
+    val explorePosts: LiveData<List<FeedPost>> = _rawExplorePosts
+    val friendsPosts: LiveData<List<FeedPost>> = _rawFriendsPosts
+    val chatPosts: LiveData<List<FeedPost>> = _rawChatPosts
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -42,105 +42,139 @@ class FeedViewModel : ViewModel() {
     val isLocationAvailable: LiveData<Boolean> = _isLocationAvailable
 
     private var userLocation: GeoPoint? = null
+    
+    // Jobs to manage streams so we don't have multiple snapshot listeners fighting each other
+    private var exploreJob: Job? = null
+    private var friendsJob: Job? = null
+    private var chatJob: Job? = null
     private var profileObservationJob: Job? = null
     
-    data class FeedFilters(
-        val showChat: Boolean = true,
-        val onlyFriends: Boolean = false,
-        val radius: Double? = null,
-        val showMyPosts: Boolean = true
-    )
-    
-    private var currentFilters = FeedFilters(showChat = false, onlyFriends = false, radius = null)
+    private var exploreRadius: Double? = null
+    private var showMyPostsInFriends = true
 
     private val currentUserId: String
         get() = auth.currentUser?.uid ?: ""
 
-    /**
-     * Enriches posts with latest profile data and determines if distance should be shown.
-     */
-    private fun enrichAndFilter(posts: List<FeedPost>, profiles: Map<String, UserProfile>): List<FeedPost> {
-        return posts.map { post ->
-            val profile = profiles[post.userId]
-            val distance = if (!currentFilters.onlyFriends && !currentFilters.showChat && currentFilters.radius != null) post.distanceMiles else null
-            
-            if (profile != null) {
-                post.copy(
-                    username = profile.username,
-                    userProfilePicture = profile.profilePictureUrl
-                ).apply { distanceMiles = distance }
-            } else {
-                post.apply { distanceMiles = distance }
-            }
-        }
-    }
-
     fun setUserLocation(latitude: Double, longitude: Double) {
         userLocation = GeoPoint(latitude, longitude)
         _isLocationAvailable.value = true
-        loadFeed()
+        loadExploreFeed()
+        loadChatFeed()
     }
 
     fun setLocationDisabled() {
         userLocation = null
         _isLocationAvailable.value = false
-        if (currentFilters.radius != null) {
-            applyFilters(radius = null)
+        if (exploreRadius != null) {
+            applyExploreFilters(radius = null)
         } else {
-            loadFeed()
+            loadExploreFeed()
         }
     }
 
-    fun applyFilters(
-        showChat: Boolean = currentFilters.showChat,
-        onlyFriends: Boolean = currentFilters.onlyFriends,
-        radius: Double? = currentFilters.radius,
-        showMyPosts: Boolean = currentFilters.showMyPosts
-    ) {
-        currentFilters = FeedFilters(showChat, onlyFriends, radius, showMyPosts)
-        loadFeed()
+    fun applyExploreFilters(radius: Double?) {
+        exploreRadius = radius
+        loadExploreFeed()
     }
 
-    fun loadFeed() {
-        _isLoading.value = true
-        viewModelScope.launch {
-            try {
-                val friendIds = if (currentFilters.onlyFriends) {
-                    socialRepository.getFriends().first().map { 
-                        if (it.requesterId == currentUserId) it.receiverId else it.requesterId 
-                    }
-                } else emptyList()
+    fun applyFriendsFilters(showMyPosts: Boolean) {
+        showMyPostsInFriends = showMyPosts
+        loadFriendsFeed()
+    }
 
+    fun loadExploreFeed() {
+        exploreJob?.cancel() // Prevent multiple listeners running simultaneously
+        _isLoading.value = true
+        exploreJob = viewModelScope.launch {
+            try {
                 repository.getFeed(
                     userLocation = userLocation,
-                    friendIds = friendIds,
-                    showChat = currentFilters.showChat,
-                    onlyFriends = currentFilters.onlyFriends,
-                    radius = currentFilters.radius,
-                    showMyPosts = currentFilters.showMyPosts
+                    friendIds = emptyList(),
+                    showChat = false,
+                    onlyFriends = false,
+                    radius = exploreRadius,
+                    showMyPosts = true
                 ).catch { e ->
-                    Log.e("FeedViewModel", "Error in feed", e)
+                    Log.e("FeedViewModel", "Error in explore feed", e)
                     emit(emptyList())
                 }.collect { posts ->
-                    _rawPosts.value = posts
-                    observeUserProfiles(posts)
+                    _rawExplorePosts.value = posts
+                    observeUserProfiles()
                     _isLoading.value = false
                 }
             } catch (e: Exception) {
-                Log.e("FeedViewModel", "Failed to load feed", e)
+                Log.e("FeedViewModel", "Failed to load explore feed", e)
                 _isLoading.value = false
             }
         }
     }
 
-    private fun observeUserProfiles(posts: List<FeedPost>) {
-        val userIds = posts.map { it.userId }.distinct()
+    fun loadFriendsFeed() {
+        friendsJob?.cancel() // Prevent multiple listeners
+        friendsJob = viewModelScope.launch {
+            try {
+                val friendIds = socialRepository.getFriends().first().map { 
+                    if (it.requesterId == currentUserId) it.receiverId else it.requesterId 
+                }
+                repository.getFeed(
+                    userLocation = userLocation,
+                    friendIds = friendIds,
+                    showChat = false,
+                    onlyFriends = true,
+                    radius = null,
+                    showMyPosts = showMyPostsInFriends
+                ).catch { e ->
+                    Log.e("FeedViewModel", "Error in friends feed", e)
+                    emit(emptyList())
+                }.collect { posts ->
+                    _rawFriendsPosts.value = posts
+                    observeUserProfiles()
+                }
+            } catch (e: Exception) {
+                Log.e("FeedViewModel", "Failed to load friends feed", e)
+            }
+        }
+    }
+
+    fun loadChatFeed() {
+        chatJob?.cancel() // Prevent multiple listeners
+        chatJob = viewModelScope.launch {
+            try {
+                repository.getFeed(
+                    userLocation = userLocation,
+                    friendIds = emptyList(),
+                    showChat = true,
+                    onlyFriends = false,
+                    radius = null,
+                    showMyPosts = true
+                ).catch { e ->
+                    Log.e("FeedViewModel", "Error in chat feed", e)
+                    emit(emptyList())
+                }.collect { posts ->
+                    _rawChatPosts.value = posts
+                    observeUserProfiles()
+                }
+            } catch (e: Exception) {
+                Log.e("FeedViewModel", "Failed to load chat feed", e)
+            }
+        }
+    }
+
+    private fun observeUserProfiles() {
+        val allPosts = (_rawExplorePosts.value ?: emptyList()) + 
+                       (_rawFriendsPosts.value ?: emptyList()) + 
+                       (_rawChatPosts.value ?: emptyList())
+                       
+        val userIds = allPosts.map { it.userId }.distinct()
         if (userIds.isEmpty()) return
 
+        // We accumulate profiles instead of wiping them to prevent UI flashing
         profileObservationJob?.cancel()
         profileObservationJob = viewModelScope.launch {
             profileRepository.observeProfiles(userIds).collect { profiles ->
-                _userProfiles.value = profiles
+                val currentMap = _userProfiles.value?.toMutableMap() ?: mutableMapOf()
+                currentMap.putAll(profiles)
+                _userProfiles.value = currentMap
             }
         }
     }
@@ -158,6 +192,12 @@ class FeedViewModel : ViewModel() {
                 location = userLocation
             )
             repository.createPost(post)
+        }
+    }
+
+    fun updateChatMessage(postId: String, newText: String) {
+        viewModelScope.launch {
+            repository.updatePost(postId, newText)
         }
     }
 
@@ -188,6 +228,9 @@ class FeedViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
+        exploreJob?.cancel()
+        friendsJob?.cancel()
+        chatJob?.cancel()
         profileObservationJob?.cancel()
     }
 }

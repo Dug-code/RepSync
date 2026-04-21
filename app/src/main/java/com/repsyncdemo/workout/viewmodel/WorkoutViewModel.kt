@@ -1,12 +1,7 @@
 package com.repsyncdemo.workout.viewmodel
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.map
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.*
 import com.repsyncdemo.workout.data.repository.WorkoutRepository
@@ -76,7 +71,7 @@ class WorkoutViewModel : ViewModel() {
 
     // Combined library flow: Static Database + Firestore Custom Exercises
     private val _customExercises = repository.getCustomExercises()
-        .onStart { emit(emptyList()) } // Ensure it emits immediately for the combine
+        .onStart { emit(emptyList()) }
         .catch { e ->
             Log.e("WorkoutViewModel", "Error loading custom exercises", e)
             emit(emptyList()) 
@@ -95,10 +90,8 @@ class WorkoutViewModel : ViewModel() {
     val filteredExercises: StateFlow<List<ExerciseDefinition>> = _filteredExercises
 
     init {
-        // Automatically keep the library updated when custom exercises change
         viewModelScope.launch {
             allLibraryExercises.collect {
-                // If no filters are active, show all
                 if (_filterName.value == null && selectedFilter.value == null) {
                     _filteredExercises.value = it
                 }
