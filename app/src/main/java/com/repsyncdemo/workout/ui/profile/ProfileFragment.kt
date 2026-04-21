@@ -92,7 +92,7 @@ class ProfileFragment : Fragment() {
             tab.text = when (position) {
                 0 -> if (targetUserId == null) "My Posts" else "Posts"
                 1 -> "Friends"
-                2 -> "Workouts"
+                2 -> "Shared Workouts"
                 else -> "Goals"
             }
         }.attach()
