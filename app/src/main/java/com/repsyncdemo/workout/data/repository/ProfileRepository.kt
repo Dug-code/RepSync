@@ -10,15 +10,25 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+/**
+ * Repository for managing user profiles in Firestore.
+ */
 class ProfileRepository {
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private val profilesCollection = db.collection("profiles")
 
+    /**
+     * Helper to get current Firebase User ID.
+     * Throws if no user is authenticated.
+     */
     private val currentUserId: String
         get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
 
+    /**
+     * Creates a new user profile in the database.
+     */
     suspend fun createProfile(profile: UserProfile): Result<Unit> {
         return try {
             val profileWithUser = profile.copy(
@@ -32,6 +42,9 @@ class ProfileRepository {
         }
     }
 
+    /**
+     * Retrieves a profile for a specific user ID, or the current user if null.
+     */
     suspend fun getProfile(userId: String? = null): Result<UserProfile> {
         val id = userId ?: currentUserId
         return try {
@@ -53,6 +66,9 @@ class ProfileRepository {
         }
     }
 
+    /**
+     * Returns a real-time Flow of a specific user's profile.
+     */
     fun observeProfile(userId: String? = null): Flow<UserProfile?> = callbackFlow {
         val id = userId ?: currentUserId
         val listener = profilesCollection.document(id)
@@ -68,6 +84,9 @@ class ProfileRepository {
         awaitClose { listener.remove() }
     }
 
+    /**
+     * Returns a Flow mapping user IDs to their respective profiles for a list of IDs.
+     */
     fun observeProfiles(userIds: List<String>): Flow<Map<String, UserProfile>> = callbackFlow {
         if (userIds.isEmpty()) {
             trySend(emptyMap())
@@ -115,6 +134,9 @@ class ProfileRepository {
         }
     }
 
+    /**
+     * Updates the user's location coordinates.
+     */
     suspend fun updateLocation(latitude: Double, longitude: Double): Result<Unit> {
         return try {
             profilesCollection.document(currentUserId)
@@ -126,15 +148,23 @@ class ProfileRepository {
         }
     }
 
+    /**
+     * Checks if a profile document exists for the current user.
+     */
     suspend fun hasProfile(): Boolean {
         return try {
             val doc = profilesCollection.document(currentUserId).get().await()
             doc.exists()
         } catch (e: Exception) {
+            // Fix for "Parameter 'e' is never used" warning - Log the error for tracking
+            Log.e("ProfileRepository", "Error checking for profile", e)
             false
         }
     }
 
+    /**
+     * Searches for users by username (case-insensitive).
+     */
     suspend fun searchUsers(query: String): Result<List<UserProfile>> {
         return try {
             val lowerQuery = query.lowercase().trim()
