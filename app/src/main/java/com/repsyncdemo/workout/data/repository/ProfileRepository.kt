@@ -92,10 +92,19 @@ class ProfileRepository {
         awaitClose { listeners.forEach { it.remove() } }
     }
 
+    /**
+     * Updates a user profile. 
+     * CRITICAL FIX: Now uses the userId from the profile object itself to determine
+     * the target document, rather than always overwriting the current logged-in user.
+     */
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
-            profilesCollection.document(currentUserId).set(
+            // Use the userId from the profile, falling back to current user only if empty
+            val targetId = if (profile.userId.isNotEmpty()) profile.userId else currentUserId
+            
+            profilesCollection.document(targetId).set(
                 profile.copy(
+                    userId = targetId, // Ensure internal userId matches the document ID
                     updatedAt = System.currentTimeMillis(),
                     usernameLowercase = profile.username.lowercase()
                 )
