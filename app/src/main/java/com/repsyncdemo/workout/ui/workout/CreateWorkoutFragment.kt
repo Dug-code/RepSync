@@ -1,6 +1,5 @@
 package com.repsyncdemo.workout.ui.workout
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -9,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.PopupMenu
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -20,6 +20,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.ExerciseType
@@ -48,6 +49,7 @@ class CreateWorkoutFragment : Fragment() {
 
     private lateinit var exerciseInputAdapter: ExerciseInputAdapter
     private var existingWorkoutId: String? = null
+    private var isPublic: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -112,13 +114,17 @@ class CreateWorkoutFragment : Fragment() {
             if (existingWorkoutId != null && workout != null) {
                 binding.etName.setText(workout.name)
                 binding.etDescription.setText(workout.description)
-                binding.switchPublic.isChecked = workout.isPublic
-                exerciseInputAdapter.clearItems() // New method to prevent duplicates
+                isPublic = workout.isPublic
+                updatePrivacyIcon()
+                
+                exerciseInputAdapter.clearItems()
                 workout.exercises.forEach { exercise ->
                     exerciseInputAdapter.addExerciseFromObject(exercise)
                 }
             }
         }
+
+        binding.btnPrivacyMenu.setOnClickListener { showPrivacyPopupMenu(it) }
 
         binding.btnAddExercise.setOnClickListener {
             showCustomExerciseDialog()
@@ -135,9 +141,10 @@ class CreateWorkoutFragment : Fragment() {
         workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess { workoutId ->
                 navigationLockViewModel.setLocked(false)
-                if (binding.switchPublic.isChecked && existingWorkoutId == null) {
+                if (isPublic && existingWorkoutId == null) {
                     val username = profileViewModel.myProfile.value?.username ?: ""
                     val post = FeedPost(
+                        userId = profileViewModel.myProfile.value?.userId ?: "",
                         username = username,
                         type = FeedPostType.WORKOUT_SHARED,
                         workoutId = workoutId,
@@ -167,6 +174,34 @@ class CreateWorkoutFragment : Fragment() {
         }
     }
 
+    private fun showPrivacyPopupMenu(view: View) {
+        val popup = PopupMenu(requireContext(), view)
+        popup.menuInflater.inflate(R.menu.menu_workout_privacy, popup.menu)
+        
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_public -> {
+                    isPublic = true
+                    updatePrivacyIcon()
+                    updateLockState()
+                    true
+                }
+                R.id.action_private -> {
+                    isPublic = false
+                    updatePrivacyIcon()
+                    updateLockState()
+                    true
+                }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    private fun updatePrivacyIcon() {
+        binding.ivPrivacyIcon.setImageResource(if (isPublic) R.drawable.ic_public else R.drawable.ic_private)
+    }
+
     private fun showCustomExerciseDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_create_custom_exercise, null)
         val etName = dialogView.findViewById<EditText>(R.id.etCustomName)
@@ -182,7 +217,7 @@ class CreateWorkoutFragment : Fragment() {
         spinnerPrimary.adapter = muscleAdapter
         spinnerSecondary.adapter = muscleAdapter
 
-        AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("New Custom Exercise")
             .setView(dialogView)
             .setPositiveButton("Add") { _, _ ->
@@ -211,7 +246,6 @@ class CreateWorkoutFragment : Fragment() {
 
         binding.etName.addTextChangedListener(watcher)
         binding.etDescription.addTextChangedListener(watcher)
-        binding.switchPublic.setOnCheckedChangeListener { _, _ -> updateLockState() }
     }
 
     private fun updateLockState() {
@@ -227,9 +261,9 @@ class CreateWorkoutFragment : Fragment() {
     }
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
-        AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
-            .setTitle("Discard Workout?")
-            .setMessage("You have unsaved changes. Are you sure you want to discard this workout?")
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Discard Changes?")
+            .setMessage("You have unsaved changes. Are you sure you want to discard them?")
             .setPositiveButton("Discard") { _, _ -> onDiscard() }
             .setNegativeButton("Keep Editing", null)
             .show()
@@ -256,15 +290,13 @@ class CreateWorkoutFragment : Fragment() {
             name = name,
             description = description,
             exercises = exercises,
-            isPublic = binding.switchPublic.isChecked
+            isPublic = isPublic
         )
 
         if (existingWorkoutId == null) {
             workoutViewModel.addWorkout(workout)
         } else {
             workoutViewModel.updateWorkout(workout)
-            // Manually trigger a success result for update since updateWorkout doesn't use operationResult yet
-            // Actually, I should update the ViewModel to handle this consistently.
             Toast.makeText(requireContext(), "Workout updated!", Toast.LENGTH_SHORT).show()
             navigationLockViewModel.setLocked(false)
             findNavController().popBackStack()

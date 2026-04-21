@@ -1,14 +1,17 @@
 package com.repsyncdemo.workout.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.databinding.ItemWorkoutBinding
 
 class WorkoutAdapter(
+    private val isReorderable: Boolean = false,
     private val onClick: (Workout) -> Unit
 ) : ListAdapter<Workout, WorkoutAdapter.ViewHolder>(WorkoutDiffCallback()) {
 
@@ -32,6 +35,19 @@ class WorkoutAdapter(
             binding.tvDescription.text = workout.description
             val count = workout.exercises.size
             binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
+            
+            // Set privacy icon based on workout status
+            if (workout.isPublic) {
+                binding.ivPrivacyStatus.setImageResource(R.drawable.ic_public)
+                binding.ivPrivacyStatus.alpha = 0.6f
+            } else {
+                binding.ivPrivacyStatus.setImageResource(R.drawable.ic_private)
+                binding.ivPrivacyStatus.alpha = 0.3f
+            }
+
+            // Show drag handle ONLY if reorderable
+            binding.ivDragHandle.visibility = if (isReorderable) View.VISIBLE else View.GONE
+
             binding.root.setOnClickListener { onClick(workout) }
         }
     }

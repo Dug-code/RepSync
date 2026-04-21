@@ -4,41 +4,36 @@
     android:viewportWidth="24"
     android:viewportHeight="24"
     android:tint="?attr/colorControlNormal">
-    <!-- Barbell / Dumbbell Bar -->
+    <!-- Main handle bar -->
     <path
-        android:fillColor="#00000000"
         android:strokeColor="@android:color/white"
-        android:strokeWidth="2"
+        android:strokeWidth="2.5"
         android:strokeLineCap="round"
-        android:pathData="M6.5,6.5 L17.5,17.5" />
-    <!-- Weight Plate 1 -->
+        android:pathData="M8,12 L16,12" />
+    <!-- Left side weights -->
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="@android:color/white"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M3,5.5 L8.5,11" />
-    <path
-        android:fillColor="#00000000"
         android:strokeColor="@android:color/white"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M2,9 L6,13" />
-    <!-- Weight Plate 2 -->
+        android:pathData="M6,8 v8" />
     <path
-        android:fillColor="#00000000"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M2,10 v4" />
+    <!-- Right side weights -->
+    <path
         android:strokeColor="@android:color/white"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M15.5,13 L21,18.5" />
+        android:pathData="M18,8 v8" />
     <path
-        android:fillColor="#00000000"
         android:strokeColor="@android:color/white"
-        android:strokeWidth="2"
+        android:strokeWidth="2.5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M18,11 L22,15" />
+        android:pathData="M22,10 v4" />
 </vector>

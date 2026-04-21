@@ -218,7 +218,17 @@ class WorkoutViewModel : ViewModel() {
         _isLoading.value = true
         viewModelScope.launch {
             repository.updateWorkout(workout)
+            // Fix: Update local state immediately for real-time UI refresh
+            if (_selectedWorkout.value?.id == workout.id) {
+                _selectedWorkout.value = workout
+            }
             _isLoading.value = false
+        }
+    }
+
+    fun updateWorkoutOrder(workouts: List<Workout>) {
+        viewModelScope.launch {
+            repository.updateWorkoutOrder(workouts)
         }
     }
 

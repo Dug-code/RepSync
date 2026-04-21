@@ -40,7 +40,8 @@ class WorkoutListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        workoutAdapter = WorkoutAdapter { workout ->
+        // Pass isReorderable = true for the main list
+        workoutAdapter = WorkoutAdapter(isReorderable = true) { workout ->
             val bundle = Bundle().apply { putString("workoutId", workout.id) }
             findNavController().navigate(R.id.action_workoutList_to_workoutDetail, bundle)
         }
@@ -89,8 +90,8 @@ class WorkoutListFragment : Fragment() {
 
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
-                // Persistence would normally happen here by updating a 'position' field in Firestore
-                // For now, this reorders the local list.
+                // Persist the new order to Firestore
+                viewModel.updateWorkoutOrder(allWorkouts)
             }
         })
         itemTouchHelper.attachToRecyclerView(binding.rvWorkouts)

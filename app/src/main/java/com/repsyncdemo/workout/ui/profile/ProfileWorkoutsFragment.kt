@@ -69,11 +69,20 @@ class ProfileWorkoutsFragment : Fragment() {
         } else {
             val workoutsSource = if (targetUserId != null) workoutViewModel.targetUserWorkouts else workoutViewModel.workouts
             workoutsSource.observe(viewLifecycleOwner) { workouts ->
-                workoutAdapter.submitList(workouts)
-                val isEmpty = workouts.isNullOrEmpty()
+                // Fix: Only show PUBLIC workouts on the profile, regardless of who is viewing.
+                val sharedWorkouts = workouts.filter { it.isPublic }
+                workoutAdapter.submitList(sharedWorkouts)
+                
+                val isEmpty = sharedWorkouts.isEmpty()
                 binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
-                binding.tvEmptyTitle.text = "No saved workouts."
-                binding.tvEmptySubtitle.text = ""
+                
+                if (targetUserId != null) {
+                    binding.tvEmptyTitle.text = "No shared workouts."
+                    binding.tvEmptySubtitle.text = "This user hasn't made any routines public yet."
+                } else {
+                    binding.tvEmptyTitle.text = "Nothing shared yet."
+                    binding.tvEmptySubtitle.text = "Mark your favorite routines as 'Public' to show them off here!"
+                }
                 binding.btnEmptyAction.visibility = View.GONE
             }
         }

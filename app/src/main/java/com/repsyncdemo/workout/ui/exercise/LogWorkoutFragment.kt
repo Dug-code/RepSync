@@ -192,7 +192,7 @@ class LogWorkoutFragment : Fragment() {
     }
 
     private fun showDatePicker() {
-        DatePickerDialog(
+        val datePickerDialog = DatePickerDialog(
             requireContext(),
             { _, year, month, dayOfMonth ->
                 startCalendar.set(Calendar.YEAR, year)
@@ -209,7 +209,10 @@ class LogWorkoutFragment : Fragment() {
             startCalendar.get(Calendar.YEAR),
             startCalendar.get(Calendar.MONTH),
             startCalendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
+        )
+        // Prevent picking future dates
+        datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+        datePickerDialog.show()
     }
 
     private fun showTimePicker(calendar: Calendar, isStart: Boolean) {
@@ -229,6 +232,12 @@ class LogWorkoutFragment : Fragment() {
     }
 
     private fun saveWorkout() {
+        // Double check for future dates/times
+        if (endCalendar.timeInMillis > System.currentTimeMillis()) {
+            Toast.makeText(requireContext(), "Cannot log a workout in the future", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val workoutName = binding.tvWorkoutName.text.toString()
         val workoutId = arguments?.getString("workoutId") ?: viewModel.selectedLog.value?.workoutId ?: ""
         

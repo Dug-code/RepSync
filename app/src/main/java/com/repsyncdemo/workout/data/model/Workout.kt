@@ -13,5 +13,6 @@ data class Workout(
     @get:PropertyName("isPublic")
     @set:PropertyName("isPublic")
     var isPublic: Boolean = false,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val order: Int = 0 // Added field for custom reordering
 )

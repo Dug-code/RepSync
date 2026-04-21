@@ -34,7 +34,8 @@ class WorkoutRepository {
                     return@addSnapshotListener
                 }
                 val workouts = snapshot?.toObjects(Workout::class.java) ?: emptyList()
-                trySend(workouts.sortedByDescending { it.createdAt })
+                // Order primarily by the 'order' field, then by 'createdAt'
+                trySend(workouts.sortedWith(compareBy({ it.order }, { -it.createdAt })))
             }
         awaitClose { listener.remove() }
     }
@@ -62,9 +63,22 @@ class WorkoutRepository {
 
     suspend fun updateWorkout(workout: Workout): Result<Unit> {
         return try {
-            // Fix: Preserve the userId during updates so the workout remains visible to the owner
             val workoutWithUser = workout.copy(userId = userId)
             workoutCollection.document(workout.id).set(workoutWithUser).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateWorkoutOrder(workouts: List<Workout>): Result<Unit> {
+        return try {
+            val batch = db.batch()
+            workouts.forEachIndexed { index, workout ->
+                val ref = workoutCollection.document(workout.id)
+                batch.update(ref, "order", index)
+            }
+            batch.commit().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
