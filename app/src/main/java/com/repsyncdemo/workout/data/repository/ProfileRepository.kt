@@ -113,21 +113,32 @@ class ProfileRepository {
 
     /**
      * Updates a user profile. 
-     * CRITICAL FIX: Now uses the userId from the profile object itself to determine
-     * the target document, rather than always overwriting the current logged-in user.
+     * 
+     * FINAL FIX FOR DUPLICATION/OVERWRITE: 
+     * This method now strictly prioritizes the document's actual ID (from Firestore metadata)
+     * if it exists, ensuring we update the exact document we read. 
+     * It then ensures the internal 'userId' field is synced to match that document ID, 
+     * which repairs any previous "overwritten" corruption.
      */
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
-            // Use the userId from the profile, falling back to current user only if empty
-            val targetId = if (profile.userId.isNotEmpty()) profile.userId else currentUserId
+            // Priority 1: Use 'id' (@DocumentId) if populated from a read.
+            // Priority 2: Use 'userId' field if provided.
+            // Priority 3: Fallback to current user (for self-updates from scratch).
+            val targetId = when {
+                profile.id.isNotEmpty() -> profile.id
+                profile.userId.isNotEmpty() -> profile.userId
+                else -> currentUserId
+            }
             
-            profilesCollection.document(targetId).set(
-                profile.copy(
-                    userId = targetId, // Ensure internal userId matches the document ID
-                    updatedAt = System.currentTimeMillis(),
-                    usernameLowercase = profile.username.lowercase()
-                )
-            ).await()
+            // Sync the userId field to the document ID to fix/prevent corruption
+            val profileToSave = profile.copy(
+                userId = targetId,
+                updatedAt = System.currentTimeMillis(),
+                usernameLowercase = profile.username.lowercase()
+            )
+            
+            profilesCollection.document(targetId).set(profileToSave).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -156,8 +167,8 @@ class ProfileRepository {
             val doc = profilesCollection.document(currentUserId).get().await()
             doc.exists()
         } catch (e: Exception) {
-            // Fix for "Parameter 'e' is never used" warning - Log the error for tracking
-            Log.e("ProfileRepository", "Error checking for profile", e)
+            // Use the exception in a log to resolve the "unused parameter" warning
+            Log.e("ProfileRepository", "Error checking if profile exists", e)
             false
         }
     }
