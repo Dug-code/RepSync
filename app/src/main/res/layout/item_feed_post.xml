@@ -16,7 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp"
+        android:padding="16dp"
         android:background="?attr/selectableItemBackground">
 
         <LinearLayout
@@ -27,8 +27,8 @@
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivUserProfile"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_profile_red"
                 app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
@@ -46,97 +46,81 @@
                     android:id="@+id/tvUsername"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/tvTimestamp"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="2dp">
-
-                    <TextView
-                        android:id="@+id/tvTimestamp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorTextSecondary" />
-
-                    <TextView
-                        android:id="@+id/tvDistanceAway"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:textSize="12sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primary"
-                        android:visibility="gone" />
-                </LinearLayout>
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorTextSecondary"
+                    android:alpha="0.7" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/tvPostType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="11sp"
+                android:textSize="9sp"
                 android:textStyle="bold"
                 android:textAllCaps="true"
                 android:textColor="@color/white"
                 android:background="@drawable/bg_post_type_tag"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp" />
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/tvPostContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:textStyle="bold"
+            android:textSize="15sp"
             android:textColor="?attr/colorOnSurface"
-            android:layout_marginTop="16dp"
-            android:lineSpacingExtra="4dp" />
+            android:layout_marginTop="12dp" />
 
         <TextView
             android:id="@+id/tvDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="15sp"
+            android:textSize="14sp"
             android:textColor="?attr/colorTextSecondary"
-            android:layout_marginTop="8dp"
-            android:lineSpacingExtra="4dp" />
+            android:layout_marginTop="4dp"
+            android:alpha="0.9" />
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?attr/colorDivider"
-            android:layout_marginTop="20dp"
-            android:alpha="0.5"/>
+        <TextView
+            android:id="@+id/tvDistanceAway"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingTop="12dp">
+            android:layout_marginTop="12dp">
 
             <LinearLayout
                 android:id="@+id/btnReactionArea"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/bg_post_type_tag"
-                android:backgroundTint="?attr/colorDivider"
+                android:backgroundTint="?attr/android:windowBackground"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp">
 
                 <ImageView
                     android:id="@+id/ivReaction"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
                     android:src="@drawable/ic_reaction"
                     app:tint="?attr/colorOnSurface" />
 
@@ -144,10 +128,10 @@
                     android:id="@+id/tvReactionCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="6dp"
                     android:text="React"
                     android:textColor="?attr/colorOnSurface"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:textStyle="bold" />
 
             </LinearLayout>
@@ -169,22 +153,21 @@
                     android:id="@+id/tvReaction1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="18sp"
-                    android:paddingHorizontal="2dp" />
+                    android:textSize="16sp" />
 
                 <TextView
                     android:id="@+id/tvReaction2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="18sp"
-                    android:paddingHorizontal="2dp" />
+                    android:textSize="16sp"
+                    android:layout_marginStart="2dp" />
 
                 <TextView
                     android:id="@+id/tvReaction3"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="18sp"
-                    android:paddingHorizontal="2dp" />
+                    android:textSize="16sp"
+                    android:layout_marginStart="2dp" />
             </LinearLayout>
 
         </LinearLayout>

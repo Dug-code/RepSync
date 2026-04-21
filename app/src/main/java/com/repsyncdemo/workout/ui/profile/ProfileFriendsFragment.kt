@@ -93,7 +93,8 @@ class ProfileFriendsFragment : Fragment() {
                 val myUsername = profileViewModel.myProfile.value?.username ?: "User"
                 socialViewModel.sendFriendRequest(user.userId, user.username, myUsername)
             },
-            onCancelRequest = { id -> socialViewModel.removeFriendship(id) }
+            onCancelRequest = { id -> socialViewModel.removeFriendship(id) },
+            onAcceptRequest = { friendship -> socialViewModel.acceptRequest(friendship.id) }
         )
     }
 
@@ -122,6 +123,10 @@ class ProfileFriendsFragment : Fragment() {
         socialViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
             friendsAdapter.updateProfiles(profiles)
             requestAdapter.updateProfiles(profiles)
+        }
+
+        socialViewModel.myFriendships.observe(viewLifecycleOwner) { friendships ->
+            searchAdapter.updateFriendships(friendships)
         }
 
         if (targetUserId == null) {

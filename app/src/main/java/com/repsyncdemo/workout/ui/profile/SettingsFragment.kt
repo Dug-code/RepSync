@@ -28,10 +28,12 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.GoalType
 import com.repsyncdemo.workout.data.model.WeightLog
 import com.repsyncdemo.workout.databinding.FragmentSettingsBinding
 import com.repsyncdemo.workout.ui.auth.LoginActivity
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
+import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import java.util.*
@@ -42,6 +44,7 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private val analyticsViewModel: AnalyticsViewModel by activityViewModels()
+    private val goalViewModel: GoalViewModel by activityViewModels()
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     private var isInitialLoad = true
@@ -110,10 +113,8 @@ class SettingsFragment : Fragment() {
                         binding.etHeightInches.setText((it.heightInches % 12).toString())
                     }
 
-                    // Weight saving fix: Ensure we capture the original weight correctly
                     originalWeight = it.weightLbs
-                    // Note: If you add an etWeight field to the settings XML, populate it here.
-                    // For now, I'm assuming you update weight via the Weigh-In feature on Profile.
+                    binding.etSettingsWeight.setText(it.weightLbs.toString())
 
                     binding.switchHeightPublic.isChecked = it.isHeightPublic
                     binding.switchWeightPublic.isChecked = it.isWeightPublic
@@ -327,6 +328,7 @@ class SettingsFragment : Fragment() {
         binding.etTwitterUrl.addTextChangedListener(watcher)
         binding.etHeightFeet.addTextChangedListener(watcher)
         binding.etHeightInches.addTextChangedListener(watcher)
+        binding.etSettingsWeight.addTextChangedListener(watcher)
 
         binding.switchHeightPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
         binding.switchWeightPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
@@ -346,7 +348,7 @@ class SettingsFragment : Fragment() {
         val currentInches = binding.etHeightInches.text.toString().trim().toIntOrNull() ?: 0
         val currentHeight = (currentFeet * 12) + currentInches
 
-        val hasHeightChanged = currentHeight != originalHeight
+        val currentWeight = binding.etSettingsWeight.text.toString().trim().toDoubleOrNull() ?: 0.0
 
         return binding.etUsername.text.toString().trim() != original.username ||
                binding.etBio.text.toString().trim() != original.bio ||
@@ -354,7 +356,8 @@ class SettingsFragment : Fragment() {
                binding.etInstagramUrl.text.toString().trim() != original.instagramUrl ||
                binding.etFacebookUrl.text.toString().trim() != original.facebookUrl ||
                binding.etTwitterUrl.text.toString().trim() != original.twitterUrl ||
-               hasHeightChanged ||
+               currentHeight != originalHeight ||
+               currentWeight != originalWeight ||
                binding.switchHeightPublic.isChecked != original.isHeightPublic ||
                binding.switchWeightPublic.isChecked != original.isWeightPublic ||
                binding.switchWorkoutsPublic.isChecked != original.isWorkoutsPublic ||
@@ -383,6 +386,8 @@ class SettingsFragment : Fragment() {
         val inchesValue = binding.etHeightInches.text.toString().trim().toIntOrNull() ?: 0
         val totalHeightInches = (feetValue * 12) + inchesValue
 
+        val newWeight = binding.etSettingsWeight.text.toString().trim().toDoubleOrNull() ?: 0.0
+
         val isHeightPublic = binding.switchHeightPublic.isChecked
         val isWeightPublic = binding.switchWeightPublic.isChecked
         val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
@@ -393,24 +398,25 @@ class SettingsFragment : Fragment() {
             return
         }
 
-        val currentProfile = profileViewModel.myProfile.value
-        currentProfile?.let {
-            val updatedProfile = it.copy(
-                username = username,
-                bio = bio,
-                profilePictureUrl = picUrl,
-                instagramUrl = instagramUrl,
-                facebookUrl = facebookUrl,
-                twitterUrl = twitterUrl,
-                heightInches = totalHeightInches,
-                isHeightPublic = isHeightPublic,
-                isWeightPublic = isWeightPublic,
-                isWorkoutsPublic = isWorkoutsPublic,
-                isFriendsListPublic = isFriendsPublic
-            )
-            
-            profileViewModel.updateProfile(updatedProfile)
-        }
+        // Surgical update using fields instead of the whole object
+        val updates = mutableMapOf<String, Any>(
+            "username" to username,
+            "bio" to bio,
+            "profilePictureUrl" to picUrl,
+            "instagramUrl" to instagramUrl,
+            "facebookUrl" to facebookUrl,
+            "twitterUrl" to twitterUrl,
+            "heightInches" to totalHeightInches,
+            "weightLbs" to newWeight,
+            "isHeightPublic" to isHeightPublic,
+            "isWeightPublic" to isWeightPublic,
+            "isWorkoutsPublic" to isWorkoutsPublic,
+            "isFriendsListPublic" to isFriendsPublic
+        )
+        
+        profileViewModel.updateWeightAndHeight(newWeight, totalHeightInches)
+        // This is safe because updateWeightAndHeight uses updateProfileFields internally
+        profileViewModel.updateProfileFields(updates)
     }
 
     private fun isValidUrl(url: String, allowedDomains: List<String>): Boolean {

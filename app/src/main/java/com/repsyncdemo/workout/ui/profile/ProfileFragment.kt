@@ -1,11 +1,13 @@
 package com.repsyncdemo.workout.ui.profile
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
@@ -17,6 +19,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -73,6 +76,14 @@ class ProfileFragment : Fragment() {
         }
         binding.viewPager.adapter = adapter
         binding.viewPager.offscreenPageLimit = 3
+        
+        // Dismiss keyboard when switching sub-tabs on profile
+        binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                hideKeyboard()
+            }
+        })
+
         TabLayoutMediator(binding.profileTabs, binding.viewPager) { tab, position ->
             tab.text = when (position) {
                 0 -> if (targetUserId == null) "My Posts" else "Posts"
@@ -169,14 +180,15 @@ class ProfileFragment : Fragment() {
             if (view.findViewById<MaterialCheckBox>(R.id.cbSat).isChecked) selectedDays.add(6)
             if (view.findViewById<MaterialCheckBox>(R.id.cbSun).isChecked) selectedDays.add(7)
         }
-        val profile = profileViewModel.myProfile.value ?: return
-        val updatedProfile = profile.copy(
-            weightLbs = weight,
-            weighInFrequency = freq,
-            weighInDays = selectedDays,
-            lastWeighInDate = System.currentTimeMillis()
+        
+        val updates = mapOf(
+            "weightLbs" to weight,
+            "weighInFrequency" to freq,
+            "weighInDays" to selectedDays,
+            "lastWeighInDate" to System.currentTimeMillis()
         )
-        profileViewModel.updateProfile(updatedProfile)
+        
+        profileViewModel.updateProfileFields(updates)
         Toast.makeText(requireContext(), "Weight updated!", Toast.LENGTH_SHORT).show()
     }
 
@@ -185,6 +197,7 @@ class ProfileFragment : Fragment() {
             profileViewModel.observeProfile(targetUserId)
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
             workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
+            goalViewModel.loadGoalsForUser(targetUserId!!)
         } else {
             profileViewModel.observeProfile()
             workoutViewModel.loadWorkoutLogsForUser(currentUserId)
@@ -192,22 +205,28 @@ class ProfileFragment : Fragment() {
     }
 
     private fun observeViewModel() {
+        // Observe currentProfile (handles both my profile and other users)
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
                 binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
                 updateProfilePicture(it.profilePictureUrl)
-                updateTrophyUI()
+                
                 val feet = it.heightInches / 12
                 val inches = it.heightInches % 12
                 binding.tvHeightValue.text = if (it.isHeightPublic || targetUserId == null) "${feet}' ${inches}\"" else "Private"
                 binding.tvWeightValue.text = if (it.isWeightPublic || targetUserId == null) "${it.weightLbs.toInt()} lbs" else "Private"
+                
                 setupSocialIcon(binding.btnInstagram, it.instagramUrl)
                 setupSocialIcon(binding.btnFacebook, it.facebookUrl)
                 setupSocialIcon(binding.btnTwitter, it.twitterUrl)
+                
+                updateTrophyUI()
             }
         }
+        
         socialViewModel.friendshipWithTarget.observe(viewLifecycleOwner) { updateFriendButtonUI(it) }
+        
         val activeGoalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
         activeGoalsSource.observe(viewLifecycleOwner) { goals ->
             val activeGoals = goals.filter { !it.isCompleted }.take(5)
@@ -215,6 +234,7 @@ class ProfileFragment : Fragment() {
             binding.tvGoalsHeader.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
             binding.rvMiniGoals.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
         }
+
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
         profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
     }
@@ -345,6 +365,14 @@ class ProfileFragment : Fragment() {
             }
         } else {
             button.visibility = View.GONE
+        }
+    }
+
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val view = activity?.currentFocus ?: view
+        view?.let {
+            imm.hideSoftInputFromWindow(it.windowToken, 0)
         }
     }
 

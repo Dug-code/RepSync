@@ -99,13 +99,12 @@ class HomeFragment : Fragment() {
     }
 
     private fun triggerConfetti() {
-        val primaryColor = ContextCompat.getColor(requireContext(), R.color.primary)
         val party = Party(
             speed = 0f,
             maxSpeed = 30f,
             damping = 0.9f,
             spread = 360,
-            colors = listOf(primaryColor, 0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
+            colors = listOf(0xE31E24, 0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
             position = Position.Relative(0.5, -0.1),
             emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
         )
@@ -149,8 +148,17 @@ class HomeFragment : Fragment() {
             val count = logs.count { it.completedAt >= thirtyDaysAgo }
             val timeText = if (count == 1) "time" else "times"
             binding.tvCongrats.text = "$greeting You worked out $count $timeText in the last 30 days"
+            
+            // Update motivational message
+            binding.tvMotivationalMessage.text = when {
+                count == 0 -> "Time to lock in!"
+                count in 1..4 -> "Keep up the momentum!"
+                count in 5..9 -> "Consistency is key!"
+                else -> "Keep crushing it!"
+            }
         } else {
             binding.tvCongrats.text = if (username.isNotEmpty()) "Congrats $username! Checking your progress..." else "Loading your progress..."
+            binding.tvMotivationalMessage.text = "Keep up the momentum!"
         }
     }
 

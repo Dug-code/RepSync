@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.Goal
 import com.repsyncdemo.workout.data.model.GoalType
 import com.repsyncdemo.workout.databinding.ItemMiniGoalBinding
@@ -30,12 +31,20 @@ class MiniGoalAdapter : ListAdapter<Goal, MiniGoalAdapter.ViewHolder>(GoalDiffCa
         fun bind(goal: Goal) {
             binding.tvMiniGoalTitle.text = goal.title
             
+            // Match the new icons from the main goals list
+            val iconRes = when (goal.type) {
+                GoalType.WEIGHT_LOSS, GoalType.WEIGHT_GAIN -> R.drawable.ic_scale
+                GoalType.PR -> R.drawable.ic_medal
+                else -> R.drawable.ic_checkered_flag
+            }
+            binding.ivMiniGoalIcon.setImageResource(iconRes)
+            
             val start = if (goal.startingValue == 0.0) goal.currentValue else goal.startingValue
             val change = goal.currentValue - start
             val changeText = if (change >= 0) "+${change.toInt()}" else "${change.toInt()}"
             
-            // Format: "198 lbs (-2) | Goal: 190"
-            binding.tvMiniGoalValue.text = "${goal.currentValue.toInt()} ${goal.unit} ($changeText)\nGoal: ${goal.targetValue.toInt()}"
+            // Clean single line value: "198 lbs (-2) of 190"
+            binding.tvMiniGoalValue.text = "${goal.currentValue.toInt()} ${goal.unit} ($changeText) of ${goal.targetValue.toInt()}"
             
             val totalDiff = abs(goal.targetValue - start)
             val currentDiff = if (goal.type == GoalType.WEIGHT_LOSS || (start > goal.targetValue)) {

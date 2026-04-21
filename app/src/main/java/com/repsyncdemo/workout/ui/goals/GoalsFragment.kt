@@ -124,8 +124,7 @@ class GoalsFragment : Fragment() {
 
         // Setup exercise autocomplete
         viewLifecycleOwner.lifecycleScope.launch {
-            workoutViewModel.allLibraryExercises.collectLatest { exercises ->
-                val names = exercises.map { it.name }.sorted()
+            workoutViewModel.allUniqueExerciseNames.collectLatest { names ->
                 val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
                 etExerciseName.setAdapter(adapter)
             }
@@ -213,9 +212,7 @@ class GoalsFragment : Fragment() {
                 viewModel.addGoal(goal)
 
                 if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
-                    profileViewModel.myProfile.value?.let { profile ->
-                        profileViewModel.updateProfile(profile.copy(weightLbs = initialVal))
-                    }
+                    profileViewModel.updateWeight(initialVal)
                 }
                 
                 if (switchPublic.isChecked) {
@@ -247,9 +244,7 @@ class GoalsFragment : Fragment() {
                 viewModel.updateProgress(goal.id, newValue)
 
                 if (goal.type == GoalType.WEIGHT_LOSS || goal.type == GoalType.WEIGHT_GAIN) {
-                    profileViewModel.myProfile.value?.let { profile ->
-                        profileViewModel.updateProfile(profile.copy(weightLbs = newValue))
-                    }
+                    profileViewModel.updateWeight(newValue)
                 }
 
                 val isComplete = when (goal.type) {

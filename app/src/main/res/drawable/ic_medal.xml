@@ -6,14 +6,14 @@
     <!-- Ribbon -->
     <path
         android:fillColor="@android:color/white"
-        android:alpha="0.7"
-        android:pathData="M7.5,2L5,9L12,12L19,9L16.5,2H14.5L12,5L9.5,2H7.5Z" />
+        android:alpha="0.8"
+        android:pathData="M15,2l-3,5l-3,-5H7l4,7h2l4,-7H15z" />
     <!-- Medal Circle -->
     <path
         android:fillColor="@android:color/white"
-        android:pathData="M12,10c-3.3,0 -6,2.7 -6,6s2.7,6 6,6s6,-2.7 6,-6S15.3,10 12,10z M12,20.5c-2.5,0 -4.5,-2 -4.5,-4.5s2,-4.5 4.5,-4.5s4.5,2 4.5,4.5S14.5,20.5 12,20.5z" />
-    <!-- Number 1 or Star inside medal -->
+        android:pathData="M12,9c-3.86,0 -7,3.14 -7,7s3.14,7 7,7s7,-3.14 7,-7S15.86,9 12,9z M12,21c-2.76,0 -5,-2.24 -5,-5s2.24,-5 5,-5s5,2.24 5,5S14.76,21 12,21z" />
+    <!-- Star in center -->
     <path
         android:fillColor="@android:color/white"
-        android:pathData="M12,13.5l0.8,1.7l1.9,0.3l-1.4,1.3l0.3,1.9l-1.7,-0.9l-1.7,0.9l0.3,-1.9l-1.4,-1.3l1.9,-0.3Z" />
+        android:pathData="M12,13.5l0.6,1.2l1.3,0.2l-0.9,0.9l0.2,1.3l-1.2,-0.6l-1.2,0.6l0.2,-1.3l-0.9,-0.9l1.3,-0.2z" />
 </vector>

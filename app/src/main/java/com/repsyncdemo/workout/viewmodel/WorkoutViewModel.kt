@@ -86,6 +86,23 @@ class WorkoutViewModel : ViewModel() {
         (static + custom).distinctBy { it.name.lowercase() }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ExerciseDatabase.allExercises)
 
+    // Comprehensive list of all exercises the user has interacted with
+    val allUniqueExerciseNames: StateFlow<List<String>> = combine(
+        allLibraryExercises,
+        repository.getWorkouts(),
+        repository.getWorkoutLogs()
+    ) { library, templates, logs ->
+        val names = mutableSetOf<String>()
+        library.forEach { names.add(it.name) }
+        templates.forEach { workout ->
+            workout.exercises.forEach { names.add(it.name) }
+        }
+        logs.forEach { log ->
+            log.exercises.forEach { names.add(it.exerciseName) }
+        }
+        names.toList().filter { it.isNotEmpty() }.sorted()
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     private val _filteredExercises = MutableStateFlow<List<ExerciseDefinition>>(ExerciseDatabase.allExercises)
     val filteredExercises: StateFlow<List<ExerciseDefinition>> = _filteredExercises
 

@@ -1,9 +1,11 @@
 package com.repsyncdemo.workout
 
+import android.content.Context
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 import android.widget.EditText
@@ -20,7 +22,6 @@ import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.repsyncdemo.workout.R
-import com.repsyncdemo.workout.data.model.WeightLog
 import com.repsyncdemo.workout.databinding.ActivityMainBinding
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
@@ -53,22 +54,40 @@ class MainActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
         navController.addOnDestinationChangedListener { _, destination, arguments ->
-            val isRootProfile = destination.id == R.id.profileFragment && arguments?.getString("userId") == null
-            if (appBarConfiguration.topLevelDestinations.contains(destination.id) || isRootProfile) {
+            val userId = arguments?.getString("userId")
+            val isOtherUserProfile = destination.id == R.id.profileFragment && userId != null
+            
+            // Hide action bar for main tabs, but SHOW it for other users' profiles
+            if (appBarConfiguration.topLevelDestinations.contains(destination.id) && !isOtherUserProfile) {
                 supportActionBar?.hide()
             } else {
                 supportActionBar?.show()
+                supportActionBar?.setDisplayHomeAsUpEnabled(true)
             }
+            // Hide keyboard on any destination change
+            hideKeyboard()
         }
 
         binding.bottomNav.setupWithNavController(navController)
         binding.bottomNav.setOnItemSelectedListener { item ->
             if (navigationLockViewModel.isLocked.value == true) {
-                showLockWarning(item.itemId)
+                showLockWarning {
+                    navigationLockViewModel.setLocked(false)
+                    if (item.itemId == R.id.profileFragment) {
+                        navController.navigate(R.id.profileFragment, null)
+                    } else {
+                        navController.navigate(item.itemId)
+                    }
+                }
                 false
             } else {
                 if (item.itemId != navController.currentDestination?.id) {
-                    navController.navigate(item.itemId)
+                    hideKeyboard()
+                    if (item.itemId == R.id.profileFragment) {
+                        navController.navigate(R.id.profileFragment, null)
+                    } else {
+                        navController.navigate(item.itemId)
+                    }
                 }
                 true
             }
@@ -86,6 +105,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        currentFocus?.let {
+            imm.hideSoftInputFromWindow(it.windowToken, 0)
+        }
+    }
+
     private fun checkWeighInSchedule(profile: com.repsyncdemo.workout.data.model.UserProfile) {
         if (profile.weighInFrequency == "never") return
 
@@ -100,7 +126,6 @@ class MainActivity : AppCompatActivity() {
             "daily" -> true
             "custom" -> {
                 val dayOfWeek = now.get(Calendar.DAY_OF_WEEK) // 1 (Sun) to 7 (Sat)
-                // Convert to our format: 1 (Mon) to 7 (Sun)
                 val ourDay = if (dayOfWeek == Calendar.SUNDAY) 7 else dayOfWeek - 1
                 profile.weighInDays.contains(ourDay)
             }
@@ -133,7 +158,6 @@ class MainActivity : AppCompatActivity() {
         val freqOptions = arrayOf("Never", "Every Day", "Select Days")
         spinnerFreq.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, freqOptions))
 
-        // Pre-fill current data
         profileViewModel.myProfile.value?.let { p ->
             etWeight.setText(p.weightLbs.toString())
             spinnerFreq.setText(when(p.weighInFrequency) {
@@ -187,36 +211,31 @@ class MainActivity : AppCompatActivity() {
             if (view.findViewById<MaterialCheckBox>(R.id.cbSun).isChecked) selectedDays.add(7)
         }
 
-        val profile = profileViewModel.myProfile.value ?: return
-        val updatedProfile = profile.copy(
-            weightLbs = weight,
-            weighInFrequency = freq,
-            weighInDays = selectedDays,
-            lastWeighInDate = System.currentTimeMillis()
+        val updates = mapOf(
+            "weightLbs" to weight,
+            "weighInFrequency" to freq,
+            "weighInDays" to selectedDays,
+            "lastWeighInDate" to System.currentTimeMillis()
         )
         
-        profileViewModel.updateProfile(updatedProfile)
-        // Also save to logs for analytics
-        // Note: Repository would normally handle this, simplified for now
+        profileViewModel.updateProfileFields(updates)
+        Toast.makeText(this, "Weight updated!", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupBottomNavSlide() {
         val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
-                if (e1 == null || navigationLockViewModel.isLocked.value == true) return false
+                if (e1 == null) return false
                 val diffX = e2.x - e1.x
                 if (abs(diffX) > 100 && abs(velocityX) > 100) {
-                    val menu = binding.bottomNav.menu
-                    val currentId = binding.bottomNav.selectedItemId
-                    var currentIndex = -1
-                    for (i in 0 until menu.size()) {
-                        if (menu.getItem(i).itemId == currentId) {
-                            currentIndex = i
-                            break
+                    if (navigationLockViewModel.isLocked.value == true) {
+                        showLockWarning {
+                            navigationLockViewModel.setLocked(false)
+                            performFlingNavigation(diffX)
                         }
+                    } else {
+                        performFlingNavigation(diffX)
                     }
-                    if (diffX > 0) { if (currentIndex > 0) binding.bottomNav.selectedItemId = menu.getItem(currentIndex - 1).itemId }
-                    else { if (currentIndex < menu.size() - 1) binding.bottomNav.selectedItemId = menu.getItem(currentIndex + 1).itemId }
                     return true
                 }
                 return false
@@ -225,11 +244,47 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNav.setOnTouchListener { v, event -> if (gestureDetector.onTouchEvent(event)) true else v.onTouchEvent(event) }
     }
 
-    private fun showLockWarning(targetMenuId: Int) {
-        AlertDialog.Builder(this).setTitle("Unsaved Changes").setMessage("You have unsaved changes. Are you sure you want to discard them?")
-            .setPositiveButton("Discard") { _, _ -> navigationLockViewModel.setLocked(false); navController.navigate(targetMenuId) }
-            .setNegativeButton("Keep Editing", null).show()
+    private fun performFlingNavigation(diffX: Float) {
+        val menu = binding.bottomNav.menu
+        val currentId = binding.bottomNav.selectedItemId
+        var currentIndex = -1
+        for (i in 0 until menu.size()) {
+            if (menu.getItem(i).itemId == currentId) {
+                currentIndex = i
+                break
+            }
+        }
+        if (diffX > 0) { 
+            if (currentIndex > 0) {
+                hideKeyboard()
+                binding.bottomNav.selectedItemId = menu.getItem(currentIndex - 1).itemId 
+            }
+        }
+        else { 
+            if (currentIndex < menu.size() - 1) {
+                hideKeyboard()
+                binding.bottomNav.selectedItemId = menu.getItem(currentIndex + 1).itemId 
+            }
+        }
     }
 
-    override fun onSupportNavigateUp(): Boolean = navController.navigateUp() || super.onSupportNavigateUp()
+    private fun showLockWarning(onDiscard: () -> Unit) {
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Unsaved Changes")
+            .setMessage("You have unsaved changes. Are you sure you want to discard them?")
+            .setPositiveButton("Discard") { _, _ -> onDiscard() }
+            .setNegativeButton("Keep Editing", null)
+            .show()
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        if (navigationLockViewModel.isLocked.value == true) {
+            showLockWarning {
+                navigationLockViewModel.setLocked(false)
+                navController.navigateUp()
+            }
+            return true
+        }
+        return navController.navigateUp() || super.onSupportNavigateUp()
+    }
 }
