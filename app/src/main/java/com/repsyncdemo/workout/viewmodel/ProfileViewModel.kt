@@ -1,16 +1,13 @@
 package com.repsyncdemo.workout.viewmodel
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.data.repository.FeedRepository
 import com.repsyncdemo.workout.data.repository.ProfileRepository
 import com.repsyncdemo.workout.util.SingleLiveEvent
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
@@ -45,6 +42,8 @@ class ProfileViewModel : ViewModel() {
     private val _userPosts = MutableLiveData<List<FeedPost>>()
     val userPosts: LiveData<List<FeedPost>> = _userPosts
 
+    private var profileObservationJob: Job? = null
+
     val myPosts: LiveData<List<FeedPost>> = feedRepository.getMyPosts()
         .catch { e ->
             Log.e("ProfileViewModel", "Error fetching my posts", e)
@@ -58,17 +57,25 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun loadProfile(userId: String? = null) {
-        _isLoading.value = true
-        viewModelScope.launch {
-            repository.getProfile(userId).onSuccess {
+    /**
+     * Start observing a profile in real-time.
+     * Cancels any previous observation job to prevent multiple listeners.
+     */
+    fun observeProfile(userId: String? = null) {
+        profileObservationJob?.cancel()
+        profileObservationJob = viewModelScope.launch {
+            repository.observeProfile(userId).collect {
                 _currentProfile.value = it
-                loadUserPosts(it.userId)
-            }.onFailure {
-                Log.e("ProfileViewModel", "Error loading profile", it)
+                if (it != null) {
+                    loadUserPosts(it.userId)
+                }
             }
-            _isLoading.value = false
         }
+    }
+
+    // Restored for backward compatibility during migration
+    fun loadProfile(userId: String? = null) {
+        observeProfile(userId)
     }
 
     private fun loadUserPosts(userId: String) {
@@ -84,14 +91,6 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun observeProfile(userId: String? = null) {
-        viewModelScope.launch {
-            repository.observeProfile(userId).collect {
-                _currentProfile.value = it
-            }
-        }
-    }
-
     fun createProfile(profile: UserProfile) {
         _isLoading.value = true
         viewModelScope.launch {
@@ -103,7 +102,8 @@ class ProfileViewModel : ViewModel() {
     fun updateProfile(profile: UserProfile) {
         _isLoading.value = true
         viewModelScope.launch {
-            _profileResult.value = repository.updateProfile(profile)
+            val result = repository.updateProfile(profile)
+            _profileResult.value = result
             _isLoading.value = false
         }
     }

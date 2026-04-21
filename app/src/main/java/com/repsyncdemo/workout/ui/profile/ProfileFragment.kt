@@ -6,6 +6,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -15,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import coil.load
 import coil.transform.CircleCropTransformation
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.firebase.auth.FirebaseAuth
@@ -24,11 +29,6 @@ import com.repsyncdemo.workout.databinding.FragmentProfileBinding
 import com.repsyncdemo.workout.ui.adapter.*
 import com.repsyncdemo.workout.viewmodel.*
 
-/**
- * Fragment that displays a user's profile.
- * Handles both the logged-in user's profile and other users' profiles.
- * Includes integration for Admin features and Friend management.
- */
 class ProfileFragment : Fragment() {
 
     private var _binding: FragmentProfileBinding? = null
@@ -44,32 +44,20 @@ class ProfileFragment : Fragment() {
     private var targetUserId: String? = null
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // If userId is passed in arguments, we are viewing another user's profile.
-        // If null, we are viewing the logged-in user's own profile.
         targetUserId = arguments?.getString("userId")
-
         setupViewPager()
         setupListeners()
         observeViewModel()
-
         loadData()
     }
 
-    /**
-     * Sets up the ViewPager with tabs for Posts, Friends, Workouts, and Goals.
-     */
     private fun setupViewPager() {
         val adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 4
@@ -84,10 +72,7 @@ class ProfileFragment : Fragment() {
             }
         }
         binding.viewPager.adapter = adapter
-        
-        // Pre-load profile tabs for smooth swiping
         binding.viewPager.offscreenPageLimit = 3
-
         TabLayoutMediator(binding.profileTabs, binding.viewPager) { tab, position ->
             tab.text = when (position) {
                 0 -> if (targetUserId == null) "My Posts" else "Posts"
@@ -98,32 +83,23 @@ class ProfileFragment : Fragment() {
         }.attach()
     }
 
-    /**
-     * Initializes click listeners for settings, trophy shelf, and admin dashboard.
-     */
     private fun setupListeners() {
         if (targetUserId == null) {
-            // UI elements only visible on the user's own profile
             binding.btnSettings.visibility = View.VISIBLE
             binding.btnTrophyShelf.visibility = View.VISIBLE
             binding.btnFriendAction.visibility = View.GONE
+            binding.btnSettings.setOnClickListener { findNavController().navigate(R.id.action_profile_to_settings) }
+            binding.btnTrophyShelf.setOnClickListener { findNavController().navigate(R.id.action_profile_to_trophyShelf) }
             
-            binding.btnSettings.setOnClickListener {
-                findNavController().navigate(R.id.action_profile_to_settings)
-            }
-            binding.btnTrophyShelf.setOnClickListener {
-                findNavController().navigate(R.id.action_profile_to_trophyShelf)
-            }
-            // ADMIN: Navigate to the management dashboard
-            binding.btnAdminDashboard.setOnClickListener {
-                findNavController().navigate(R.id.action_profile_to_adminDashboard)
-            }
+            // WEIGH-IN: Allow user to tap weight to log it
+            binding.layoutWeight.setOnClickListener { showWeighInDialog() }
+            binding.layoutWeight.isClickable = true
+            binding.layoutWeight.isFocusable = true
         } else {
-            // UI elements for viewing another user
             binding.btnSettings.visibility = View.GONE
             binding.btnTrophyShelf.visibility = View.GONE
-            binding.btnAdminDashboard.visibility = View.GONE
             binding.btnFriendAction.visibility = View.VISIBLE
+            binding.layoutWeight.isClickable = false
         }
 
         miniGoalAdapter = MiniGoalAdapter()
@@ -133,57 +109,105 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    /**
-     * Triggers data loading from repositories based on the profile being viewed.
-     */
+    private fun showWeighInDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_weigh_in, null)
+        val etWeight = dialogView.findViewById<EditText>(R.id.etWeight)
+        val spinnerFreq = dialogView.findViewById<AutoCompleteTextView>(R.id.spinnerFrequency)
+        val layoutCustom = dialogView.findViewById<LinearLayout>(R.id.layoutCustomDays)
+        
+        val freqOptions = arrayOf("Never", "Every Day", "Select Days")
+        spinnerFreq.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, freqOptions))
+
+        profileViewModel.myProfile.value?.let { p ->
+            etWeight.setText(p.weightLbs.toString())
+            spinnerFreq.setText(when(p.weighInFrequency) {
+                "daily" -> "Every Day"
+                "custom" -> "Select Days"
+                else -> "Never"
+            }, false)
+            if (p.weighInFrequency == "custom") {
+                layoutCustom.visibility = View.VISIBLE
+                dialogView.findViewById<MaterialCheckBox>(R.id.cbMon).isChecked = p.weighInDays.contains(1)
+                dialogView.findViewById<MaterialCheckBox>(R.id.cbTue).isChecked = p.weighInDays.contains(2)
+                dialogView.findViewById<MaterialCheckBox>(R.id.cbWed).isChecked = p.weighInDays.contains(3)
+                dialogView.findViewById<MaterialCheckBox>(R.id.cbThu).isChecked = p.weighInDays.contains(4)
+                dialogView.findViewById<MaterialCheckBox>(R.id.cbFri).isChecked = p.weighInDays.contains(5)
+                dialogView.findViewById<MaterialCheckBox>(R.id.cbSat).isChecked = p.weighInDays.contains(6)
+                dialogView.findViewById<MaterialCheckBox>(R.id.cbSun).isChecked = p.weighInDays.contains(7)
+            }
+        }
+
+        spinnerFreq.setOnItemClickListener { _, _, position, _ ->
+            layoutCustom.visibility = if (position == 2) View.VISIBLE else View.GONE
+        }
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setView(dialogView)
+            .setPositiveButton("Save") { _, _ ->
+                val weight = etWeight.text.toString().toDoubleOrNull() ?: 0.0
+                if (weight > 0) {
+                    saveWeighInData(weight, spinnerFreq.text.toString(), dialogView)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun saveWeighInData(weight: Double, freqText: String, view: View) {
+        val freq = when(freqText) {
+            "Every Day" -> "daily"
+            "Select Days" -> "custom"
+            else -> "never"
+        }
+        val selectedDays = mutableListOf<Int>()
+        if (freq == "custom") {
+            if (view.findViewById<MaterialCheckBox>(R.id.cbMon).isChecked) selectedDays.add(1)
+            if (view.findViewById<MaterialCheckBox>(R.id.cbTue).isChecked) selectedDays.add(2)
+            if (view.findViewById<MaterialCheckBox>(R.id.cbWed).isChecked) selectedDays.add(3)
+            if (view.findViewById<MaterialCheckBox>(R.id.cbThu).isChecked) selectedDays.add(4)
+            if (view.findViewById<MaterialCheckBox>(R.id.cbFri).isChecked) selectedDays.add(5)
+            if (view.findViewById<MaterialCheckBox>(R.id.cbSat).isChecked) selectedDays.add(6)
+            if (view.findViewById<MaterialCheckBox>(R.id.cbSun).isChecked) selectedDays.add(7)
+        }
+        val profile = profileViewModel.myProfile.value ?: return
+        val updatedProfile = profile.copy(
+            weightLbs = weight,
+            weighInFrequency = freq,
+            weighInDays = selectedDays,
+            lastWeighInDate = System.currentTimeMillis()
+        )
+        profileViewModel.updateProfile(updatedProfile)
+        Toast.makeText(requireContext(), "Weight updated!", Toast.LENGTH_SHORT).show()
+    }
+
     private fun loadData() {
         if (targetUserId != null) {
-            profileViewModel.loadProfile(targetUserId)
+            profileViewModel.observeProfile(targetUserId)
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
             workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
         } else {
-            profileViewModel.loadProfile()
+            profileViewModel.observeProfile()
             workoutViewModel.loadWorkoutLogsForUser(currentUserId)
         }
     }
 
-    /**
-     * Sets up observers for ViewModel data to update the UI reactively.
-     */
     private fun observeViewModel() {
-        // Observes the profile of the user being viewed
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
                 binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
-                
                 updateProfilePicture(it.profilePictureUrl)
                 updateTrophyUI()
-
                 val feet = it.heightInches / 12
                 val inches = it.heightInches % 12
                 binding.tvHeightValue.text = if (it.isHeightPublic || targetUserId == null) "${feet}' ${inches}\"" else "Private"
                 binding.tvWeightValue.text = if (it.isWeightPublic || targetUserId == null) "${it.weightLbs.toInt()} lbs" else "Private"
-
                 setupSocialIcon(binding.btnInstagram, it.instagramUrl)
                 setupSocialIcon(binding.btnFacebook, it.facebookUrl)
                 setupSocialIcon(binding.btnTwitter, it.twitterUrl)
             }
         }
-
-        // Observes the logged-in user's profile to handle specific permissions
-        profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
-            if (targetUserId == null) {
-                // ADMIN: Only show the dashboard button if the user is an admin
-                binding.btnAdminDashboard.visibility = if (profile?.isAdmin == true) View.VISIBLE else View.GONE
-            }
-            updateTrophyUI()
-        }
-
-        socialViewModel.friendshipWithTarget.observe(viewLifecycleOwner) { friendship ->
-            updateFriendButtonUI(friendship)
-        }
-
+        socialViewModel.friendshipWithTarget.observe(viewLifecycleOwner) { updateFriendButtonUI(it) }
         val activeGoalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
         activeGoalsSource.observe(viewLifecycleOwner) { goals ->
             val activeGoals = goals.filter { !it.isCompleted }.take(5)
@@ -191,19 +215,14 @@ class ProfileFragment : Fragment() {
             binding.tvGoalsHeader.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
             binding.rvMiniGoals.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
         }
-
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
+        profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
     }
 
-    /**
-     * Updates the Friend Action button based on the current friendship status (Accepted, Pending, None).
-     */
     private fun updateFriendButtonUI(friendship: Friendship?) {
         if (targetUserId == null) return
-        
         val button = binding.btnFriendAction
         button.visibility = View.VISIBLE
-        
         when {
             friendship == null -> {
                 button.text = "Friend +"
@@ -225,9 +244,7 @@ class ProfileFragment : Fragment() {
                     button.setIconResource(R.drawable.ic_check_simple)
                     button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.text_secondary)
                     button.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
-                    button.setOnClickListener {
-                        showUnfriendConfirmation(friendship, "Cancel friend request?")
-                    }
+                    button.setOnClickListener { showUnfriendConfirmation(friendship, "Cancel friend request?") }
                 } else {
                     button.text = "Accept"
                     button.setIconResource(R.drawable.ic_check_simple)
@@ -252,9 +269,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    /**
-     * Shows a confirmation dialog before removing a friend or cancelling a request.
-     */
     private fun showUnfriendConfirmation(friendship: Friendship, message: String) {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Manage Friendship")
@@ -267,9 +281,6 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
-    /**
-     * Loads and displays the profile picture (either a URL or a built-in color avatar).
-     */
     private fun updateProfilePicture(url: String) {
         if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
             binding.ivProfilePic.load(url) {
@@ -291,24 +302,18 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    /**
-     * Updates the UI for the pinned trophy based on user achievements and preferences.
-     */
     private fun updateTrophyUI() {
         val profile = profileViewModel.myProfile.value ?: return
         val workoutCount = workoutViewModel.workoutLogs.value?.size ?: 0
         val restDayCount = profile.totalRestDays
-
         val pinnedTrophyId = profile.pinnedTrophyId
         val trophyToDisplay = if (pinnedTrophyId == "recovery") {
             Trophy("recovery", "Recovery", "Total rest days recorded", restDayCount, TrophyType.RECOVERY)
         } else {
             Trophy("gym_rat", "Gym Rat", "Total workouts completed", workoutCount, TrophyType.GYM_RAT)
         }
-        
         val rank = trophyToDisplay.rank
         binding.ivPinnedTrophy.visibility = View.VISIBLE
-        
         val iconRes = when (trophyToDisplay.type) {
             TrophyType.GYM_RAT -> when (rank) {
                 TrophyRank.BRONZE -> R.drawable.gym_rat_bronze
@@ -331,9 +336,6 @@ class ProfileFragment : Fragment() {
         binding.ivPinnedTrophy.background = null
     }
 
-    /**
-     * Sets up visibility and external link behavior for social media icons.
-     */
     private fun setupSocialIcon(button: View, url: String) {
         if (url.isNotEmpty()) {
             button.visibility = View.VISIBLE

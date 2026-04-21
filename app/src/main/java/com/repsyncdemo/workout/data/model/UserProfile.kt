@@ -64,6 +64,11 @@ data class UserProfile(
     
     val pinnedTrophyId: String? = null, // ID of the pinned trophy displayed on profile
 
+    // Weigh-in settings
+    val weighInFrequency: String = "never", // "never", "daily", "custom"
+    val weighInDays: List<Int> = emptyList(), // 1 (Mon) to 7 (Sun)
+    val lastWeighInDate: Long = 0, // Timestamp of last weigh-in
+
     val location: GeoPoint? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()

@@ -9,7 +9,6 @@ data class Goal(
     val userId: String = "",
     val type: GoalType = GoalType.WEIGHT_LOSS,
     val title: String = "",
-    val description: String = "",
     val exerciseName: String = "",
     val startingValue: Double = 0.0,
     val targetValue: Double = 0.0,

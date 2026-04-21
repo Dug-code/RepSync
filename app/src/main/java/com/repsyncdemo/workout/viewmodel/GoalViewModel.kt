@@ -52,6 +52,12 @@ class GoalViewModel : ViewModel() {
         }
     }
 
+    fun updateGoal(goal: Goal) {
+        viewModelScope.launch {
+            repository.updateGoal(goal)
+        }
+    }
+
     fun updateProgress(goalId: String, newValue: Double) {
         viewModelScope.launch {
             repository.updateProgress(goalId, newValue)

@@ -58,7 +58,7 @@
                         android:layout_width="100dp"
                         android:layout_height="100dp"
                         android:scaleType="centerCrop"
-                        android:src="@drawable/ic_profile_grey"
+                        android:src="@drawable/ic_profile"
                         app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
                         app:strokeColor="?attr/colorDivider"
                         app:strokeWidth="2dp" />

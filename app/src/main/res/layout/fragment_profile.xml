@@ -41,7 +41,7 @@
                             android:layout_width="80dp"
                             android:layout_height="80dp"
                             android:scaleType="centerCrop"
-                            android:src="@android:drawable/ic_menu_gallery"
+                            android:src="@drawable/ic_profile"
                             app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.CornerSize50Percent"
                             app:strokeColor="?attr/colorDivider"
                             app:strokeWidth="2dp" />
@@ -97,16 +97,6 @@
                         android:orientation="horizontal">
 
                         <ImageButton
-                            android:id="@+id/btnAdminDashboard"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:src="@drawable/ic_settings"
-                            app:tint="@color/primary"
-                            android:visibility="gone"
-                            android:layout_marginEnd="4dp" />
-
-                        <ImageButton
                             android:id="@+id/btnTrophyShelf"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
@@ -122,6 +112,20 @@
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:src="@drawable/ic_settings"
                             app:tint="?attr/colorOnSurface" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAdminDashboard"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:visibility="gone"
+                            android:insetLeft="0dp"
+                            android:insetTop="0dp"
+                            android:insetRight="0dp"
+                            android:insetBottom="0dp"
+                            app:icon="@drawable/ic_drag_handle"
+                            app:iconPadding="0dp"
+                            app:iconTint="?attr/colorOnSurface" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFriendAction"

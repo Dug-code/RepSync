@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.databinding.ItemHistoryBinding
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -15,7 +16,7 @@ class HistoryAdapter(
     private val onEditClick: (WorkoutLog) -> Unit
 ) : ListAdapter<WorkoutLog, HistoryAdapter.ViewHolder>(HistoryDiffCallback()) {
 
-    private val dateFormat = SimpleDateFormat("MMM dd, yyyy 'at' h:mm a", Locale.getDefault())
+    private val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemHistoryBinding.inflate(
@@ -33,12 +34,29 @@ class HistoryAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(log: WorkoutLog) {
+            val date = Date(log.completedAt)
+            binding.tvDateMonth.text = monthFormat.format(date).uppercase()
+            binding.tvDateDay.text = getDayWithSuffix(log.completedAt)
+            
             binding.tvWorkoutName.text = log.workoutName
-            binding.tvDate.text = dateFormat.format(Date(log.completedAt))
             binding.tvDuration.text = "${log.durationMinutes} min"
             val count = log.exercises.size
             binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
+            
             binding.btnEdit.setOnClickListener { onEditClick(log) }
+        }
+
+        private fun getDayWithSuffix(timestamp: Long): String {
+            val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+            val day = cal.get(Calendar.DAY_OF_MONTH)
+            val suffix = when {
+                day in 11..13 -> "th"
+                day % 10 == 1 -> "st"
+                day % 10 == 2 -> "nd"
+                day % 10 == 3 -> "rd"
+                else -> "th"
+            }
+            return String.format("%02d%s", day, suffix)
         }
     }
 
