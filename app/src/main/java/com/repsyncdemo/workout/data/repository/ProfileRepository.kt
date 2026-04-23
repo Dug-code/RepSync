@@ -112,25 +112,16 @@ class ProfileRepository {
     }
 
     /**
-     * 
-     * fix for duplication and overwrite problem:
-     * This method now  prioritizes the document's actual ID (from Firestore metadata)
-     * if it exists, ensuring we update the exact document we read. 
-     * It then ensures the internal 'userId' field is synced to match that document ID, 
-     * which repairs any previous "overwritten" corruption.
+     * Updates the entire profile document.
      */
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
-            // Priority 1: Use 'id' (@DocumentId) if populated from a read.
-            // Priority 2: Use 'userId' field if provided.
-            // Priority 3: Fallback to current user (for self-updates from scratch).
             val targetId = when {
                 profile.id.isNotEmpty() -> profile.id
                 profile.userId.isNotEmpty() -> profile.userId
                 else -> currentUserId
             }
             
-            // Sync the userId field to the document ID to fix/prevent corruption
             val profileToSave = profile.copy(
                 userId = targetId,
                 updatedAt = System.currentTimeMillis(),
@@ -141,6 +132,42 @@ class ProfileRepository {
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Updates specific fields in the profile document.
+     */
+    suspend fun updateProfileFields(updates: Map<String, Any>): Result<Unit> {
+        return try {
+            val finalUpdates = updates.toMutableMap()
+            if (updates.containsKey("username")) {
+                val username = updates["username"] as String
+                finalUpdates["usernameLowercase"] = username.lowercase()
+            }
+            finalUpdates["updatedAt"] = System.currentTimeMillis()
+            
+            profilesCollection.document(currentUserId).update(finalUpdates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Checks if a username is already taken.
+     */
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        return try {
+            val snapshot = profilesCollection
+                .whereEqualTo("usernameLowercase", username.lowercase())
+                .limit(1)
+                .get()
+                .await()
+            snapshot.isEmpty
+        } catch (e: Exception) {
+            Log.e("ProfileRepository", "Error checking username availability", e)
+            false
         }
     }
 
@@ -166,7 +193,6 @@ class ProfileRepository {
             val doc = profilesCollection.document(currentUserId).get().await()
             doc.exists()
         } catch (e: Exception) {
-            // Use the exception in a log to resolve the "unused parameter" warning
             Log.e("ProfileRepository", "Error checking if profile exists", e)
             false
         }
@@ -180,7 +206,6 @@ class ProfileRepository {
             val lowerQuery = query.lowercase().trim()
             if (lowerQuery.isEmpty()) return Result.success(emptyList())
 
-            // Try searching by lowercase username
             val snapshot = profilesCollection
                 .whereGreaterThanOrEqualTo("usernameLowercase", lowerQuery)
                 .whereLessThanOrEqualTo("usernameLowercase", lowerQuery + "\uf8ff")
@@ -190,7 +215,6 @@ class ProfileRepository {
             
             var profiles = snapshot.toObjects(UserProfile::class.java)
             
-            // If no results, try searching the original username field (case sensitive) as a fallback
             if (profiles.isEmpty()) {
                 val fallbackSnapshot = profilesCollection
                     .whereGreaterThanOrEqualTo("username", query)

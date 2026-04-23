@@ -101,6 +101,7 @@ class ProfileFragment : Fragment() {
             binding.btnFriendAction.visibility = View.GONE
             binding.btnSettings.setOnClickListener { findNavController().navigate(R.id.action_profile_to_settings) }
             binding.btnTrophyShelf.setOnClickListener { findNavController().navigate(R.id.action_profile_to_trophyShelf) }
+            binding.btnAdminDashboard.setOnClickListener { findNavController().navigate(R.id.action_profile_to_adminDashboard) }
             
             // WEIGH-IN: Allow user to tap weight to log it
             binding.layoutWeight.setOnClickListener { showWeighInDialog() }
@@ -222,6 +223,13 @@ class ProfileFragment : Fragment() {
                 setupSocialIcon(binding.btnTwitter, it.twitterUrl)
                 
                 updateTrophyUI()
+
+                // Admin Dashboard visibility
+                if (targetUserId == null) {
+                    binding.btnAdminDashboard.visibility = if (it.isAdmin) View.VISIBLE else View.GONE
+                } else {
+                    binding.btnAdminDashboard.visibility = View.GONE
+                }
             }
         }
         
