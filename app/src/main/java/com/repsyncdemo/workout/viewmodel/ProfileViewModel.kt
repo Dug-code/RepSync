@@ -55,7 +55,8 @@ class ProfileViewModel(
 
     private var profileObservationJob: Job? = null
 
-    val myPosts: LiveData<List<FeedPost>> = userPosts
+    private val _myPosts = MutableLiveData<List<FeedPost>>()
+    val myPosts: LiveData<List<FeedPost>> = _myPosts
 
     fun checkHasProfile() {
         viewModelScope.launch {
@@ -78,12 +79,21 @@ class ProfileViewModel(
 
     fun loadMyPosts() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        loadUserPosts(userId)
-    }
-
-    private fun loadUserPosts(userId: String) {
         viewModelScope.launch {
             feedRepository.getUserPosts(userId)
+                .catch { e ->
+                    Log.e("ProfileViewModel", "Error fetching my posts", e)
+                    emit(emptyList())
+                }
+                .collect { posts ->
+                    _myPosts.value = posts
+                }
+        }
+    }
+
+    fun loadUserPosts(userId: String) {
+        viewModelScope.launch {
+            feedRepository.getUserPosts(userId, includeChat = false)
                 .catch { e ->
                     Log.e("ProfileViewModel", "Error fetching user posts", e)
                     emit(emptyList())

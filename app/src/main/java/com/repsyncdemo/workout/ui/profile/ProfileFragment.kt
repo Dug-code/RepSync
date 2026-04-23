@@ -195,11 +195,13 @@ class ProfileFragment : Fragment() {
     private fun loadData() {
         if (targetUserId != null) {
             profileViewModel.observeProfile(targetUserId)
+            profileViewModel.loadUserPosts(targetUserId!!)
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
             workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
             goalViewModel.loadGoalsForUser(targetUserId!!)
         } else {
             profileViewModel.observeProfile()
+            profileViewModel.loadMyPosts()
             workoutViewModel.loadWorkoutLogsForUser(currentUserId)
         }
     }
