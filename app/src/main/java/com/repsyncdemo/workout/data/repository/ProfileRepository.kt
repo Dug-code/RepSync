@@ -112,10 +112,9 @@ class ProfileRepository {
     }
 
     /**
-     * Updates a user profile. 
      * 
-     * FINAL FIX FOR DUPLICATION/OVERWRITE: 
-     * This method now strictly prioritizes the document's actual ID (from Firestore metadata)
+     * fix for duplication and overwrite problem:
+     * This method now  prioritizes the document's actual ID (from Firestore metadata)
      * if it exists, ensuring we update the exact document we read. 
      * It then ensures the internal 'userId' field is synced to match that document ID, 
      * which repairs any previous "overwritten" corruption.
