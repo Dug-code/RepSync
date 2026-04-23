@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private val profileViewModel: ProfileViewModel by viewModels()
     private val workoutViewModel: WorkoutViewModel by viewModels()
     private lateinit var navController: NavController
+    private var weighInReminderDialog: androidx.appcompat.app.AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -138,14 +139,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showWeighInReminder() {
-        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_App_MaterialAlertDialog)
+        if (weighInReminderDialog?.isShowing == true) return
+
+        weighInReminderDialog = MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Time to Weigh In!")
             .setMessage("Keep your progress tracking accurate by logging your weight for today.")
             .setCancelable(false)
             .setPositiveButton("Weigh In Now") { _, _ ->
                 showWeighInDialog()
             }
-            .setNegativeButton("Skip for Today", null)
+            .setNegativeButton("Skip for Today") { _, _ ->
+                profileViewModel.updateProfileFields(mapOf("lastWeighInDate" to System.currentTimeMillis()))
+            }
             .show()
     }
 

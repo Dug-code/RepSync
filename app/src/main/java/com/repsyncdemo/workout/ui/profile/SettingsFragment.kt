@@ -2,6 +2,7 @@ package com.repsyncdemo.workout.ui.profile
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -158,6 +159,22 @@ class SettingsFragment : Fragment() {
 
         binding.btnClearHistory.setOnClickListener {
             showClearHistoryConfirmation()
+        }
+
+        binding.btnReportBug.setOnClickListener {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("RepSyncTracker@gmail.com"))
+                putExtra(Intent.EXTRA_SUBJECT, "Bug Report - RepSync")
+                val deviceModel = android.os.Build.MODEL
+                val androidVersion = android.os.Build.VERSION.RELEASE
+                putExtra(Intent.EXTRA_TEXT, "\n\n--- Device Info ---\nModel: $deviceModel\nAndroid: $androidVersion")
+            }
+            try {
+                startActivity(Intent.createChooser(intent, "Send Bug Report"))
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "No email client found", Toast.LENGTH_SHORT).show()
+            }
         }
 
         binding.btnDeleteAccount.setOnClickListener {
