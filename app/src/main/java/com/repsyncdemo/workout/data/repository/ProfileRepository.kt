@@ -20,16 +20,15 @@ class ProfileRepository {
     private val auth = FirebaseAuth.getInstance()
     private val profilesCollection = db.collection("profiles")
 
-    private val currentUserId: String
-        get() = auth.currentUser?.uid ?: ""
+    private val currentUserId: String?
+        get() = auth.currentUser?.uid
 
     /**
      * Creates a new user profile in the database.
      */
     suspend fun createProfile(profile: UserProfile): Result<Unit> {
         return try {
-            val id = currentUserId
-            if (id.isEmpty()) return Result.failure(Exception("User not logged in"))
+            val id = currentUserId ?: return Result.failure(Exception("User not logged in"))
             
             val profileWithUser = profile.copy(
                 userId = id,
@@ -46,8 +45,7 @@ class ProfileRepository {
      * Retrieves a profile for a specific user ID.
      */
     suspend fun getProfile(userId: String? = null): Result<UserProfile> {
-        val id = userId ?: currentUserId
-        if (id.isEmpty()) return Result.failure(Exception("User not logged in"))
+        val id = userId ?: currentUserId ?: return Result.failure(Exception("User not logged in"))
         
         return try {
             val doc = profilesCollection.document(id).get().await()
@@ -64,8 +62,9 @@ class ProfileRepository {
      */
     fun observeProfile(userId: String? = null): Flow<UserProfile?> = callbackFlow {
         val id = userId ?: currentUserId
-        if (id.isEmpty()) {
+        if (id == null) {
             trySend(null)
+            awaitClose { }
             return@callbackFlow
         }
         
@@ -113,8 +112,7 @@ class ProfileRepository {
      * Uses Firestore update() which is much more reliable for concurrent edits.
      */
     suspend fun updateProfileFields(updates: Map<String, Any>): Result<Unit> {
-        val id = currentUserId
-        if (id.isEmpty()) return Result.failure(Exception("User not logged in"))
+        val id = currentUserId ?: return Result.failure(Exception("User not logged in"))
         
         return try {
             val finalUpdates = updates.toMutableMap()
@@ -137,8 +135,8 @@ class ProfileRepository {
      */
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
-            val targetId = if (profile.userId.isNotEmpty()) profile.userId else currentUserId
-            if (targetId.isEmpty()) return Result.failure(Exception("User not logged in"))
+            val targetId = profile.userId.ifEmpty { currentUserId } 
+                ?: return Result.failure(Exception("User not logged in"))
             
             profilesCollection.document(targetId).set(
                 profile.copy(
@@ -159,8 +157,7 @@ class ProfileRepository {
     }
 
     suspend fun hasProfile(): Boolean {
-        val id = currentUserId
-        if (id.isEmpty()) return false
+        val id = currentUserId ?: return false
         return try {
             val doc = profilesCollection.document(id).get().await()
             doc.exists()
@@ -182,7 +179,12 @@ class ProfileRepository {
                 .await()
             
             val profiles = snapshot.toObjects(UserProfile::class.java)
-            val filteredResults = profiles.filter { it.userId != currentUserId }
+            val currentUid = currentUserId
+            val filteredResults = if (currentUid != null) {
+                profiles.filter { it.userId != currentUid }
+            } else {
+                profiles
+            }
             Result.success(filteredResults)
         } catch (e: Exception) {
             Result.failure(e)

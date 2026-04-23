@@ -19,16 +19,21 @@ class WorkoutRepository {
     private val customExercisesCollection = db.collection("custom_exercises")
     private val weightLogsCollection = db.collection("weight_logs")
 
-    private val userId: String
-        get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
+    private val userId: String?
+        get() = auth.currentUser?.uid
 
     fun getWorkouts(targetUserId: String? = null): Flow<List<Workout>> = callbackFlow {
         val id = targetUserId ?: userId
+        if (id == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = workoutCollection
             .whereEqualTo("userId", id)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val workouts = snapshot?.toObjects(Workout::class.java) ?: emptyList()
@@ -50,7 +55,8 @@ class WorkoutRepository {
 
     suspend fun addWorkout(workout: Workout): Result<String> {
         return try {
-            val workoutWithUser = workout.copy(userId = userId)
+            val uid = userId ?: throw IllegalStateException("User not logged in")
+            val workoutWithUser = workout.copy(userId = uid)
             val doc = workoutCollection.add(workoutWithUser).await()
             Result.success(doc.id)
         } catch (e: Exception) {
@@ -60,7 +66,8 @@ class WorkoutRepository {
 
     suspend fun updateWorkout(workout: Workout): Result<Unit> {
         return try {
-            val workoutWithUser = workout.copy(userId = userId)
+            val uid = userId ?: throw IllegalStateException("User not logged in")
+            val workoutWithUser = workout.copy(userId = uid)
             workoutCollection.document(workout.id).set(workoutWithUser).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -93,11 +100,16 @@ class WorkoutRepository {
 
     fun getWorkoutLogs(targetUserId: String? = null): Flow<List<WorkoutLog>> = callbackFlow {
         val id = targetUserId ?: userId
+        if (id == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = logsCollection
             .whereEqualTo("userId", id)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val logs = snapshot?.toObjects(WorkoutLog::class.java) ?: emptyList()
@@ -119,7 +131,8 @@ class WorkoutRepository {
 
     suspend fun addWorkoutLog(log: WorkoutLog): Result<String> {
         return try {
-            val logWithUser = log.copy(userId = userId)
+            val uid = userId ?: throw IllegalStateException("User not logged in")
+            val logWithUser = log.copy(userId = uid)
             val doc = logsCollection.add(logWithUser).await()
             Result.success(doc.id)
         } catch (e: Exception) {
@@ -129,7 +142,8 @@ class WorkoutRepository {
 
     suspend fun updateWorkoutLog(log: WorkoutLog): Result<Unit> {
         return try {
-            val logWithUser = log.copy(userId = userId)
+            val uid = userId ?: throw IllegalStateException("User not logged in")
+            val logWithUser = log.copy(userId = uid)
             logsCollection.document(log.id).set(logWithUser).await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -148,7 +162,8 @@ class WorkoutRepository {
 
     suspend fun deleteAllWorkoutLogs(): Result<Unit> {
         return try {
-            val snapshot = logsCollection.whereEqualTo("userId", userId).get().await()
+            val uid = userId ?: throw IllegalStateException("User not logged in")
+            val snapshot = logsCollection.whereEqualTo("userId", uid).get().await()
             val batch = db.batch()
             snapshot.documents.forEach { batch.delete(it.reference) }
             batch.commit().await()
@@ -159,11 +174,17 @@ class WorkoutRepository {
     }
 
     fun getRestDays(): Flow<List<RestDay>> = callbackFlow {
+        val uid = userId
+        if (uid == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = restDaysCollection
-            .whereEqualTo("userId", userId)
+            .whereEqualTo("userId", uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val days = snapshot?.toObjects(RestDay::class.java) ?: emptyList()
@@ -174,7 +195,8 @@ class WorkoutRepository {
 
     suspend fun addRestDay(restDay: RestDay): Result<Unit> {
         return try {
-            restDaysCollection.add(restDay.copy(userId = userId)).await()
+            val uid = userId ?: throw IllegalStateException("User not logged in")
+            restDaysCollection.add(restDay.copy(userId = uid)).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -194,8 +216,9 @@ class WorkoutRepository {
 
     suspend fun addWeightLog(weight: Double): Result<Unit> {
         return try {
+            val uid = userId ?: throw IllegalStateException("User not logged in")
             val log = WeightLog(
-                userId = userId,
+                userId = uid,
                 weightLbs = weight,
                 date = System.currentTimeMillis()
             )
@@ -207,11 +230,20 @@ class WorkoutRepository {
     }
 
     fun getWeightLogs(): Flow<List<WeightLog>> = callbackFlow {
+        val uid = userId
+        if (uid == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = weightLogsCollection
-            .whereEqualTo("userId", userId)
+            .whereEqualTo("userId", uid)
             .orderBy("date", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
-                if (error != null) return@addSnapshotListener
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
                 val logs = snapshot?.toObjects(WeightLog::class.java) ?: emptyList()
                 trySend(logs)
             }
@@ -221,11 +253,17 @@ class WorkoutRepository {
     // --- Custom Exercises ---
 
     fun getCustomExercises(): Flow<List<ExerciseDefinition>> = callbackFlow {
+        val uid = userId
+        if (uid == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = customExercisesCollection
-            .whereEqualTo("userId", userId)
+            .whereEqualTo("userId", uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val exercises = snapshot?.toObjects(ExerciseDefinition::class.java) ?: emptyList()
@@ -236,7 +274,8 @@ class WorkoutRepository {
 
     suspend fun addCustomExercise(exercise: ExerciseDefinition): Result<Unit> {
         return try {
-            customExercisesCollection.add(exercise.copy(userId = userId, isCustom = true)).await()
+            val uid = userId ?: throw IllegalStateException("User not logged in")
+            customExercisesCollection.add(exercise.copy(userId = uid, isCustom = true)).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

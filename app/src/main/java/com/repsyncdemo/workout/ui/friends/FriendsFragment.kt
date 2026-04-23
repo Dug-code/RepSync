@@ -129,6 +129,11 @@ class FriendsFragment : Fragment() {
             }
         })
 
+        socialViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
+            friendAdapter.updateProfiles(profiles)
+            requestAdapter.updateProfiles(profiles)
+        }
+
         socialViewModel.friends.observe(viewLifecycleOwner) { friends ->
             friendAdapter.submitList(friends)
             if (binding.tabLayout.selectedTabPosition == 0) {
