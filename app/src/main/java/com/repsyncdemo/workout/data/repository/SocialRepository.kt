@@ -58,14 +58,14 @@ class SocialRepository {
         val listener = friendshipsCollection
             .whereEqualTo("receiverId", currentUserId)
             .whereEqualTo("status", FriendshipStatus.PENDING.name)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.e("SocialRepository", "Error fetching pending requests", error)
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
-                val requests = snapshot?.toObjects(Friendship::class.java) ?: emptyList()
+                val requests = snapshot?.toObjects(Friendship::class.java)
+                    ?.sortedByDescending { it.createdAt } ?: emptyList()
                 trySend(requests)
             }
         awaitClose { listener.remove() }

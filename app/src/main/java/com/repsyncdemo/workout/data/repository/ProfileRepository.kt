@@ -188,4 +188,17 @@ class ProfileRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        return try {
+            val snapshot = profilesCollection
+                .whereEqualTo("usernameLowercase", username.lowercase().trim())
+                .limit(1)
+                .get()
+                .await()
+            snapshot.isEmpty
+        } catch (e: Exception) {
+            false
+        }
+    }
 }

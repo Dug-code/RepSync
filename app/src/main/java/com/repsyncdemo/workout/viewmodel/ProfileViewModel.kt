@@ -1,7 +1,12 @@
 package com.repsyncdemo.workout.viewmodel
 
 import android.util.Log
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.GoalType
 import com.repsyncdemo.workout.data.model.UserProfile
@@ -15,12 +20,12 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class ProfileViewModel : ViewModel() {
-
-    private val repository = ProfileRepository()
-    private val feedRepository = FeedRepository()
-    private val goalRepository = GoalRepository()
-    private val workoutRepository = WorkoutRepository()
+class ProfileViewModel(
+    private val repository: ProfileRepository = ProfileRepository(),
+    private val feedRepository: FeedRepository = FeedRepository(),
+    private val goalRepository: GoalRepository = GoalRepository(),
+    private val workoutRepository: WorkoutRepository = WorkoutRepository()
+) : ViewModel() {
 
     private val _profileResult = SingleLiveEvent<Result<Unit>>()
     val profileResult: LiveData<Result<Unit>> = _profileResult
@@ -50,12 +55,7 @@ class ProfileViewModel : ViewModel() {
 
     private var profileObservationJob: Job? = null
 
-    val myPosts: LiveData<List<FeedPost>> = feedRepository.getMyPosts()
-        .catch { e ->
-            Log.e("ProfileViewModel", "Error fetching my posts", e)
-            emit(emptyList())
-        }
-        .asLiveData()
+    val myPosts: LiveData<List<FeedPost>> = userPosts
 
     fun checkHasProfile() {
         viewModelScope.launch {
@@ -66,17 +66,19 @@ class ProfileViewModel : ViewModel() {
     fun observeProfile(userId: String? = null) {
         profileObservationJob?.cancel()
         profileObservationJob = viewModelScope.launch {
-            repository.observeProfile(userId).collect {
-                _currentProfile.value = it
-                if (it != null) {
-                    loadUserPosts(it.userId)
-                }
+            repository.observeProfile(userId).collect { profile ->
+                _currentProfile.value = profile
             }
         }
     }
 
     fun loadProfile(userId: String? = null) {
         observeProfile(userId)
+    }
+
+    fun loadMyPosts() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        loadUserPosts(userId)
     }
 
     private fun loadUserPosts(userId: String) {
@@ -95,9 +97,19 @@ class ProfileViewModel : ViewModel() {
     fun createProfile(profile: UserProfile) {
         _isLoading.value = true
         viewModelScope.launch {
+            // Check availability one last time before creating
+            if (!repository.isUsernameAvailable(profile.username)) {
+                _profileResult.value = Result.failure(Exception("Username is already taken"))
+                _isLoading.value = false
+                return@launch
+            }
             _profileResult.value = repository.createProfile(profile)
             _isLoading.value = false
         }
+    }
+
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        return repository.isUsernameAvailable(username)
     }
 
     /**
