@@ -3,10 +3,7 @@ package com.repsyncdemo.workout.data.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.repsyncdemo.workout.data.model.ExerciseDefinition
-import com.repsyncdemo.workout.data.model.RestDay
-import com.repsyncdemo.workout.data.model.Workout
-import com.repsyncdemo.workout.data.model.WorkoutLog
+import com.repsyncdemo.workout.data.model.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -20,6 +17,7 @@ class WorkoutRepository {
     private val logsCollection = db.collection("workout_logs")
     private val restDaysCollection = db.collection("rest_days")
     private val customExercisesCollection = db.collection("custom_exercises")
+    private val weightLogsCollection = db.collection("weight_logs")
 
     private val userId: String
         get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
@@ -34,7 +32,6 @@ class WorkoutRepository {
                     return@addSnapshotListener
                 }
                 val workouts = snapshot?.toObjects(Workout::class.java) ?: emptyList()
-                // Order primarily by the 'order' field, then by 'createdAt'
                 trySend(workouts.sortedWith(compareBy({ it.order }, { -it.createdAt })))
             }
         awaitClose { listener.remove() }
@@ -182,6 +179,43 @@ class WorkoutRepository {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    suspend fun deleteRestDay(restDayId: String): Result<Unit> {
+        return try {
+            restDaysCollection.document(restDayId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // --- Weight Logging ---
+
+    suspend fun addWeightLog(weight: Double): Result<Unit> {
+        return try {
+            val log = WeightLog(
+                userId = userId,
+                weightLbs = weight,
+                date = System.currentTimeMillis()
+            )
+            weightLogsCollection.add(log).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun getWeightLogs(): Flow<List<WeightLog>> = callbackFlow {
+        val listener = weightLogsCollection
+            .whereEqualTo("userId", userId)
+            .orderBy("date", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                val logs = snapshot?.toObjects(WeightLog::class.java) ?: emptyList()
+                trySend(logs)
+            }
+        awaitClose { listener.remove() }
     }
 
     // --- Custom Exercises ---

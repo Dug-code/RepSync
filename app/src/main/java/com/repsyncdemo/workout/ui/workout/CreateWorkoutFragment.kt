@@ -275,6 +275,7 @@ class CreateWorkoutFragment : Fragment() {
 
         if (name.isEmpty()) {
             binding.etName.error = "Name is required"
+            Toast.makeText(requireContext(), "Please enter a workout name", Toast.LENGTH_SHORT).show()
             return
         }
 

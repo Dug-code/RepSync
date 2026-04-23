@@ -6,18 +6,26 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.data.model.FeedPost
+import com.repsyncdemo.workout.data.model.GoalType
 import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.data.repository.FeedRepository
+import com.repsyncdemo.workout.data.repository.GoalRepository
 import com.repsyncdemo.workout.data.repository.ProfileRepository
+import com.repsyncdemo.workout.data.repository.WorkoutRepository
 import com.repsyncdemo.workout.util.SingleLiveEvent
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-class ProfileViewModel : ViewModel() {
-
-    private val repository = ProfileRepository()
-    private val feedRepository = FeedRepository()
+class ProfileViewModel(
+    private val repository: ProfileRepository = ProfileRepository(),
+    private val feedRepository: FeedRepository = FeedRepository(),
+    private val goalRepository: GoalRepository = GoalRepository(),
+    private val workoutRepository: WorkoutRepository = WorkoutRepository()
+) : ViewModel() {
 
     private val _profileResult = SingleLiveEvent<Result<Unit>>()
     val profileResult: LiveData<Result<Unit>> = _profileResult
@@ -45,12 +53,9 @@ class ProfileViewModel : ViewModel() {
     private val _userPosts = MutableLiveData<List<FeedPost>>()
     val userPosts: LiveData<List<FeedPost>> = _userPosts
 
-    val myPosts: LiveData<List<FeedPost>> = feedRepository.getMyPosts()
-        .catch { e ->
-            Log.e("ProfileViewModel", "Error fetching my posts", e)
-            emit(emptyList())
-        }
-        .asLiveData()
+    private var profileObservationJob: Job? = null
+
+    val myPosts: LiveData<List<FeedPost>> = userPosts
 
     fun checkHasProfile() {
         viewModelScope.launch {
@@ -58,17 +63,22 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun loadProfile(userId: String? = null) {
-        _isLoading.value = true
-        viewModelScope.launch {
-            repository.getProfile(userId).onSuccess {
-                _currentProfile.value = it
-                loadUserPosts(it.userId)
-            }.onFailure {
-                Log.e("ProfileViewModel", "Error loading profile", it)
+    fun observeProfile(userId: String? = null) {
+        profileObservationJob?.cancel()
+        profileObservationJob = viewModelScope.launch {
+            repository.observeProfile(userId).collect { profile ->
+                _currentProfile.value = profile
             }
-            _isLoading.value = false
         }
+    }
+
+    fun loadProfile(userId: String? = null) {
+        observeProfile(userId)
+    }
+
+    fun loadMyPosts() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        loadUserPosts(userId)
     }
 
     private fun loadUserPosts(userId: String) {
@@ -84,34 +94,98 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun observeProfile(userId: String? = null) {
-        viewModelScope.launch {
-            repository.observeProfile(userId).collect {
-                _currentProfile.value = it
-            }
-        }
-    }
-
     fun createProfile(profile: UserProfile) {
         _isLoading.value = true
         viewModelScope.launch {
+            // Check availability one last time before creating
+            if (!repository.isUsernameAvailable(profile.username)) {
+                _profileResult.value = Result.failure(Exception("Username is already taken"))
+                _isLoading.value = false
+                return@launch
+            }
             _profileResult.value = repository.createProfile(profile)
             _isLoading.value = false
         }
     }
 
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        return repository.isUsernameAvailable(username)
+    }
+
+    /**
+     * Updates specific fields in the profile. This is the preferred method
+     * to avoid overwriting data or encountering race conditions.
+     */
+    fun updateProfileFields(updates: Map<String, Any>) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            val result = repository.updateProfileFields(updates)
+            
+            // Post-update logic for weight
+            if (result.isSuccess && updates.containsKey("weightLbs")) {
+                val newWeight = updates["weightLbs"] as? Double ?: 0.0
+                if (newWeight > 0) {
+                    syncWeightWithGoals(newWeight)
+                    workoutRepository.addWeightLog(newWeight)
+                }
+            }
+            
+            _profileResult.value = result
+            _isLoading.value = false
+        }
+    }
+
+    /**
+     * Legacy update method. Use updateProfileFields for specific changes.
+     */
     fun updateProfile(profile: UserProfile) {
         _isLoading.value = true
         viewModelScope.launch {
-            _profileResult.value = repository.updateProfile(profile)
+            val result = repository.updateProfile(profile)
+            if (result.isSuccess) {
+                syncWeightWithGoals(profile.weightLbs)
+                if (profile.weightLbs > 0) {
+                    workoutRepository.addWeightLog(profile.weightLbs)
+                }
+            }
+            _profileResult.value = result
             _isLoading.value = false
+        }
+    }
+
+    fun pinTrophy(trophyId: String) {
+        updateProfileFields(mapOf("pinnedTrophyId" to trophyId))
+    }
+
+    fun updateWeightAndHeight(weight: Double, heightInches: Int) {
+        updateProfileFields(mapOf(
+            "weightLbs" to weight,
+            "heightInches" to heightInches
+        ))
+    }
+
+    fun updateWeight(newWeight: Double) {
+        updateProfileFields(mapOf("weightLbs" to newWeight))
+    }
+
+    private fun syncWeightWithGoals(newWeight: Double) {
+        viewModelScope.launch {
+            try {
+                val goals = goalRepository.getGoals().first()
+                goals.forEach { goal ->
+                    if (goal.type == GoalType.WEIGHT_LOSS || goal.type == GoalType.WEIGHT_GAIN) {
+                        goalRepository.updateProgress(goal.id, newWeight)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileViewModel", "Error syncing weight with goals", e)
+            }
         }
     }
 
     fun incrementRestDays() {
         val profile = myProfile.value ?: return
-        val updatedProfile = profile.copy(totalRestDays = profile.totalRestDays + 1)
-        updateProfile(updatedProfile)
+        updateProfileFields(mapOf("totalRestDays" to profile.totalRestDays + 1))
     }
 
     fun updateLocation(latitude: Double, longitude: Double) {

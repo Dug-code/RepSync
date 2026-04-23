@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -36,10 +37,9 @@ class TrophyShelfFragment : Fragment() {
 
         val trophyAdapter = TrophyAdapter { trophy ->
             // Pin Trophy logic
-            profileViewModel.currentProfile.value?.let { profile ->
-                profileViewModel.updateProfile(profile.copy(pinnedTrophyId = trophy.id))
-                findNavController().popBackStack()
-            }
+            profileViewModel.pinTrophy(trophy.id)
+            Toast.makeText(requireContext(), "${trophy.name} pinned to profile!", Toast.LENGTH_SHORT).show()
+            findNavController().popBackStack()
         }
 
         binding.rvTrophies.apply {

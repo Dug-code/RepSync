@@ -77,6 +77,15 @@ class AnalyticsViewModel : ViewModel() {
         logs.sumOf { calculateLogVolume(it) }
     }
 
+    val totalDurationMinutes: LiveData<Int> = filteredWorkouts.map { logs ->
+        logs.sumOf { it.durationMinutes }
+    }
+
+    val averageDurationMinutes: LiveData<Int> = filteredWorkouts.map { logs ->
+        if (logs.isEmpty()) 0
+        else logs.sumOf { it.durationMinutes } / logs.size
+    }
+
     val volumeBreakdown: LiveData<List<ExerciseVolumeBreakdown>> = filteredWorkouts.map { logs ->
         val breakdownMap = mutableMapOf<String, Pair<Double, MutableSet<String>>>()
         logs.forEach { log ->

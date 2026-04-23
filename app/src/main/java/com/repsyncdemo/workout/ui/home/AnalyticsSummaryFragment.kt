@@ -45,6 +45,16 @@ class AnalyticsSummaryFragment : Fragment() {
             binding.tvTotalVolume.text = "$formatted lbs"
         }
 
+        viewModel.totalDurationMinutes.observe(viewLifecycleOwner) { totalMinutes ->
+            val hours = totalMinutes / 60
+            val minutes = totalMinutes % 60
+            binding.tvTotalTime.text = "${hours}h ${minutes}m"
+        }
+
+        viewModel.averageDurationMinutes.observe(viewLifecycleOwner) { avgMinutes ->
+            binding.tvAvgTime.text = "${avgMinutes}m"
+        }
+
         viewModel.workoutsCount.observe(viewLifecycleOwner) { count ->
             binding.tvWorkoutsCount.text = count.toString()
         }

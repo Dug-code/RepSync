@@ -2,13 +2,17 @@ package com.repsyncdemo.workout.ui.profile
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -20,15 +24,20 @@ import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.GoalType
+import com.repsyncdemo.workout.data.model.WeightLog
 import com.repsyncdemo.workout.databinding.FragmentSettingsBinding
 import com.repsyncdemo.workout.ui.auth.LoginActivity
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
+import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import java.util.*
 
 class SettingsFragment : Fragment() {
 
@@ -36,9 +45,12 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private val analyticsViewModel: AnalyticsViewModel by activityViewModels()
+    private val goalViewModel: GoalViewModel by activityViewModels()
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     private var isInitialLoad = true
+    private var originalHeight: Int = 0
+    private var originalWeight: Double = 0.0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -73,43 +85,48 @@ class SettingsFragment : Fragment() {
 
         profileViewModel.myProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
-                binding.etUsername.setText(it.username)
-                binding.etBio.setText(it.bio)
-                binding.etProfilePicUrl.setText(it.profilePictureUrl)
-                
-                binding.etInstagramUrl.setText(it.instagramUrl)
-                if (it.instagramUrl.isNotEmpty()) {
-                    binding.tilInstagram.visibility = View.VISIBLE
-                    binding.btnEnableInstagram.visibility = View.GONE
-                }
+                if (isInitialLoad) {
+                    binding.etUsername.setText(it.username)
+                    binding.etBio.setText(it.bio)
+                    binding.etProfilePicUrl.setText(it.profilePictureUrl)
+                    
+                    binding.etInstagramUrl.setText(it.instagramUrl)
+                    if (it.instagramUrl.isNotEmpty()) {
+                        binding.tilInstagram.visibility = View.VISIBLE
+                        binding.btnEnableInstagram.visibility = View.GONE
+                    }
 
-                binding.etFacebookUrl.setText(it.facebookUrl)
-                if (it.facebookUrl.isNotEmpty()) {
-                    binding.tilFacebook.visibility = View.VISIBLE
-                    binding.btnEnableFacebook.visibility = View.GONE
-                }
+                    binding.etFacebookUrl.setText(it.facebookUrl)
+                    if (it.facebookUrl.isNotEmpty()) {
+                        binding.tilFacebook.visibility = View.VISIBLE
+                        binding.btnEnableFacebook.visibility = View.GONE
+                    }
 
-                binding.etTwitterUrl.setText(it.twitterUrl)
-                if (it.twitterUrl.isNotEmpty()) {
-                    binding.tilTwitter.visibility = View.VISIBLE
-                    binding.btnEnableTwitter.visibility = View.GONE
-                }
+                    binding.etTwitterUrl.setText(it.twitterUrl)
+                    if (it.twitterUrl.isNotEmpty()) {
+                        binding.tilTwitter.visibility = View.VISIBLE
+                        binding.btnEnableTwitter.visibility = View.GONE
+                    }
 
-                if (it.heightInches > 0) {
-                    binding.etHeightFeet.setText((it.heightInches / 12).toString())
-                    binding.etHeightInches.setText((it.heightInches % 12).toString())
-                }
+                    originalHeight = it.heightInches
+                    if (it.heightInches > 0) {
+                        binding.etHeightFeet.setText((it.heightInches / 12).toString())
+                        binding.etHeightInches.setText((it.heightInches % 12).toString())
+                    }
 
-                binding.switchHeightPublic.isChecked = it.isHeightPublic
-                binding.switchWeightPublic.isChecked = it.isWeightPublic
-                binding.switchWorkoutsPublic.isChecked = it.isWorkoutsPublic
-                binding.switchFriendsPublic.isChecked = it.isFriendsListPublic
-                
-                updateProfilePicturePreview(it.profilePictureUrl)
-                
-                // Mark initial load as finished so listeners can start tracking changes
-                isInitialLoad = false
-                navigationLockViewModel.setLocked(false)
+                    originalWeight = it.weightLbs
+                    binding.etSettingsWeight.setText(it.weightLbs.toString())
+
+                    binding.switchHeightPublic.isChecked = it.isHeightPublic
+                    binding.switchWeightPublic.isChecked = it.isWeightPublic
+                    binding.switchWorkoutsPublic.isChecked = it.isWorkoutsPublic
+                    binding.switchFriendsPublic.isChecked = it.isFriendsListPublic
+                    
+                    updateProfilePicturePreview(it.profilePictureUrl)
+                    
+                    isInitialLoad = false
+                    navigationLockViewModel.setLocked(false)
+                }
             }
         }
 
@@ -142,6 +159,22 @@ class SettingsFragment : Fragment() {
 
         binding.btnClearHistory.setOnClickListener {
             showClearHistoryConfirmation()
+        }
+
+        binding.btnReportBug.setOnClickListener {
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf("RepSyncTracker@gmail.com"))
+                putExtra(Intent.EXTRA_SUBJECT, "Bug Report - RepSync")
+                val deviceModel = android.os.Build.MODEL
+                val androidVersion = android.os.Build.VERSION.RELEASE
+                putExtra(Intent.EXTRA_TEXT, "\n\n--- Device Info ---\nModel: $deviceModel\nAndroid: $androidVersion")
+            }
+            try {
+                startActivity(Intent.createChooser(intent, "Send Bug Report"))
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "No email client found", Toast.LENGTH_SHORT).show()
+            }
         }
 
         binding.btnDeleteAccount.setOnClickListener {
@@ -312,11 +345,12 @@ class SettingsFragment : Fragment() {
         binding.etTwitterUrl.addTextChangedListener(watcher)
         binding.etHeightFeet.addTextChangedListener(watcher)
         binding.etHeightInches.addTextChangedListener(watcher)
+        binding.etSettingsWeight.addTextChangedListener(watcher)
 
-        binding.switchHeightPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
-        binding.switchWeightPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
-        binding.switchWorkoutsPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
-        binding.switchFriendsPublic.setOnClickListener { if (!isInitialLoad) updateLockState() }
+        binding.switchHeightPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
+        binding.switchWeightPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
+        binding.switchWorkoutsPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
+        binding.switchFriendsPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
     }
 
     private fun updateLockState() {
@@ -327,17 +361,20 @@ class SettingsFragment : Fragment() {
         if (isInitialLoad) return false
         val original = profileViewModel.myProfile.value ?: return false
         
-        val currentFeet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
-        val currentInches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
+        val currentFeet = binding.etHeightFeet.text.toString().trim().toIntOrNull() ?: 0
+        val currentInches = binding.etHeightInches.text.toString().trim().toIntOrNull() ?: 0
         val currentHeight = (currentFeet * 12) + currentInches
 
-        return binding.etUsername.text.toString() != original.username ||
-               binding.etBio.text.toString() != original.bio ||
-               binding.etProfilePicUrl.text.toString() != original.profilePictureUrl ||
-               binding.etInstagramUrl.text.toString() != original.instagramUrl ||
-               binding.etFacebookUrl.text.toString() != original.facebookUrl ||
-               binding.etTwitterUrl.text.toString() != original.twitterUrl ||
-               currentHeight != original.heightInches ||
+        val currentWeight = binding.etSettingsWeight.text.toString().trim().toDoubleOrNull() ?: 0.0
+
+        return binding.etUsername.text.toString().trim() != original.username ||
+               binding.etBio.text.toString().trim() != original.bio ||
+               binding.etProfilePicUrl.text.toString().trim() != original.profilePictureUrl ||
+               binding.etInstagramUrl.text.toString().trim() != original.instagramUrl ||
+               binding.etFacebookUrl.text.toString().trim() != original.facebookUrl ||
+               binding.etTwitterUrl.text.toString().trim() != original.twitterUrl ||
+               currentHeight != originalHeight ||
+               currentWeight != originalWeight ||
                binding.switchHeightPublic.isChecked != original.isHeightPublic ||
                binding.switchWeightPublic.isChecked != original.isWeightPublic ||
                binding.switchWorkoutsPublic.isChecked != original.isWorkoutsPublic ||
@@ -362,9 +399,11 @@ class SettingsFragment : Fragment() {
         val facebookUrl = binding.etFacebookUrl.text.toString().trim()
         val twitterUrl = binding.etTwitterUrl.text.toString().trim()
         
-        val feet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
-        val inches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
-        val totalHeightInches = (feet * 12) + inches
+        val feetValue = binding.etHeightFeet.text.toString().trim().toIntOrNull() ?: 0
+        val inchesValue = binding.etHeightInches.text.toString().trim().toIntOrNull() ?: 0
+        val totalHeightInches = (feetValue * 12) + inchesValue
+
+        val newWeight = binding.etSettingsWeight.text.toString().trim().toDoubleOrNull() ?: 0.0
 
         val isHeightPublic = binding.switchHeightPublic.isChecked
         val isWeightPublic = binding.switchWeightPublic.isChecked
@@ -376,39 +415,25 @@ class SettingsFragment : Fragment() {
             return
         }
 
-        if (!isValidUrl(instagramUrl, listOf("instagram.com"))) {
-            binding.etInstagramUrl.error = "Invalid Instagram URL"
-            return
-        }
-        if (!isValidUrl(facebookUrl, listOf("facebook.com"))) {
-            binding.etFacebookUrl.error = "Invalid Facebook URL"
-            return
-        }
-        if (!isValidUrl(twitterUrl, listOf("x.com", "twitter.com"))) {
-            binding.etTwitterUrl.error = "Invalid X/Twitter URL"
-            return
-        }
-
-        val currentProfile = profileViewModel.myProfile.value
-        currentProfile?.let {
-            val updatedProfile = it.copy(
-                username = username,
-                bio = bio,
-                profilePictureUrl = picUrl,
-                instagramUrl = instagramUrl,
-                facebookUrl = facebookUrl,
-                twitterUrl = twitterUrl,
-                heightInches = totalHeightInches,
-                preferredUnit = "lbs",
-                theme = "dark",
-                isHeightPublic = isHeightPublic,
-                isWeightPublic = isWeightPublic,
-                isWorkoutsPublic = isWorkoutsPublic,
-                isFriendsListPublic = isFriendsPublic
-            )
-            
-            profileViewModel.updateProfile(updatedProfile)
-        }
+        // Surgical update using fields instead of the whole object
+        val updates = mutableMapOf<String, Any>(
+            "username" to username,
+            "bio" to bio,
+            "profilePictureUrl" to picUrl,
+            "instagramUrl" to instagramUrl,
+            "facebookUrl" to facebookUrl,
+            "twitterUrl" to twitterUrl,
+            "heightInches" to totalHeightInches,
+            "weightLbs" to newWeight,
+            "isHeightPublic" to isHeightPublic,
+            "isWeightPublic" to isWeightPublic,
+            "isWorkoutsPublic" to isWorkoutsPublic,
+            "isFriendsListPublic" to isFriendsPublic
+        )
+        
+        profileViewModel.updateWeightAndHeight(newWeight, totalHeightInches)
+        // This is safe because updateWeightAndHeight uses updateProfileFields internally
+        profileViewModel.updateProfileFields(updates)
     }
 
     private fun isValidUrl(url: String, allowedDomains: List<String>): Boolean {

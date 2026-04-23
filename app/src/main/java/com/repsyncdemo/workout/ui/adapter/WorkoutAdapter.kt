@@ -32,7 +32,6 @@ class WorkoutAdapter(
 
         fun bind(workout: Workout) {
             binding.tvName.text = workout.name
-            binding.tvDescription.text = workout.description
             val count = workout.exercises.size
             binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
             

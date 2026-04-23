@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentFeedExploreBinding
 import com.repsyncdemo.workout.ui.adapter.FeedAdapter
@@ -24,6 +25,7 @@ class FeedExploreFragment : Fragment() {
     private val feedViewModel: FeedViewModel by activityViewModels()
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private lateinit var feedAdapter: FeedAdapter
+    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFeedExploreBinding.inflate(inflater, container, false)
@@ -35,8 +37,12 @@ class FeedExploreFragment : Fragment() {
 
         feedAdapter = FeedAdapter(
             onUserClick = { userId ->
-                val bundle = Bundle().apply { putString("userId", userId) }
-                findNavController().navigate(R.id.action_feed_to_profile, bundle)
+                if (userId == currentUserId) {
+                    findNavController().navigate(R.id.profileFragment)
+                } else {
+                    val bundle = Bundle().apply { putString("userId", userId) }
+                    findNavController().navigate(R.id.action_feed_to_profile, bundle)
+                }
             },
             onReactionClick = { view, postId -> 
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)

@@ -2,6 +2,7 @@ package com.repsyncdemo.workout.ui.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -17,7 +18,8 @@ class UserSearchAdapter(
     private val currentUserId: String,
     private val onUserClick: (UserProfile) -> Unit,
     private val onAddFriend: (UserProfile) -> Unit,
-    private val onCancelRequest: (String) -> Unit // Added callback for canceling
+    private val onCancelRequest: (String) -> Unit,
+    private val onAcceptRequest: (Friendship) -> Unit = {}
 ) : ListAdapter<UserProfile, UserSearchAdapter.ViewHolder>(UserDiffCallback()) {
 
     private var friendships: List<Friendship> = emptyList()
@@ -46,15 +48,23 @@ class UserSearchAdapter(
             binding.tvUsername.text = user.username
             
             // Load Profile Pic
-            if (user.profilePictureUrl.isNotEmpty()) {
+            if (user.profilePictureUrl.isNotEmpty() && (user.profilePictureUrl.startsWith("http") || user.profilePictureUrl.startsWith("https"))) {
                 binding.ivSearchProfilePic.load(user.profilePictureUrl) {
                     crossfade(true)
-                    placeholder(android.R.drawable.ic_menu_gallery)
-                    error(android.R.drawable.ic_menu_gallery)
+                    placeholder(R.drawable.ic_profile_grey)
+                    error(R.drawable.ic_profile_grey)
                     transformations(CircleCropTransformation())
                 }
             } else {
-                binding.ivSearchProfilePic.setImageResource(android.R.drawable.ic_menu_gallery)
+                val resId = when(user.profilePictureUrl) {
+                    "red" -> R.drawable.ic_profile_red
+                    "blue" -> R.drawable.ic_profile_blue
+                    "green" -> R.drawable.ic_profile_green
+                    "yellow" -> R.drawable.ic_profile_yellow
+                    "purple" -> R.drawable.ic_profile_purple
+                    else -> R.drawable.ic_profile_grey
+                }
+                binding.ivSearchProfilePic.setImageResource(resId)
             }
 
             // Determine Friendship Status for Button
@@ -63,37 +73,43 @@ class UserSearchAdapter(
                 (it.requesterId == user.userId && it.receiverId == currentUserId)
             }
 
+            val btn = binding.btnAddFriend
+            btn.alpha = 1.0f
+            btn.isEnabled = true
+            
             when (friendship?.status) {
                 FriendshipStatus.ACCEPTED -> {
-                    binding.btnAddFriend.text = "Friends"
-                    binding.btnAddFriend.isEnabled = false
-                    binding.btnAddFriend.alpha = 0.6f
+                    btn.text = "Remove"
+                    btn.setBackgroundColor(ContextCompat.getColor(itemView.context, R.color.error))
+                    btn.setTextColor(ContextCompat.getColor(itemView.context, R.color.white))
                 }
                 FriendshipStatus.PENDING -> {
                     if (friendship.requesterId == currentUserId) {
-                        binding.btnAddFriend.text = "Requested"
-                        binding.btnAddFriend.isEnabled = true // Enable so it can be clicked to cancel
-                        binding.btnAddFriend.alpha = 0.8f
+                        btn.text = "Requested"
+                        btn.setBackgroundColor(ContextCompat.getColor(itemView.context, R.color.text_secondary))
+                        btn.setTextColor(ContextCompat.getColor(itemView.context, R.color.white))
+                        btn.alpha = 0.8f
                     } else {
-                        binding.btnAddFriend.text = "Accept"
-                        binding.btnAddFriend.isEnabled = true
-                        binding.btnAddFriend.alpha = 1.0f
+                        btn.text = "Accept"
+                        btn.setBackgroundColor(ContextCompat.getColor(itemView.context, R.color.success))
+                        btn.setTextColor(ContextCompat.getColor(itemView.context, R.color.white))
                     }
                 }
                 else -> {
-                    binding.btnAddFriend.text = "Add Friend"
-                    binding.btnAddFriend.isEnabled = true
-                    binding.btnAddFriend.alpha = 1.0f
+                    btn.text = "Add Friend"
+                    btn.setBackgroundColor(ContextCompat.getColor(itemView.context, R.color.primary))
+                    btn.setTextColor(ContextCompat.getColor(itemView.context, R.color.white))
                 }
             }
 
             binding.root.setOnClickListener { onUserClick(user) }
             
-            binding.btnAddFriend.setOnClickListener { 
-                when (binding.btnAddFriend.text) {
+            btn.setOnClickListener { 
+                when (btn.text) {
                     "Add Friend" -> onAddFriend(user)
                     "Requested" -> friendship?.let { onCancelRequest(it.id) }
-                    "Accept" -> friendship?.let { /* In a full app, we might call an onAccept callback here too */ }
+                    "Accept" -> friendship?.let { onAcceptRequest(it) }
+                    "Remove" -> friendship?.let { onCancelRequest(it.id) }
                 }
             }
         }

@@ -6,16 +6,22 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.lifecycleScope
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.MainActivity
 import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.databinding.ActivityProfileSetupBinding
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class ProfileSetupActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProfileSetupBinding
     private val viewModel: ProfileViewModel by viewModels()
+    private var usernameCheckJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,18 +33,49 @@ class ProfileSetupActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        binding.etUsername.addTextChangedListener { text ->
+            val username = text?.toString()?.trim() ?: ""
+            binding.tilUsername.error = null
+            
+            usernameCheckJob?.cancel()
+            if (username.length >= 3) {
+                usernameCheckJob = lifecycleScope.launch {
+                    delay(500)
+                    val available = viewModel.isUsernameAvailable(username)
+                    if (!available) {
+                        binding.tilUsername.error = "Username is already taken"
+                    }
+                }
+            }
+        }
+
         binding.btnSaveProfile.setOnClickListener {
             val username = binding.etUsername.text.toString().trim()
             val feet = binding.etHeightFeet.text.toString().toIntOrNull() ?: 0
             val inches = binding.etHeightInches.text.toString().toIntOrNull() ?: 0
             val weight = binding.etWeight.text.toString().toDoubleOrNull() ?: 0.0
 
+            var hasError = false
+
             if (username.isEmpty()) {
-                binding.etUsername.error = "Username is required"
-                return@setOnClickListener
+                binding.tilUsername.error = "Username is required"
+                hasError = true
+            } else if (username.length < 3) {
+                binding.tilUsername.error = "Username must be at least 3 characters"
+                hasError = true
             }
-            if (username.length < 3) {
-                binding.etUsername.error = "Username must be at least 3 characters"
+
+            if (feet <= 0 && inches <= 0) {
+                Toast.makeText(this, "Please enter your height", Toast.LENGTH_SHORT).show()
+                hasError = true
+            }
+
+            if (weight <= 0) {
+                binding.etWeight.error = "Please enter your weight"
+                hasError = true
+            }
+
+            if (hasError || binding.tilUsername.error != null) {
                 return@setOnClickListener
             }
 
@@ -60,8 +97,9 @@ class ProfileSetupActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.isLoading.observe(this) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.btnSaveProfile.isEnabled = !isLoading
+            val loading = isLoading == true
+            binding.progressBar.visibility = if (loading) View.VISIBLE else View.GONE
+            binding.btnSaveProfile.isEnabled = !loading
         }
 
         viewModel.profileResult.observe(this) { result ->
@@ -70,7 +108,11 @@ class ProfileSetupActivity : AppCompatActivity() {
                 finish()
             }
             result.onFailure { e ->
-                Toast.makeText(this, e.message ?: "Failed to save profile", Toast.LENGTH_SHORT).show()
+                if (e.message == "Username is already taken") {
+                    binding.tilUsername.error = e.message
+                } else {
+                    Toast.makeText(this, e.message ?: "Failed to save profile", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

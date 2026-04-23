@@ -1,18 +1,17 @@
 package com.repsyncdemo.workout.ui.goals
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import android.widget.Toast
+import android.view.inputmethod.InputMethodManager
+import android.widget.*
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.navigation.fragment.findNavController
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.FeedPost
@@ -24,6 +23,9 @@ import com.repsyncdemo.workout.ui.adapter.GoalAdapter
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class GoalsFragment : Fragment() {
 
@@ -32,6 +34,7 @@ class GoalsFragment : Fragment() {
     private val viewModel: GoalViewModel by activityViewModels()
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private val feedViewModel: FeedViewModel by activityViewModels()
+    private val workoutViewModel: WorkoutViewModel by activityViewModels()
 
     private lateinit var goalAdapter: GoalAdapter
 
@@ -50,6 +53,17 @@ class GoalsFragment : Fragment() {
         goalAdapter = GoalAdapter(
             isMyProfile = true,
             onUpdateProgress = { goal -> showUpdateProgressDialog(goal) },
+            onEdit = { goal -> showRenameGoalDialog(goal) },
+            onTogglePrivacy = { goal -> 
+                val newStatus = !goal.isPublic
+                viewModel.updateGoal(goal.copy(isPublic = newStatus))
+                val statusText = if (newStatus) "Public" else "Private"
+                Toast.makeText(requireContext(), "Goal is now $statusText", Toast.LENGTH_SHORT).show()
+                
+                if (newStatus) {
+                    shareGoalToFeed(goal.copy(isPublic = true), FeedPostType.GOAL_CREATED)
+                }
+            },
             onDelete = { goal -> viewModel.deleteGoal(goal.id) }
         )
 
@@ -69,29 +83,98 @@ class GoalsFragment : Fragment() {
         }
     }
 
+    private fun showRenameGoalDialog(goal: Goal) {
+        val input = EditText(requireContext())
+        input.setText(goal.title)
+        input.setSelection(goal.title.length)
+        input.setPadding(64, 32, 64, 32)
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Rename Goal")
+            .setView(input)
+            .setPositiveButton("Update") { _, _ ->
+                val newTitle = input.text.toString().trim()
+                if (newTitle.isNotEmpty()) {
+                    viewModel.updateGoal(goal.copy(title = newTitle))
+                    Toast.makeText(requireContext(), "Goal renamed", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun showCreateGoalDialog() {
         val dialogView = LayoutInflater.from(requireContext())
             .inflate(R.layout.dialog_create_goal, null)
 
         val etTitle = dialogView.findViewById<EditText>(R.id.etGoalTitle)
-        val etDescription = dialogView.findViewById<EditText>(R.id.etGoalDescription)
         val rgGoalType = dialogView.findViewById<RadioGroup>(R.id.rgGoalType)
         val rbPR = dialogView.findViewById<RadioButton>(R.id.rbPR)
+        val ivPreview = dialogView.findViewById<ImageView>(R.id.ivGoalPreviewIcon)
         val tilExerciseName = dialogView.findViewById<View>(R.id.tilExerciseName)
-        val etExerciseName = dialogView.findViewById<EditText>(R.id.etExerciseName)
+        val etExerciseName = dialogView.findViewById<AutoCompleteTextView>(R.id.etExerciseName)
+        val llPRUnits = dialogView.findViewById<LinearLayout>(R.id.llPRUnits)
+        val cbUnitLbs = dialogView.findViewById<CheckBox>(R.id.cbUnitLbs)
+        val cbUnitReps = dialogView.findViewById<CheckBox>(R.id.cbUnitReps)
         val etCurrentValue = dialogView.findViewById<EditText>(R.id.etCurrentValue)
         val etTargetValue = dialogView.findViewById<EditText>(R.id.etTargetValue)
+        val tilUnit = dialogView.findViewById<View>(R.id.tilUnit)
         val etUnit = dialogView.findViewById<EditText>(R.id.etUnit)
         val switchPublic = dialogView.findViewById<SwitchMaterial>(R.id.switchPublicGoal)
 
+        // Setup exercise autocomplete
+        viewLifecycleOwner.lifecycleScope.launch {
+            workoutViewModel.allUniqueExerciseNames.collectLatest { names ->
+                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
+                etExerciseName.setAdapter(adapter)
+            }
+        }
+
         rgGoalType.setOnCheckedChangeListener { _, checkedId ->
+            hideKeyboard(dialogView)
+            etTitle.clearFocus()
+            etExerciseName.clearFocus()
+            activity?.currentFocus?.clearFocus()
+            
             tilExerciseName.visibility = if (checkedId == R.id.rbPR) View.VISIBLE else View.GONE
-            etUnit.setText("lbs")
+            llPRUnits.visibility = if (checkedId == R.id.rbPR) View.VISIBLE else View.GONE
+            
+            val previewIcon = when (checkedId) {
+                R.id.rbPR -> R.drawable.ic_medal
+                R.id.rbWeightLoss, R.id.rbWeightGain -> R.drawable.ic_scale
+                else -> R.drawable.ic_checkered_flag
+            }
+            ivPreview.setImageResource(previewIcon)
+
+            when (checkedId) {
+                R.id.rbPR -> {
+                    tilUnit.visibility = View.GONE
+                }
+                R.id.rbWeightLoss, R.id.rbWeightGain -> {
+                    tilUnit.visibility = View.VISIBLE
+                    etUnit.setText("lbs")
+                    etUnit.isEnabled = false
+                }
+                R.id.rbOther -> {
+                    tilUnit.visibility = View.VISIBLE
+                    etUnit.setText("sets")
+                    etUnit.isEnabled = true
+                }
+            }
+        }
+
+        cbUnitLbs.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) cbUnitReps.isChecked = false
+        }
+        cbUnitReps.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) cbUnitLbs.isChecked = false
         }
 
         rbPR.isChecked = true
+        ivPreview.setImageResource(R.drawable.ic_medal)
+        tilUnit.visibility = View.GONE
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Create Goal")
             .setView(dialogView)
             .setPositiveButton("Create") { _, _ ->
@@ -108,26 +191,28 @@ class GoalsFragment : Fragment() {
                     else -> GoalType.PR
                 }
 
+                val unit = when (rgGoalType.checkedRadioButtonId) {
+                    R.id.rbPR -> if (cbUnitLbs.isChecked) "lbs" else "reps"
+                    R.id.rbWeightLoss, R.id.rbWeightGain -> "lbs"
+                    else -> etUnit.text.toString().trim().ifEmpty { "sets" }
+                }
+
                 val initialVal = etCurrentValue.text.toString().toDoubleOrNull() ?: 0.0
                 val goal = Goal(
                     title = title,
-                    description = etDescription.text.toString().trim(),
                     type = goalType,
                     exerciseName = if (goalType == GoalType.PR) etExerciseName.text.toString().trim() else "",
                     startingValue = initialVal,
                     currentValue = initialVal,
                     targetValue = etTargetValue.text.toString().toDoubleOrNull() ?: 0.0,
-                    unit = etUnit.text.toString().trim().ifEmpty { "lbs" },
+                    unit = unit,
                     isPublic = switchPublic.isChecked
                 )
 
                 viewModel.addGoal(goal)
 
-                // Sync profile weight immediately
                 if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
-                    profileViewModel.currentProfile.value?.let { profile ->
-                        profileViewModel.updateProfile(profile.copy(weightLbs = initialVal))
-                    }
+                    profileViewModel.updateWeight(initialVal)
                 }
                 
                 if (switchPublic.isChecked) {
@@ -138,13 +223,19 @@ class GoalsFragment : Fragment() {
             .show()
     }
 
+    private fun hideKeyboard(view: View) {
+        val imm = ContextCompat.getSystemService(requireContext(), InputMethodManager::class.java)
+        imm?.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
     private fun showUpdateProgressDialog(goal: Goal) {
         val input = EditText(requireContext())
         input.hint = "New value (${goal.unit})"
         input.inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
         input.setText(goal.currentValue.toString())
+        input.setPadding(64, 32, 64, 32)
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Update Progress")
             .setMessage("${goal.title}\nTarget: ${goal.targetValue} ${goal.unit}")
             .setView(input)
@@ -152,11 +243,8 @@ class GoalsFragment : Fragment() {
                 val newValue = input.text.toString().toDoubleOrNull() ?: return@setPositiveButton
                 viewModel.updateProgress(goal.id, newValue)
 
-                // Sync profile weight on update
                 if (goal.type == GoalType.WEIGHT_LOSS || goal.type == GoalType.WEIGHT_GAIN) {
-                    profileViewModel.currentProfile.value?.let { profile ->
-                        profileViewModel.updateProfile(profile.copy(weightLbs = newValue))
-                    }
+                    profileViewModel.updateWeight(newValue)
                 }
 
                 val isComplete = when (goal.type) {
@@ -179,7 +267,7 @@ class GoalsFragment : Fragment() {
     }
 
     private fun shareGoalToFeed(goal: Goal, type: FeedPostType) {
-        val profile = profileViewModel.currentProfile.value ?: return
+        val profile = profileViewModel.myProfile.value ?: return
         val post = FeedPost(
             userId = profile.userId,
             username = profile.username,

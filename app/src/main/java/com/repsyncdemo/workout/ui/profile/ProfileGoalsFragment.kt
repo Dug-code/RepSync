@@ -4,11 +4,15 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.Goal
 import com.repsyncdemo.workout.databinding.LayoutTabListBinding
 import com.repsyncdemo.workout.ui.adapter.GoalAdapter
 import com.repsyncdemo.workout.viewmodel.GoalViewModel
@@ -37,6 +41,13 @@ class ProfileGoalsFragment : Fragment() {
                 val bundle = Bundle().apply { putString("goalId", goal.id) }
                 findNavController().navigate(R.id.goalsFragment, bundle)
             },
+            onEdit = { goal -> showRenameGoalDialog(goal) },
+            onTogglePrivacy = { goal ->
+                val newStatus = !goal.isPublic
+                goalViewModel.updateGoal(goal.copy(isPublic = newStatus))
+                val statusText = if (newStatus) "Public" else "Private"
+                Toast.makeText(requireContext(), "Goal is now $statusText", Toast.LENGTH_SHORT).show()
+            },
             onDelete = { goal -> goalViewModel.deleteGoal(goal.id) }
         )
 
@@ -60,6 +71,26 @@ class ProfileGoalsFragment : Fragment() {
             }
             binding.btnEmptyAction.visibility = View.GONE
         }
+    }
+
+    private fun showRenameGoalDialog(goal: Goal) {
+        val input = EditText(requireContext())
+        input.setText(goal.title)
+        input.setSelection(goal.title.length)
+        input.setPadding(64, 32, 64, 32)
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Rename Goal")
+            .setView(input)
+            .setPositiveButton("Update") { _, _ ->
+                val newTitle = input.text.toString().trim()
+                if (newTitle.isNotEmpty()) {
+                    goalViewModel.updateGoal(goal.copy(title = newTitle))
+                    Toast.makeText(requireContext(), "Goal renamed", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onDestroyView() {

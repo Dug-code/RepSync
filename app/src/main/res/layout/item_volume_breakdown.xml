@@ -21,4 +21,12 @@
         android:textSize="14sp"
         android:textColor="?attr/colorTextSecondary" />
 
+    <!-- Divider line fixed: Remove top margin if it creates "weird lines" between items -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorDivider"
+        android:layout_marginTop="12dp"
+        android:alpha="0.5" />
+
 </LinearLayout>

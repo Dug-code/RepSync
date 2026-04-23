@@ -1,16 +1,19 @@
 package com.repsyncdemo.workout.ui.feed
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.tabs.TabLayoutMediator
 import com.repsyncdemo.workout.databinding.FragmentFeedBinding
@@ -110,6 +113,13 @@ class FeedFragment : Fragment() {
         binding.viewPager.adapter = adapter
         binding.viewPager.offscreenPageLimit = 2
 
+        // Dismiss keyboard when switching sub-tabs
+        binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                hideKeyboard()
+            }
+        })
+
         TabLayoutMediator(binding.feedTabs, binding.viewPager) { tab, position ->
             tab.text = when (position) {
                 0 -> "Explore"
@@ -117,6 +127,14 @@ class FeedFragment : Fragment() {
                 else -> "Chat"
             }
         }.attach()
+    }
+
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val view = activity?.currentFocus ?: view
+        view?.let {
+            imm.hideSoftInputFromWindow(it.windowToken, 0)
+        }
     }
 
     override fun onDestroyView() {

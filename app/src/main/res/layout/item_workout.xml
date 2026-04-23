@@ -15,8 +15,31 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="20dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:padding="16dp">
+
+        <!-- Left Sidebar: Workout Icon Container -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:minWidth="56dp"
+            android:paddingVertical="4dp">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_workouts"
+                app:tint="@color/primary" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="40dp"
+            android:background="?attr/colorDivider"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="16dp" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -35,62 +58,40 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textSize="18sp"
+                    android:textSize="16sp"
                     android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:textColor="?attr/colorOnSurface"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
 
                 <ImageView
                     android:id="@+id/ivPrivacyStatus"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
                     android:layout_marginStart="8dp"
                     android:src="@drawable/ic_public"
                     app:tint="?attr/colorTextSecondary"
-                    android:alpha="0.6" />
+                    android:alpha="0.4" />
             </LinearLayout>
 
             <TextView
-                android:id="@+id/tvDescription"
-                android:layout_width="match_parent"
+                android:id="@+id/tvExerciseCount"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textColor="?attr/colorTextSecondary"
-                android:layout_marginTop="6dp"
-                android:lineSpacingExtra="2dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:src="@drawable/ic_workouts"
-                    app:tint="@color/primary" />
-
-                <TextView
-                    android:id="@+id/tvExerciseCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary"
-                    android:layout_marginStart="6dp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.05" />
-            </LinearLayout>
+                android:layout_marginTop="2dp" />
         </LinearLayout>
 
         <ImageView
             android:id="@+id/ivDragHandle"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:layout_marginStart="16dp"
             android:src="@drawable/ic_drag_handle"
             app:tint="?attr/colorTextSecondary"
-            android:alpha="0.5" />
+            android:alpha="0.5"
+            android:scaleType="centerInside" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

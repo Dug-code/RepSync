@@ -86,6 +86,23 @@ class WorkoutViewModel : ViewModel() {
         (static + custom).distinctBy { it.name.lowercase() }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ExerciseDatabase.allExercises)
 
+    // Comprehensive list of all exercises the user has interacted with
+    val allUniqueExerciseNames: StateFlow<List<String>> = combine(
+        allLibraryExercises,
+        repository.getWorkouts(),
+        repository.getWorkoutLogs()
+    ) { library, templates, logs ->
+        val names = mutableSetOf<String>()
+        library.forEach { names.add(it.name) }
+        templates.forEach { workout ->
+            workout.exercises.forEach { names.add(it.name) }
+        }
+        logs.forEach { log ->
+            log.exercises.forEach { names.add(it.exerciseName) }
+        }
+        names.toList().filter { it.isNotEmpty() }.sorted()
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     private val _filteredExercises = MutableStateFlow<List<ExerciseDefinition>>(ExerciseDatabase.allExercises)
     val filteredExercises: StateFlow<List<ExerciseDefinition>> = _filteredExercises
 
@@ -218,7 +235,6 @@ class WorkoutViewModel : ViewModel() {
         _isLoading.value = true
         viewModelScope.launch {
             repository.updateWorkout(workout)
-            // Fix: Update local state immediately for real-time UI refresh
             if (_selectedWorkout.value?.id == workout.id) {
                 _selectedWorkout.value = workout
             }
@@ -251,6 +267,10 @@ class WorkoutViewModel : ViewModel() {
     fun logWorkout(log: WorkoutLog) {
         _isLoading.value = true
         viewModelScope.launch {
+            // 1. Automatically remove any rest day for this date
+            removeRestDayForDate(log.completedAt)
+
+            // 2. Log the workout
             val result = if (log.id.isEmpty()) {
                 repository.addWorkoutLog(log)
             } else {
@@ -263,10 +283,55 @@ class WorkoutViewModel : ViewModel() {
 
     fun addRestDay() {
         viewModelScope.launch {
-            repository.addRestDay(RestDay(date = System.currentTimeMillis()))
+            val today = System.currentTimeMillis()
+            
+            // Check if a workout exists for today
+            val hasWorkoutToday = workoutLogs.value?.any { isSameDay(it.completedAt, today) } ?: false
+            
+            if (hasWorkoutToday) {
+                _operationResult.value = Result.failure(Exception("Cannot log rest day: A workout was already performed today."))
+                return@launch
+            }
+
+            // Check if a rest day already exists for today to avoid duplicates
+            val hasRestDayToday = restDays.value?.any { isSameDay(it.date, today) } ?: false
+            if (hasRestDayToday) {
+                _operationResult.value = Result.failure(Exception("Rest day already logged for today."))
+                return@launch
+            }
+
+            repository.addRestDay(RestDay(date = today))
+            _operationResult.value = Result.success("Rest day logged successfully")
         }
     }
 
+    private suspend fun removeRestDayForDate(timestamp: Long) {
+        val restDaysList = restDays.value ?: return
+        val dayToRemove = restDaysList.find { isSameDay(it.date, timestamp) }
+        dayToRemove?.let {
+            repository.deleteRestDay(it.id)
+        }
+    }
+
+    private fun isSameDay(t1: Long, t2: Long): Boolean {
+        val cal1 = Calendar.getInstance().apply { timeInMillis = t1 }
+        val cal2 = Calendar.getInstance().apply { timeInMillis = t2 }
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+               cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+    }
+
+    fun addWeightLog(weight: Double) {
+        viewModelScope.launch {
+            repository.addWeightLog(weight)
+        }
+    }
+
+    fun clearSelection() {
+        _selectedWorkout.value = null
+        _selectedLog.value = null
+    }
+
+    // RESTORED: These methods were accidentally removed during cleanup and are required for the Exercise Picker
     fun selectWorkout(workout: Workout) {
         _selectedWorkout.value = workout
     }
@@ -336,10 +401,5 @@ class WorkoutViewModel : ViewModel() {
             )
             repository.addCustomExercise(definition)
         }
-    }
-
-    fun clearSelection() {
-        _selectedWorkout.value = null
-        _selectedLog.value = null
     }
 }
