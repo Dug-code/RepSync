@@ -196,11 +196,13 @@ class ProfileFragment : Fragment() {
     private fun loadData() {
         if (targetUserId != null) {
             profileViewModel.observeProfile(targetUserId)
+            profileViewModel.loadUserPosts(targetUserId!!)
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
             workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
             goalViewModel.loadGoalsForUser(targetUserId!!)
         } else {
             profileViewModel.observeProfile()
+            profileViewModel.loadMyPosts()
             workoutViewModel.loadWorkoutLogsForUser(currentUserId)
         }
     }
@@ -310,6 +312,9 @@ class ProfileFragment : Fragment() {
     }
 
     private fun updateProfilePicture(url: String) {
+        // Clear previous image to prevent flickering/misloading during data updates
+        binding.ivProfilePic.setImageDrawable(null)
+
         if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
             binding.ivProfilePic.load(url) {
                 crossfade(true)

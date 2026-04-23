@@ -90,6 +90,10 @@ class FriendsFragment : Fragment() {
             onCancelRequest = { friendshipId ->
                 socialViewModel.removeFriendship(friendshipId)
                 Toast.makeText(requireContext(), "Request cancelled", Toast.LENGTH_SHORT).show()
+            },
+            onAcceptRequest = { friendship ->
+                socialViewModel.acceptRequest(friendship.id)
+                Toast.makeText(requireContext(), "Friend request accepted!", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -128,6 +132,11 @@ class FriendsFragment : Fragment() {
                 }
             }
         })
+
+        socialViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
+            friendAdapter.updateProfiles(profiles)
+            requestAdapter.updateProfiles(profiles)
+        }
 
         socialViewModel.friends.observe(viewLifecycleOwner) { friends ->
             friendAdapter.submitList(friends)

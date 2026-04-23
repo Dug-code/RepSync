@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.SetOptions
 import com.repsyncdemo.workout.data.model.UserProfile
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -19,23 +20,21 @@ class ProfileRepository {
     private val auth = FirebaseAuth.getInstance()
     private val profilesCollection = db.collection("profiles")
 
-    /**
-     * Helper to get current Firebase User ID.
-     * Throws if no user is authenticated.
-     */
-    private val currentUserId: String
-        get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
+    private val currentUserId: String?
+        get() = auth.currentUser?.uid
 
     /**
      * Creates a new user profile in the database.
      */
     suspend fun createProfile(profile: UserProfile): Result<Unit> {
         return try {
+            val id = currentUserId ?: return Result.failure(Exception("User not logged in"))
+            
             val profileWithUser = profile.copy(
-                userId = currentUserId,
+                userId = id,
                 usernameLowercase = profile.username.lowercase()
             )
-            profilesCollection.document(currentUserId).set(profileWithUser).await()
+            profilesCollection.document(id).set(profileWithUser).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -43,23 +42,15 @@ class ProfileRepository {
     }
 
     /**
-     * Retrieves a profile for a specific user ID, or the current user if null.
+     * Retrieves a profile for a specific user ID.
      */
     suspend fun getProfile(userId: String? = null): Result<UserProfile> {
-        val id = userId ?: currentUserId
+        val id = userId ?: currentUserId ?: return Result.failure(Exception("User not logged in"))
+        
         return try {
             val doc = profilesCollection.document(id).get().await()
             val profile = doc.toObject(UserProfile::class.java)
-            if (profile != null) {
-                // Migration: If lowercase field is missing, update it now
-                if (profile.usernameLowercase.isEmpty() && profile.username.isNotEmpty()) {
-                    val updated = profile.copy(usernameLowercase = profile.username.lowercase())
-                    profilesCollection.document(id).set(updated)
-                    Result.success(updated)
-                } else {
-                    Result.success(profile)
-                }
-            }
+            if (profile != null) Result.success(profile)
             else Result.failure(Exception("Profile not found"))
         } catch (e: Exception) {
             Result.failure(e)
@@ -71,6 +62,12 @@ class ProfileRepository {
      */
     fun observeProfile(userId: String? = null): Flow<UserProfile?> = callbackFlow {
         val id = userId ?: currentUserId
+        if (id == null) {
+            trySend(null)
+            awaitClose { }
+            return@callbackFlow
+        }
+        
         val listener = profilesCollection.document(id)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -93,7 +90,6 @@ class ProfileRepository {
             return@callbackFlow
         }
 
-        // Limit to 10 at a time for 'whereIn' (Firestore limit)
         val batches = userIds.chunked(10)
         val profileMap = mutableMapOf<String, UserProfile>()
 
@@ -112,95 +108,64 @@ class ProfileRepository {
     }
 
     /**
-     * Updates the entire profile document.
+     * Updates specific fields in a user profile.
+     * Uses Firestore update() which is much more reliable for concurrent edits.
+     */
+    suspend fun updateProfileFields(updates: Map<String, Any>): Result<Unit> {
+        val id = currentUserId ?: return Result.failure(Exception("User not logged in"))
+        
+        return try {
+            val finalUpdates = updates.toMutableMap()
+            finalUpdates["updatedAt"] = System.currentTimeMillis()
+            
+            if (updates.containsKey("username")) {
+                finalUpdates["usernameLowercase"] = (updates["username"] as String).lowercase()
+            }
+            
+            profilesCollection.document(id).update(finalUpdates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ProfileRepository", "Update failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Updates the user profile using merge to avoid overwriting fields not present in the object.
      */
     suspend fun updateProfile(profile: UserProfile): Result<Unit> {
         return try {
-            val targetId = when {
-                profile.id.isNotEmpty() -> profile.id
-                profile.userId.isNotEmpty() -> profile.userId
-                else -> currentUserId
-            }
+            val targetId = profile.userId.ifEmpty { currentUserId } 
+                ?: return Result.failure(Exception("User not logged in"))
             
-            val profileToSave = profile.copy(
-                userId = targetId,
-                updatedAt = System.currentTimeMillis(),
-                usernameLowercase = profile.username.lowercase()
-            )
-            
-            profilesCollection.document(targetId).set(profileToSave).await()
+            profilesCollection.document(targetId).set(
+                profile.copy(
+                    userId = targetId,
+                    updatedAt = System.currentTimeMillis(),
+                    usernameLowercase = profile.username.lowercase()
+                ),
+                SetOptions.merge()
+            ).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    /**
-     * Updates specific fields in the profile document.
-     */
-    suspend fun updateProfileFields(updates: Map<String, Any>): Result<Unit> {
-        return try {
-            val finalUpdates = updates.toMutableMap()
-            if (updates.containsKey("username")) {
-                val username = updates["username"] as String
-                finalUpdates["usernameLowercase"] = username.lowercase()
-            }
-            finalUpdates["updatedAt"] = System.currentTimeMillis()
-            
-            profilesCollection.document(currentUserId).update(finalUpdates).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Checks if a username is already taken.
-     */
-    suspend fun isUsernameAvailable(username: String): Boolean {
-        return try {
-            val snapshot = profilesCollection
-                .whereEqualTo("usernameLowercase", username.lowercase())
-                .limit(1)
-                .get()
-                .await()
-            snapshot.isEmpty
-        } catch (e: Exception) {
-            Log.e("ProfileRepository", "Error checking username availability", e)
-            false
-        }
-    }
-
-    /**
-     * Updates the user's location coordinates.
-     */
     suspend fun updateLocation(latitude: Double, longitude: Double): Result<Unit> {
-        return try {
-            profilesCollection.document(currentUserId)
-                .update("location", GeoPoint(latitude, longitude))
-                .await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        return updateProfileFields(mapOf("location" to GeoPoint(latitude, longitude)))
     }
 
-    /**
-     * Checks if a profile document exists for the current user.
-     */
     suspend fun hasProfile(): Boolean {
+        val id = currentUserId ?: return false
         return try {
-            val doc = profilesCollection.document(currentUserId).get().await()
+            val doc = profilesCollection.document(id).get().await()
             doc.exists()
         } catch (e: Exception) {
-            Log.e("ProfileRepository", "Error checking if profile exists", e)
             false
         }
     }
 
-    /**
-     * Searches for users by username (case-insensitive).
-     */
     suspend fun searchUsers(query: String): Result<List<UserProfile>> {
         return try {
             val lowerQuery = query.lowercase().trim()
@@ -213,23 +178,29 @@ class ProfileRepository {
                 .get()
                 .await()
             
-            var profiles = snapshot.toObjects(UserProfile::class.java)
-            
-            if (profiles.isEmpty()) {
-                val fallbackSnapshot = profilesCollection
-                    .whereGreaterThanOrEqualTo("username", query)
-                    .whereLessThanOrEqualTo("username", query + "\uf8ff")
-                    .limit(20)
-                    .get()
-                    .await()
-                profiles = fallbackSnapshot.toObjects(UserProfile::class.java)
+            val profiles = snapshot.toObjects(UserProfile::class.java)
+            val currentUid = currentUserId
+            val filteredResults = if (currentUid != null) {
+                profiles.filter { it.userId != currentUid }
+            } else {
+                profiles
             }
-
-            val filteredResults = profiles.filter { it.userId != currentUserId }
             Result.success(filteredResults)
         } catch (e: Exception) {
-            Log.e("ProfileRepository", "Search failed", e)
             Result.failure(e)
+        }
+    }
+
+    suspend fun isUsernameAvailable(username: String): Boolean {
+        return try {
+            val snapshot = profilesCollection
+                .whereEqualTo("usernameLowercase", username.lowercase().trim())
+                .limit(1)
+                .get()
+                .await()
+            snapshot.isEmpty
+        } catch (e: Exception) {
+            false
         }
     }
 }

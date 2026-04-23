@@ -17,8 +17,8 @@ class FeedRepository {
     private val auth = FirebaseAuth.getInstance()
     private val feedCollection = db.collection("feed")
 
-    private val userId: String
-        get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
+    private val userId: String?
+        get() = auth.currentUser?.uid
 
     fun getFeed(
         userLocation: GeoPoint?,
@@ -28,11 +28,12 @@ class FeedRepository {
         radius: Double? = null,
         showMyPosts: Boolean = true
     ): Flow<List<FeedPost>> = callbackFlow {
+        val currentUid = userId
         val listener = feedCollection
             .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 var posts = snapshot?.toObjects(FeedPost::class.java) ?: emptyList()
@@ -45,13 +46,13 @@ class FeedRepository {
                 }
 
                 // Filter by my posts
-                if (!showMyPosts) {
-                    posts = posts.filter { it.userId != userId }
+                if (!showMyPosts && currentUid != null) {
+                    posts = posts.filter { it.userId != currentUid }
                 }
 
                 // Filter by friends
                 if (onlyFriends) {
-                    val targetIds = friendIds + if (showMyPosts) listOf(userId) else emptyList()
+                    val targetIds = friendIds + if (showMyPosts && currentUid != null) listOf(currentUid) else emptyList()
                     posts = posts.filter { targetIds.contains(it.userId) }
                 }
 
@@ -80,7 +81,7 @@ class FeedRepository {
             .whereEqualTo("userId", targetUserId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 var posts = snapshot?.toObjects(FeedPost::class.java) ?: emptyList()
@@ -94,11 +95,18 @@ class FeedRepository {
         awaitClose { listener.remove() }
     }
 
-    fun getMyPosts(includeChat: Boolean = true): Flow<List<FeedPost>> = getUserPosts(userId, includeChat)
+    fun getMyPosts(includeChat: Boolean = true): Flow<List<FeedPost>> {
+        val currentUid = userId ?: return callbackFlow { 
+            trySend(emptyList())
+            awaitClose { }
+        }
+        return getUserPosts(currentUid, includeChat)
+    }
 
     suspend fun createPost(post: FeedPost): Result<String> {
         return try {
-            val postWithUser = post.copy(userId = userId)
+            val currentUid = userId ?: throw IllegalStateException("User not logged in")
+            val postWithUser = post.copy(userId = currentUid)
             val doc = feedCollection.add(postWithUser).await()
             Result.success(doc.id)
         } catch (e: Exception) {
@@ -117,15 +125,16 @@ class FeedRepository {
 
     suspend fun toggleLike(postId: String): Result<Unit> {
         return try {
+            val currentUid = userId ?: throw IllegalStateException("User not logged in")
             val docRef = feedCollection.document(postId)
             val doc = docRef.get().await()
             val post = doc.toObject(FeedPost::class.java) ?: return Result.failure(Exception("Post not found"))
             
             val updatedLikes = post.likes.toMutableList()
-            if (updatedLikes.contains(userId)) {
-                updatedLikes.remove(userId)
+            if (updatedLikes.contains(currentUid)) {
+                updatedLikes.remove(currentUid)
             } else {
-                updatedLikes.add(userId)
+                updatedLikes.add(currentUid)
             }
             docRef.update("likes", updatedLikes).await()
             Result.success(Unit)
@@ -137,15 +146,16 @@ class FeedRepository {
     suspend fun toggleReaction(postId: String?, emoji: String): Result<Unit> {
         if (postId == null) return Result.failure(Exception("Post ID is null"))
         return try {
+            val currentUid = userId ?: throw IllegalStateException("User not logged in")
             val docRef = feedCollection.document(postId)
             val doc = docRef.get().await()
             val post = doc.toObject(FeedPost::class.java) ?: return Result.failure(Exception("Post not found"))
 
             val updatedReactions = post.reactions.toMutableMap()
-            if (updatedReactions[userId] == emoji) {
-                updatedReactions.remove(userId)
+            if (updatedReactions[currentUid] == emoji) {
+                updatedReactions.remove(currentUid)
             } else {
-                updatedReactions[userId] = emoji
+                updatedReactions[currentUid] = emoji
             }
             
             docRef.update("reactions", updatedReactions).await()

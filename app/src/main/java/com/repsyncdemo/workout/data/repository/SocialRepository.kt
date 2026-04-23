@@ -17,11 +17,16 @@ class SocialRepository {
     private val auth = FirebaseAuth.getInstance()
     private val friendshipsCollection = db.collection("friendships")
 
-    private val currentUserId: String
-        get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
+    private val currentUserId: String?
+        get() = auth.currentUser?.uid
 
     fun getFriends(userId: String? = null): Flow<List<Friendship>> = callbackFlow {
         val targetId = userId ?: currentUserId
+        if (targetId == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = friendshipsCollection
             .whereEqualTo("status", FriendshipStatus.ACCEPTED.name)
             .addSnapshotListener { snapshot, error ->
@@ -40,6 +45,12 @@ class SocialRepository {
 
     // New: Observe ALL friendships (Pending, Accepted, etc) involving the current user
     fun getMyFriendships(): Flow<List<Friendship>> = callbackFlow {
+        val uid = currentUserId
+        if (uid == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = friendshipsCollection
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -47,7 +58,7 @@ class SocialRepository {
                     return@addSnapshotListener
                 }
                 val friendships = snapshot?.toObjects(Friendship::class.java)
-                    ?.filter { it.requesterId == currentUserId || it.receiverId == currentUserId }
+                    ?.filter { it.requesterId == uid || it.receiverId == uid }
                     ?: emptyList()
                 trySend(friendships)
             }
@@ -55,8 +66,14 @@ class SocialRepository {
     }
 
     fun getPendingRequests(): Flow<List<Friendship>> = callbackFlow {
+        val uid = currentUserId
+        if (uid == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = friendshipsCollection
-            .whereEqualTo("receiverId", currentUserId)
+            .whereEqualTo("receiverId", uid)
             .whereEqualTo("status", FriendshipStatus.PENDING.name)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -72,6 +89,12 @@ class SocialRepository {
     }
 
     fun getFriendshipWithUser(otherUserId: String): Flow<Friendship?> = callbackFlow {
+        val uid = currentUserId
+        if (uid == null) {
+            trySend(null)
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = friendshipsCollection
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -79,8 +102,8 @@ class SocialRepository {
                     return@addSnapshotListener
                 }
                 val friendship = snapshot?.toObjects(Friendship::class.java)
-                    ?.find { (it.requesterId == currentUserId && it.receiverId == otherUserId) || 
-                             (it.requesterId == otherUserId && it.receiverId == currentUserId) }
+                    ?.find { (it.requesterId == uid && it.receiverId == otherUserId) || 
+                             (it.requesterId == otherUserId && it.receiverId == uid) }
                 trySend(friendship)
             }
         awaitClose { listener.remove() }
@@ -92,8 +115,9 @@ class SocialRepository {
         senderUsername: String
     ): Result<Unit> {
         return try {
+            val uid = currentUserId ?: throw IllegalStateException("User not logged in")
             val friendship = Friendship(
-                requesterId = currentUserId,
+                requesterId = uid,
                 requesterUsername = senderUsername,
                 receiverId = receiverId,
                 receiverUsername = receiverUsername,

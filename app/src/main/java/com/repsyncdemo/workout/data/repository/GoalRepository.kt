@@ -16,11 +16,16 @@ class GoalRepository {
     private val auth = FirebaseAuth.getInstance()
     private val goalsCollection = db.collection("goals")
 
-    private val currentUserId: String
-        get() = auth.currentUser?.uid ?: throw IllegalStateException("User not logged in")
+    private val currentUserId: String?
+        get() = auth.currentUser?.uid
 
     fun getGoals(userId: String? = null): Flow<List<Goal>> = callbackFlow {
         val id = userId ?: currentUserId
+        if (id == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
         val listener = goalsCollection
             .whereEqualTo("userId", id)
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -38,7 +43,8 @@ class GoalRepository {
 
     suspend fun addGoal(goal: Goal): Result<String> {
         return try {
-            val goalWithUser = goal.copy(userId = currentUserId)
+            val uid = currentUserId ?: throw IllegalStateException("User not logged in")
+            val goalWithUser = goal.copy(userId = uid)
             val doc = goalsCollection.add(goalWithUser).await()
             Result.success(doc.id)
         } catch (e: Exception) {
