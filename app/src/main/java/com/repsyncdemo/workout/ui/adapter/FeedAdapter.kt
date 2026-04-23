@@ -194,6 +194,9 @@ class FeedAdapter(
         }
 
         private fun loadProfilePicture(url: String) {
+            // Clear the image to prevent old profile pictures from showing during recycle
+            binding.ivUserProfile.setImageDrawable(null)
+
             if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
                 binding.ivUserProfile.load(url) {
                     crossfade(true)
@@ -218,6 +221,11 @@ class FeedAdapter(
 
     class FeedDiffCallback : DiffUtil.ItemCallback<FeedPost>() {
         override fun areItemsTheSame(oldItem: FeedPost, newItem: FeedPost) = oldItem.id == newItem.id
-        override fun areContentsTheSame(oldItem: FeedPost, newItem: FeedPost) = oldItem == newItem
+        override fun areContentsTheSame(oldItem: FeedPost, newItem: FeedPost): Boolean {
+            // Include userProfilePicture and username in equality check to trigger re-bind on profile updates
+            return oldItem == newItem && 
+                   oldItem.userProfilePicture == newItem.userProfilePicture &&
+                   oldItem.username == newItem.username
+        }
     }
 }

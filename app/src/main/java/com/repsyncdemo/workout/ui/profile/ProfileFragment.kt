@@ -304,6 +304,9 @@ class ProfileFragment : Fragment() {
     }
 
     private fun updateProfilePicture(url: String) {
+        // Clear previous image to prevent flickering/misloading during data updates
+        binding.ivProfilePic.setImageDrawable(null)
+
         if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
             binding.ivProfilePic.load(url) {
                 crossfade(true)
