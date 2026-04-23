@@ -90,6 +90,10 @@ class FriendsFragment : Fragment() {
             onCancelRequest = { friendshipId ->
                 socialViewModel.removeFriendship(friendshipId)
                 Toast.makeText(requireContext(), "Request cancelled", Toast.LENGTH_SHORT).show()
+            },
+            onAcceptRequest = { friendship ->
+                socialViewModel.acceptRequest(friendship.id)
+                Toast.makeText(requireContext(), "Friend request accepted!", Toast.LENGTH_SHORT).show()
             }
         )
 
