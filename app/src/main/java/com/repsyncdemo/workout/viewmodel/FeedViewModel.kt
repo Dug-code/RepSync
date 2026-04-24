@@ -8,6 +8,7 @@ import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
 import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.data.repository.FeedRepository
+import com.repsyncdemo.workout.data.repository.NotificationRepository
 import com.repsyncdemo.workout.data.repository.ProfileRepository
 import com.repsyncdemo.workout.data.repository.SocialRepository
 import kotlinx.coroutines.Job
@@ -20,6 +21,7 @@ class FeedViewModel : ViewModel() {
     private val repository = FeedRepository()
     private val socialRepository = SocialRepository()
     private val profileRepository = ProfileRepository()
+    private val notificationRepository = NotificationRepository()
     private val auth = FirebaseAuth.getInstance()
 
     private val _rawExplorePosts = MutableLiveData<List<FeedPost>>()
@@ -220,9 +222,20 @@ class FeedViewModel : ViewModel() {
         }
     }
 
-    fun deletePost(postId: String) {
+    fun deletePost(post: FeedPost) {
         viewModelScope.launch {
-            repository.deletePost(postId)
+            val result = repository.deletePost(post.id)
+            if (result.isSuccess) {
+                // If the post being deleted belongs to someone else, it's a moderation action
+                if (post.userId != currentUserId) {
+                    val displayDescription = if (post.type == FeedPostType.CHAT_MESSAGE) {
+                        post.description
+                    } else {
+                        post.workoutName.ifEmpty { post.goalTitle.ifEmpty { "Post" } }
+                    }
+                    notificationRepository.sendModerationNotification(post.userId, displayDescription)
+                }
+            }
         }
     }
 

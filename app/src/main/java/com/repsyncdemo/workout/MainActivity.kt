@@ -24,6 +24,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.ActivityMainBinding
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
+import com.repsyncdemo.workout.viewmodel.NotificationViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import java.util.*
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private val navigationLockViewModel: NavigationLockViewModel by viewModels()
     private val profileViewModel: ProfileViewModel by viewModels()
     private val workoutViewModel: WorkoutViewModel by viewModels()
+    private val notificationViewModel: NotificationViewModel by viewModels()
     private lateinit var navController: NavController
     private var weighInReminderDialog: androidx.appcompat.app.AlertDialog? = null
 
@@ -104,6 +106,25 @@ class MainActivity : AppCompatActivity() {
         profileViewModel.myProfile.observe(this) { profile ->
             profile?.let { checkWeighInSchedule(it) }
         }
+
+        // Observe unread notifications for popups
+        notificationViewModel.unreadNotifications.observe(this) { notifications ->
+            if (notifications.isNotEmpty()) {
+                val nextNotification = notifications.first()
+                showNotificationPopup(nextNotification)
+            }
+        }
+    }
+
+    private fun showNotificationPopup(notification: com.repsyncdemo.workout.data.model.Notification) {
+        MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle(notification.title)
+            .setMessage(notification.message)
+            .setCancelable(false)
+            .setPositiveButton("Dismiss") { _, _ ->
+                notificationViewModel.markAsRead(notification.id)
+            }
+            .show()
     }
 
     private fun hideKeyboard() {
@@ -190,9 +211,7 @@ class MainActivity : AppCompatActivity() {
             .setView(dialogView)
             .setPositiveButton("Save") { _, _ ->
                 val weight = etWeight.text.toString().toDoubleOrNull() ?: 0.0
-                if (weight > 1400) {
-                    Toast.makeText(this, "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
-                } else if (weight > 0) {
+                if (weight > 0) {
                     saveWeighInData(weight, spinnerFreq.text.toString(), dialogView)
                 }
             }
@@ -293,5 +312,10 @@ class MainActivity : AppCompatActivity() {
             return true
         }
         return navController.navigateUp() || super.onSupportNavigateUp()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        notificationViewModel.refreshUser()
     }
 }

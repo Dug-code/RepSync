@@ -48,7 +48,10 @@ class FeedChatFragment : Fragment() {
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onDeleteClick = { postId -> feedViewModel.deletePost(postId) },
+            onDeleteClick = { postId -> 
+                val post = feedAdapter.currentList.find { it.id == postId }
+                post?.let { feedViewModel.deletePost(it) }
+            },
             onEditChatClick = { post ->
                 showEditChatDialog(post.id, post.description)
             }

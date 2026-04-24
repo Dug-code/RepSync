@@ -43,10 +43,13 @@ class ProfilePostsFragment : Fragment() {
                 }
             },
             onReactionClick = { view, postId -> // Open the ReactionDialogFragment
-                val reactionDialog = ReactionDialogFragment.newInstance(postId)
+                val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onDeleteClick = { postId -> feedViewModel.deletePost(postId) }
+            onDeleteClick = { postId -> 
+                val post = feedAdapter.currentList.find { it.id == postId }
+                post?.let { feedViewModel.deletePost(it) }
+            }
         )
 
         binding.rvContent.apply {
