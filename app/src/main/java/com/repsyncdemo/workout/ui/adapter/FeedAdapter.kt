@@ -80,6 +80,7 @@ class FeedAdapter(
             val displayProfilePic = latestProfile?.profilePictureUrl ?: post.userProfilePicture
 
             binding.tvUsername.text = "@$displayUsername"
+            binding.ivAdminBadge.visibility = if (latestProfile?.isAdmin == true) View.VISIBLE else View.GONE
             binding.tvUsername.setOnClickListener { onUserClick(post.userId) }
             binding.ivUserProfile.setOnClickListener { onUserClick(post.userId) }
 

@@ -212,6 +212,7 @@ class ProfileFragment : Fragment() {
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
+                binding.ivAdminBadge.visibility = if (it.isAdmin) View.VISIBLE else View.GONE
                 binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
                 updateProfilePicture(it.profilePictureUrl)
                 
