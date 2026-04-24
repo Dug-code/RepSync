@@ -52,6 +52,7 @@ class FriendAdapter(
             val profilePic = profile?.profilePictureUrl ?: "red"
 
             binding.tvUsername.text = "@$username"
+            binding.ivAdminBadge.visibility = if (profile?.isAdmin == true) View.VISIBLE else View.GONE
             
             // Load latest profile picture
             if (profilePic.startsWith("http")) {

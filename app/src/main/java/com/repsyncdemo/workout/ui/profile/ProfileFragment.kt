@@ -157,7 +157,9 @@ class ProfileFragment : Fragment() {
             .setView(dialogView)
             .setPositiveButton("Save") { _, _ ->
                 val weight = etWeight.text.toString().toDoubleOrNull() ?: 0.0
-                if (weight > 0) {
+                if (weight > 1400) {
+                    Toast.makeText(requireContext(), "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
+                } else if (weight > 0) {
                     saveWeighInData(weight, spinnerFreq.text.toString(), dialogView)
                 }
             }
@@ -212,6 +214,7 @@ class ProfileFragment : Fragment() {
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
+                binding.ivAdminBadge.visibility = if (it.isAdmin) View.VISIBLE else View.GONE
                 binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
                 updateProfilePicture(it.profilePictureUrl)
                 

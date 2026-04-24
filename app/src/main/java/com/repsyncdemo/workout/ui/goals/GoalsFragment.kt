@@ -212,6 +212,10 @@ class GoalsFragment : Fragment() {
                 viewModel.addGoal(goal)
 
                 if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
+                    if (initialVal > 1400) {
+                        Toast.makeText(requireContext(), "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
                     profileViewModel.updateWeight(initialVal)
                 }
                 
@@ -244,6 +248,10 @@ class GoalsFragment : Fragment() {
                 viewModel.updateProgress(goal.id, newValue)
 
                 if (goal.type == GoalType.WEIGHT_LOSS || goal.type == GoalType.WEIGHT_GAIN) {
+                    if (newValue > 1400) {
+                        Toast.makeText(requireContext(), "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
+                        return@setPositiveButton
+                    }
                     profileViewModel.updateWeight(newValue)
                 }
 

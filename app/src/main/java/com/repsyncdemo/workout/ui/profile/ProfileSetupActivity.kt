@@ -68,10 +68,16 @@ class ProfileSetupActivity : AppCompatActivity() {
             if (feet <= 0 && inches <= 0) {
                 Toast.makeText(this, "Please enter your height", Toast.LENGTH_SHORT).show()
                 hasError = true
+            } else if (feet > 8 || (feet == 8 && inches > 11)) {
+                Toast.makeText(this, "Height cannot exceed 8ft 11in", Toast.LENGTH_SHORT).show()
+                hasError = true
             }
 
             if (weight <= 0) {
                 binding.etWeight.error = "Please enter your weight"
+                hasError = true
+            } else if (weight > 1400) {
+                binding.etWeight.error = "Weight cannot exceed 1400 lbs"
                 hasError = true
             }
 

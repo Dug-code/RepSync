@@ -1,6 +1,7 @@
 package com.repsyncdemo.workout.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
@@ -46,6 +47,7 @@ class UserSearchAdapter(
 
         fun bind(user: UserProfile) {
             binding.tvUsername.text = user.username
+            binding.ivAdminBadge.visibility = if (user.isAdmin) View.VISIBLE else View.GONE
             
             // Load Profile Pic
             if (user.profilePictureUrl.isNotEmpty() && (user.profilePictureUrl.startsWith("http") || user.profilePictureUrl.startsWith("https"))) {

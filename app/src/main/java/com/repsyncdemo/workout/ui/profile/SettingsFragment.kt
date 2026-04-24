@@ -410,8 +410,13 @@ class SettingsFragment : Fragment() {
         val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
         val isFriendsPublic = binding.switchFriendsPublic.isChecked
 
-        if (username.isEmpty()) {
-            binding.etUsername.error = "Username required"
+        if (totalHeightInches > 107) { // 8ft 11in = 107 inches
+            Toast.makeText(requireContext(), "Height cannot exceed 8ft 11in", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (newWeight > 1400) {
+            binding.etSettingsWeight.error = "Weight cannot exceed 1400 lbs"
             return
         }
 
