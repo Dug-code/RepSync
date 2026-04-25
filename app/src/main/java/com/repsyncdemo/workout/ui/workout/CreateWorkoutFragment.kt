@@ -56,6 +56,7 @@ class CreateWorkoutFragment : Fragment() {
         if (exerciseInputAdapter == null) {
             exerciseInputAdapter = ExerciseInputAdapter(onDataChanged = {
                 updateLockState()
+                updateTopIcons()
             })
         }
     }
@@ -72,17 +73,7 @@ class CreateWorkoutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val workoutIdArg = arguments?.getString("workoutId")
-        if (workoutIdArg != existingWorkoutId) {
-            existingWorkoutId = workoutIdArg
-            // If the ID changed, we need to reload
-            if (existingWorkoutId != null) {
-                workoutViewModel.loadWorkout(existingWorkoutId!!)
-            } else {
-                exerciseInputAdapter?.clearItems()
-                exerciseInputAdapter?.addExercise()
-            }
-        }
+        existingWorkoutId = arguments?.getString("workoutId")
 
         // Handle Back Navigation
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
@@ -107,15 +98,30 @@ class CreateWorkoutFragment : Fragment() {
         binding.rvExercises.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = exerciseInputAdapter
+            // Disable animations to prevent the "flipping" or "flash" effect during reordering
+            itemAnimator = null
         }
 
-        val dragHandler = DragToReorderCallBack { fromPosition, toPosition ->
-            exerciseInputAdapter?.moveExercise(fromPosition, toPosition)
-        }
+        val dragHandler = DragToReorderCallBack(
+            onItemMove = { fromPosition, toPosition ->
+                exerciseInputAdapter?.moveExercise(fromPosition, toPosition)
+            },
+            onDragFinished = {
+                updateLockState()
+                updateTopIcons()
+            }
+        )
         ItemTouchHelper(dragHandler).attachToRecyclerView(binding.rvExercises)
 
         if (existingWorkoutId != null) {
+            if (!workoutViewModel.isWorkoutDataLoaded) {
+                workoutViewModel.loadWorkout(existingWorkoutId!!)
+            }
             binding.btnSave.text = "Update Workout"
+        } else {
+            if (exerciseInputAdapter?.itemCount == 0) {
+                exerciseInputAdapter?.addExercise()
+            }
         }
 
         workoutViewModel.selectedWorkout.observe(viewLifecycleOwner) { workout ->
@@ -130,6 +136,7 @@ class CreateWorkoutFragment : Fragment() {
                     exerciseInputAdapter?.addExerciseFromObject(exercise)
                 }
                 workoutViewModel.notifyWorkoutLoaded()
+                updateTopIcons()
             }
         }
 
@@ -143,6 +150,7 @@ class CreateWorkoutFragment : Fragment() {
             if (!exerciseName.isNullOrEmpty()) {
                 exerciseInputAdapter?.addExerciseFromLibrary(exerciseName)
                 updateLockState()
+                updateTopIcons()
             }
         }
 
@@ -188,6 +196,25 @@ class CreateWorkoutFragment : Fragment() {
 
     private fun updatePrivacyIcon() {
         binding.ivPrivacyIcon.setImageResource(if (isPublic) R.drawable.ic_public else R.drawable.ic_private)
+    }
+
+    private fun updateTopIcons() {
+        val exercises = exerciseInputAdapter?.getExercises() ?: emptyList()
+        val types = exercises.map { it.type }.distinct()
+        
+        if (types.size > 1) {
+            // It's a combination
+            binding.ivStrengthIcon.visibility = View.GONE
+            binding.ivCardioIcon.visibility = View.GONE
+            binding.ivCalisthenicsIcon.visibility = View.GONE
+            binding.tvComboLabel.visibility = View.VISIBLE
+        } else {
+            // It's all one type or empty
+            binding.tvComboLabel.visibility = View.GONE
+            binding.ivStrengthIcon.visibility = if (types.contains(ExerciseType.STRENGTH)) View.VISIBLE else View.GONE
+            binding.ivCardioIcon.visibility = if (types.contains(ExerciseType.CARDIO)) View.VISIBLE else View.GONE
+            binding.ivCalisthenicsIcon.visibility = if (types.contains(ExerciseType.CALISTHENICS)) View.VISIBLE else View.GONE
+        }
     }
 
     private fun setupChangeListeners() {

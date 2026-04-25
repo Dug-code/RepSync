@@ -18,21 +18,54 @@
         android:gravity="center_vertical"
         android:padding="16dp">
 
-        <!-- Left Sidebar: Workout Icon Container -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <!-- Left Sidebar: Single Dynamic Workout Icon or Combo Label -->
+        <FrameLayout
+            android:id="@+id/layoutIcons"
+            android:layout_width="56dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:minWidth="56dp"
             android:paddingVertical="4dp">
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:id="@+id/ivStrengthIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
                 android:src="@drawable/ic_workouts"
-                app:tint="@color/primary" />
-        </LinearLayout>
+                app:tint="@color/primary"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/ivCardioIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_cardio"
+                app:tint="@color/primary"
+                android:visibility="gone" />
+
+            <ImageView
+                android:id="@+id/ivCalisthenicsIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_calisthenics"
+                app:tint="@color/primary"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvComboLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="COMBO"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary"
+                android:textAllCaps="true"
+                android:letterSpacing="0.05"
+                android:visibility="gone" />
+
+        </FrameLayout>
 
         <View
             android:layout_width="1dp"

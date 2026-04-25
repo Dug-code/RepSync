@@ -1,5 +1,7 @@
 package com.repsyncdemo.workout.ui.adapter
 
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,14 +20,18 @@ class ExerciseInputAdapter(
     private val items = mutableListOf<ExerciseInputItem>()
     private var allLibraryExercises: List<ExerciseDefinition> = emptyList()
 
+    init {
+        setHasStableIds(true)
+    }
+
     fun updateLibrary(exercises: List<ExerciseDefinition>) {
         this.allLibraryExercises = exercises
-        notifyDataSetChanged()
     }
 
     private val exerciseNames: List<String> get() = allLibraryExercises.map { it.name }.ifEmpty { ExerciseDatabase.allExercises.map { it.name } }
 
     data class ExerciseInputItem(
+        val stableId: Long = System.nanoTime(),
         var name: String = "",
         var sets: String = "",
         var reps: String = "",
@@ -33,6 +39,7 @@ class ExerciseInputAdapter(
         var isBodyweight: Boolean = false,
         var type: ExerciseType = ExerciseType.STRENGTH,
         var isCustom: Boolean = false,
+        var isExpanded: Boolean = true,
         var cardioTime: String = "",
         var cardioDist: String = "",
         var cardioFloors: String = "",
@@ -87,7 +94,8 @@ class ExerciseInputAdapter(
             type = exercise.type,
             isCustom = exercise.isCustom,
             primaryMuscle = exercise.primaryMuscleGroup,
-            secondaryMuscle = exercise.secondaryMuscleGroup
+            secondaryMuscle = exercise.secondaryMuscleGroup,
+            isExpanded = false // Collapse existing exercises by default
         ))
         notifyItemInserted(items.size - 1)
     }
@@ -113,6 +121,8 @@ class ExerciseInputAdapter(
         }
     }
 
+    override fun getItemId(position: Int): Long = items[position].stableId
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseInputBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -127,15 +137,24 @@ class ExerciseInputAdapter(
     override fun getItemCount() = items.size
 
     fun moveExercise(fromPosition: Int, toPosition: Int) {
-        val movedItem = items.removeAt(fromPosition)
-        items.add(toPosition, movedItem)
-        notifyItemMoved(fromPosition, toPosition)
-        onDataChanged()
+        if (fromPosition < items.size && toPosition < items.size) {
+            val movedItem = items.removeAt(fromPosition)
+            items.add(toPosition, movedItem)
+            notifyItemMoved(fromPosition, toPosition)
+        }
     }
 
     inner class ViewHolder(
         private val binding: ItemExerciseInputBinding
     ) : RecyclerView.ViewHolder(binding.root) {
+
+        private var nameWatcher: TextWatcher? = null
+        private var setsWatcher: TextWatcher? = null
+        private var repsWatcher: TextWatcher? = null
+        private var weightWatcher: TextWatcher? = null
+        private var timeWatcher: TextWatcher? = null
+        private var distWatcher: TextWatcher? = null
+        private var floorsWatcher: TextWatcher? = null
 
         fun bind(item: ExerciseInputItem) {
             val context = binding.root.context
@@ -143,22 +162,34 @@ class ExerciseInputAdapter(
             val adapter = ArrayAdapter(context, android.R.layout.simple_dropdown_item_1line, exerciseNames)
             binding.etExerciseName.setAdapter(adapter)
             
+            binding.etExerciseName.removeTextChangedListener(nameWatcher)
+            binding.etSets.removeTextChangedListener(setsWatcher)
+            binding.etReps.removeTextChangedListener(repsWatcher)
+            binding.etWeight.removeTextChangedListener(weightWatcher)
+            binding.etCardioTime.removeTextChangedListener(timeWatcher)
+            binding.etCardioDist.removeTextChangedListener(distWatcher)
+            binding.etCardioFloors.removeTextChangedListener(floorsWatcher)
+
             binding.etExerciseName.setText(item.name)
             binding.etSets.setText(item.sets)
             binding.etReps.setText(item.reps)
             binding.etWeight.setText(item.weight)
             binding.cbBodyweight.isChecked = item.isBodyweight
-            
             binding.etCardioTime.setText(item.cardioTime)
             binding.etCardioDist.setText(item.cardioDist)
             binding.etCardioFloors.setText(item.cardioFloors)
 
             updateUiForType(item)
             updateMuscleGroupDisplay(item)
+            updateExpandedState(item)
+
+            binding.ivExpandIcon.setOnClickListener {
+                item.isExpanded = !item.isExpanded
+                updateExpandedState(item)
+            }
 
             binding.etExerciseName.setOnItemClickListener { _, _, _, _ ->
                 val selectedName = binding.etExerciseName.text.toString()
-                
                 val exerciseDef = allLibraryExercises.find { it.name.equals(selectedName, ignoreCase = true) }
                     ?: ExerciseDatabase.getExerciseByName(selectedName)
                 
@@ -170,14 +201,11 @@ class ExerciseInputAdapter(
                     item.primaryMuscle = exerciseDef.primaryBodyPart
                     item.secondaryMuscle = exerciseDef.secondaryBodyParts
                 }
-                
                 updateUiForType(item)
                 updateMuscleGroupDisplay(item)
                 onDataChanged()
             }
 
-            // Removed TextWatcher for etExerciseName to prevent free-form typing from being saved.
-            // Added focus listener to validate or clear input.
             binding.etExerciseName.setOnFocusChangeListener { _, hasFocus ->
                 if (!hasFocus) {
                     val currentText = binding.etExerciseName.text.toString().trim()
@@ -185,7 +213,6 @@ class ExerciseInputAdapter(
                         ?: ExerciseDatabase.getExerciseByName(currentText)
                     
                     if (match != null) {
-                        // User typed a valid name exactly but didn't click the dropdown
                         binding.etExerciseName.setText(match.name)
                         item.name = match.name
                         item.type = match.type
@@ -196,22 +223,28 @@ class ExerciseInputAdapter(
                         updateUiForType(item)
                         updateMuscleGroupDisplay(item)
                     } else if (item.name.isEmpty()) {
-                        // Garbage input and nothing previously selected
                         binding.etExerciseName.setText("")
                     } else if (!currentText.equals(item.name, ignoreCase = true)) {
-                        // User edited a valid name into garbage
                         binding.etExerciseName.setText(item.name)
                     }
                     onDataChanged()
                 }
             }
 
-            binding.etSets.addTextChangedListener(createWatcher { item.sets = it })
-            binding.etReps.addTextChangedListener(createWatcher { item.reps = it })
-            binding.etWeight.addTextChangedListener(createWatcher { item.weight = it })
-            binding.etCardioTime.addTextChangedListener(createWatcher { item.cardioTime = it })
-            binding.etCardioDist.addTextChangedListener(createWatcher { item.cardioDist = it })
-            binding.etCardioFloors.addTextChangedListener(createWatcher { item.cardioFloors = it })
+            nameWatcher = createWatcher { item.name = it }
+            setsWatcher = createWatcher { item.sets = it }
+            repsWatcher = createWatcher { item.reps = it }
+            weightWatcher = createWatcher { item.weight = it }
+            timeWatcher = createWatcher { item.cardioTime = it }
+            distWatcher = createWatcher { item.cardioDist = it }
+            floorsWatcher = createWatcher { item.cardioFloors = it }
+
+            binding.etSets.addTextChangedListener(setsWatcher)
+            binding.etReps.addTextChangedListener(repsWatcher)
+            binding.etWeight.addTextChangedListener(weightWatcher)
+            binding.etCardioTime.addTextChangedListener(timeWatcher)
+            binding.etCardioDist.addTextChangedListener(distWatcher)
+            binding.etCardioFloors.addTextChangedListener(floorsWatcher)
             
             binding.cbBodyweight.setOnCheckedChangeListener { _, isChecked ->
                 item.isBodyweight = isChecked
@@ -229,6 +262,11 @@ class ExerciseInputAdapter(
             }
         }
 
+        private fun updateExpandedState(item: ExerciseInputItem) {
+            binding.layoutCollapsibleContent.visibility = if (item.isExpanded) View.VISIBLE else View.GONE
+            binding.ivExpandIcon.rotation = if (item.isExpanded) 180f else 0f
+        }
+
         private fun updateMuscleGroupDisplay(item: ExerciseInputItem) {
             val primary = item.primaryMuscle
             val secondary = item.secondaryMuscle
@@ -240,13 +278,13 @@ class ExerciseInputAdapter(
             } else {
                 binding.tvMuscleGroups.visibility = View.GONE
             }
+            binding.tvCustomLabel.visibility = if (item.isCustom) View.VISIBLE else View.GONE
         }
 
         private fun updateUiForType(item: ExerciseInputItem) {
             if (item.type == ExerciseType.CARDIO) {
                 binding.layoutStrengthInputs.visibility = View.GONE
                 binding.layoutCardioInputs.visibility = View.VISIBLE
-                
                 val isStepMachine = item.name.lowercase().contains("stair") || item.name.lowercase().contains("step")
                 binding.tilFloors.visibility = if (isStepMachine) View.VISIBLE else View.GONE
             } else {
@@ -257,10 +295,10 @@ class ExerciseInputAdapter(
             }
         }
 
-        private fun createWatcher(onChanged: (String) -> Unit) = object : android.text.TextWatcher {
+        private fun createWatcher(onChanged: (String) -> Unit) = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
+            override fun afterTextChanged(s: Editable?) {
                 onChanged(s.toString())
                 onDataChanged()
             }

@@ -51,6 +51,9 @@ class WorkoutListFragment : Fragment() {
         binding.rvWorkouts.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = workoutAdapter
+            // Disable animations to prevent the "double animation" or "flipping" effect 
+            // that happens after letting go of a dragged item.
+            itemAnimator = null
         }
 
         setupDragAndDrop()
@@ -87,6 +90,7 @@ class WorkoutListFragment : Fragment() {
 
     private fun setupObservers() {
         viewModel.workouts.observe(viewLifecycleOwner) { workouts ->
+            // Only update if we aren't actively reordering to avoid interrupting the user
             allWorkouts = workouts.toMutableList()
             applyFiltersAndSort()
         }
@@ -106,8 +110,10 @@ class WorkoutListFragment : Fragment() {
                 val fromPos = viewHolder.bindingAdapterPosition
                 val toPos = target.bindingAdapterPosition
                 
-                Collections.swap(allWorkouts, fromPos, toPos)
-                workoutAdapter.notifyItemMoved(fromPos, toPos)
+                if (fromPos != toPos && fromPos != RecyclerView.NO_POSITION && toPos != RecyclerView.NO_POSITION) {
+                    Collections.swap(allWorkouts, fromPos, toPos)
+                    workoutAdapter.notifyItemMoved(fromPos, toPos)
+                }
                 return true
             }
 
@@ -115,6 +121,7 @@ class WorkoutListFragment : Fragment() {
 
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
+                // When the drag is finished, persist the order and snap into place
                 if (currentSort == SortType.MANUAL) {
                     viewModel.updateWorkoutOrder(allWorkouts)
                 }
@@ -126,6 +133,9 @@ class WorkoutListFragment : Fragment() {
     private fun applyFiltersAndSort() {
         val query = binding.etSearch.text.toString().trim()
         
+        // Update reorder handle visibility based on sort type
+        workoutAdapter.setReorderable(currentSort == SortType.MANUAL)
+
         var filteredList = if (query.isEmpty()) {
             allWorkouts.toList()
         } else {

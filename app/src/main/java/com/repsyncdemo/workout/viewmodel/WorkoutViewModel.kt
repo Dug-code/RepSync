@@ -7,7 +7,6 @@ import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.*
 import com.repsyncdemo.workout.data.repository.WorkoutRepository
 import com.repsyncdemo.workout.util.SingleLiveEvent
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar

@@ -7,13 +7,21 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.ExerciseType
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.databinding.ItemWorkoutBinding
 
 class WorkoutAdapter(
-    private val isReorderable: Boolean = false,
+    private var isReorderable: Boolean = false,
     private val onClick: (Workout) -> Unit
 ) : ListAdapter<Workout, WorkoutAdapter.ViewHolder>(WorkoutDiffCallback()) {
+
+    fun setReorderable(reorderable: Boolean) {
+        if (this.isReorderable != reorderable) {
+            this.isReorderable = reorderable
+            notifyDataSetChanged()
+        }
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemWorkoutBinding.inflate(
@@ -42,6 +50,23 @@ class WorkoutAdapter(
             } else {
                 binding.ivPrivacyStatus.setImageResource(R.drawable.ic_private)
                 binding.ivPrivacyStatus.alpha = 0.3f
+            }
+
+            // Determine which workout type icons to show
+            val types = workout.exercises.map { it.type }.distinct()
+            
+            if (types.size > 1) {
+                // Multi-type: Show COMBO label
+                binding.ivStrengthIcon.visibility = View.GONE
+                binding.ivCardioIcon.visibility = View.GONE
+                binding.ivCalisthenicsIcon.visibility = View.GONE
+                binding.tvComboLabel.visibility = View.VISIBLE
+            } else {
+                // Single-type or empty
+                binding.tvComboLabel.visibility = View.GONE
+                binding.ivStrengthIcon.visibility = if (types.contains(ExerciseType.STRENGTH)) View.VISIBLE else View.GONE
+                binding.ivCardioIcon.visibility = if (types.contains(ExerciseType.CARDIO)) View.VISIBLE else View.GONE
+                binding.ivCalisthenicsIcon.visibility = if (types.contains(ExerciseType.CALISTHENICS)) View.VISIBLE else View.GONE
             }
 
             // Show drag handle ONLY if reorderable
