@@ -31,8 +31,6 @@ class FeedViewModel : ViewModel() {
     private val _userProfiles = MutableLiveData<Map<String, UserProfile>>(emptyMap())
     val userProfiles: LiveData<Map<String, UserProfile>> = _userProfiles
 
-    // Expose raw posts directly to the UI. The FeedAdapter handles profile enrichment.
-    // This prevents continuous object recreation which breaks RecyclerView DiffUtil and causes glitching.
     val explorePosts: LiveData<List<FeedPost>> = _rawExplorePosts
     val friendsPosts: LiveData<List<FeedPost>> = _rawFriendsPosts
     val chatPosts: LiveData<List<FeedPost>> = _rawChatPosts
@@ -45,7 +43,6 @@ class FeedViewModel : ViewModel() {
 
     private var userLocation: GeoPoint? = null
     
-    // Jobs to manage streams so we don't have multiple snapshot listeners fighting each other
     private var exploreJob: Job? = null
     private var friendsJob: Job? = null
     private var chatJob: Job? = null
@@ -84,8 +81,16 @@ class FeedViewModel : ViewModel() {
         loadFriendsFeed()
     }
 
+    fun refreshAllFeeds() {
+        // Clear profile cache to force re-download of latest avatars
+        _userProfiles.value = emptyMap()
+        loadExploreFeed()
+        loadFriendsFeed()
+        loadChatFeed()
+    }
+
     fun loadExploreFeed() {
-        exploreJob?.cancel() // Prevent multiple listeners running simultaneously
+        exploreJob?.cancel()
         _isLoading.value = true
         exploreJob = viewModelScope.launch {
             try {
@@ -112,7 +117,7 @@ class FeedViewModel : ViewModel() {
     }
 
     fun loadFriendsFeed() {
-        friendsJob?.cancel() // Prevent multiple listeners
+        friendsJob?.cancel()
         friendsJob = viewModelScope.launch {
             try {
                 val friendIds = socialRepository.getFriends().first().map { 
@@ -139,7 +144,7 @@ class FeedViewModel : ViewModel() {
     }
 
     fun loadChatFeed() {
-        chatJob?.cancel() // Prevent multiple listeners
+        chatJob?.cancel()
         chatJob = viewModelScope.launch {
             try {
                 repository.getFeed(
@@ -170,7 +175,6 @@ class FeedViewModel : ViewModel() {
         val userIds = allPosts.map { it.userId }.distinct()
         if (userIds.isEmpty()) return
 
-        // We accumulate profiles instead of wiping them to prevent UI flashing
         profileObservationJob?.cancel()
         profileObservationJob = viewModelScope.launch {
             profileRepository.observeProfiles(userIds).collect { profiles ->

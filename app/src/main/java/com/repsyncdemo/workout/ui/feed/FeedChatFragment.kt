@@ -1,9 +1,11 @@
 package com.repsyncdemo.workout.ui.feed
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -37,7 +39,6 @@ class FeedChatFragment : Fragment() {
         feedAdapter = FeedAdapter(
             onUserClick = { userId ->
                 if (userId == currentUserId) {
-                    // Navigate to root profile tab
                     findNavController().navigate(R.id.profileFragment)
                 } else {
                     val bundle = Bundle().apply { putString("userId", userId) }
@@ -48,10 +49,7 @@ class FeedChatFragment : Fragment() {
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onDeleteClick = { postId -> 
-                val post = feedAdapter.currentList.find { it.id == postId }
-                post?.let { feedViewModel.deletePost(it) }
-            },
+            onDeleteClick = { post -> feedViewModel.deletePost(post) },
             onEditChatClick = { post ->
                 showEditChatDialog(post.id, post.description)
             }
@@ -62,7 +60,11 @@ class FeedChatFragment : Fragment() {
             adapter = feedAdapter
         }
 
-        // Use chatPosts specifically to avoid MediatorLiveData interference during swipes
+        binding.swipeRefresh.setOnRefreshListener {
+            feedViewModel.refreshAllFeeds()
+            binding.swipeRefresh.isRefreshing = false
+        }
+
         feedViewModel.chatPosts.observe(viewLifecycleOwner) { posts ->
             feedAdapter.submitList(posts)
             binding.layoutEmpty.visibility = if (posts.isEmpty()) View.VISIBLE else View.GONE
@@ -81,8 +83,14 @@ class FeedChatFragment : Fragment() {
             if (message.isNotBlank()) {
                 feedViewModel.sendChatMessage(message)
                 binding.etChatMessage.setText("")
+                hideKeyboard()
             }
         }
+    }
+
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(binding.etChatMessage.windowToken, 0)
     }
 
     private fun showEditChatDialog(postId: String, currentText: String) {

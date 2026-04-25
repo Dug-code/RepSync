@@ -45,15 +45,17 @@ class FeedFriendsFragment : Fragment() {
                 val reactionDialog = ReactionDialogFragment.newInstance(postId, view)
                 reactionDialog.show(childFragmentManager, "ReactionDialog")
             },
-            onDeleteClick = { postId -> 
-                val post = feedAdapter.currentList.find { it.id == postId }
-                post?.let { feedViewModel.deletePost(it) }
-            }
+            onDeleteClick = { post -> feedViewModel.deletePost(post) }
         )
 
         binding.rvFeed.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = feedAdapter
+        }
+
+        binding.swipeRefresh.setOnRefreshListener {
+            feedViewModel.refreshAllFeeds()
+            binding.swipeRefresh.isRefreshing = false
         }
 
         feedViewModel.friendsPosts.observe(viewLifecycleOwner) { posts ->

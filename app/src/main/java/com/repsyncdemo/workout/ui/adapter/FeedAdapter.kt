@@ -26,7 +26,7 @@ import java.util.Locale
 class FeedAdapter(
     private val onUserClick: (String) -> Unit,
     private val onReactionClick: (View, String) -> Unit,
-    private val onDeleteClick: (String) -> Unit,
+    private val onDeleteClick: (FeedPost) -> Unit, // Fixed parameter type
     private val onEditChatClick: ((FeedPost) -> Unit)? = null
 ) : ListAdapter<FeedPost, FeedAdapter.ViewHolder>(FeedDiffCallback()) {
 
@@ -182,7 +182,7 @@ class FeedAdapter(
                             MaterialAlertDialogBuilder(binding.root.context, R.style.ThemeOverlay_App_MaterialAlertDialog)
                                 .setTitle("Delete Post")
                                 .setMessage(if (isModerating) "As a moderator, are you sure you want to delete this user's post?" else "Are you sure you want to delete this post?")
-                                .setPositiveButton("Delete") { _, _ -> onDeleteClick(post.id) }
+                                .setPositiveButton("Delete") { _, _ -> onDeleteClick(post) } // Fixed parameter
                                 .setNegativeButton("Cancel", null)
                                 .show()
                         }
@@ -223,7 +223,6 @@ class FeedAdapter(
     class FeedDiffCallback : DiffUtil.ItemCallback<FeedPost>() {
         override fun areItemsTheSame(oldItem: FeedPost, newItem: FeedPost) = oldItem.id == newItem.id
         override fun areContentsTheSame(oldItem: FeedPost, newItem: FeedPost): Boolean {
-            // Include userProfilePicture and username in equality check to trigger re-bind on profile updates
             return oldItem == newItem && 
                    oldItem.userProfilePicture == newItem.userProfilePicture &&
                    oldItem.username == newItem.username
