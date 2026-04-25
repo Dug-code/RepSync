@@ -8,12 +8,14 @@ import android.widget.ArrayAdapter
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.WeightLog
 import com.repsyncdemo.workout.databinding.FragmentAnalyticsAdvancedBinding
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import java.text.SimpleDateFormat
@@ -32,16 +34,16 @@ class AnalyticsAdvancedFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupChart()
+        setupChart(binding.lineChartPR, "Select an exercise to track your PR")
+        setupChart(binding.lineChartWeight, "Log your weight to see progress")
         observeData()
     }
 
-    private fun setupChart() {
-        val chart = binding.lineChartPR
+    private fun setupChart(chart: LineChart, emptyText: String) {
         chart.description.isEnabled = false
         chart.setTouchEnabled(true)
         chart.setPinchZoom(true)
-        chart.setNoDataText("Select an exercise to track your PR")
+        chart.setNoDataText(emptyText)
         chart.setNoDataTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
 
         val xAxis = chart.xAxis
@@ -67,7 +69,11 @@ class AnalyticsAdvancedFragment : Fragment() {
         }
 
         viewModel.prHistory.observe(viewLifecycleOwner) { history ->
-            updateChartData(history)
+            updatePRChartData(history)
+        }
+
+        viewModel.filteredWeightHistory.observe(viewLifecycleOwner) { history ->
+            updateWeightChartData(history)
         }
 
         binding.autoCompleteExercise.setOnItemClickListener { _, _, position, _ ->
@@ -76,7 +82,7 @@ class AnalyticsAdvancedFragment : Fragment() {
         }
     }
 
-    private fun updateChartData(history: List<Pair<Long, Double>>) {
+    private fun updatePRChartData(history: List<Pair<Long, Double>>) {
         if (history.isEmpty()) {
             binding.lineChartPR.clear()
             binding.tvEmptyChart.visibility = View.VISIBLE
@@ -86,16 +92,40 @@ class AnalyticsAdvancedFragment : Fragment() {
 
         val entries = history.map { Entry(it.first.toFloat(), it.second.toFloat()) }
         val dataSet = LineDataSet(entries, "Max Weight (lbs)")
-        dataSet.color = ContextCompat.getColor(requireContext(), R.color.primary)
-        dataSet.setCircleColor(ContextCompat.getColor(requireContext(), R.color.primary))
+        styleDataSet(dataSet, ContextCompat.getColor(requireContext(), R.color.primary))
+
+        binding.lineChartPR.data = LineData(dataSet)
+        binding.lineChartPR.invalidate()
+    }
+
+    private fun updateWeightChartData(history: List<WeightLog>) {
+        if (history.isEmpty()) {
+            binding.lineChartWeight.clear()
+            binding.tvEmptyWeightChart.visibility = View.VISIBLE
+            return
+        }
+        binding.tvEmptyWeightChart.visibility = View.GONE
+
+        val entries = history.map { Entry(it.date.toFloat(), it.weightLbs.toFloat()) }
+        val dataSet = LineDataSet(entries, "Body Weight (lbs)")
+        // Use a distinct color for weight (e.g., a blue shade if available, or just primary)
+        styleDataSet(dataSet, ContextCompat.getColor(requireContext(), R.color.primary))
+
+        binding.lineChartWeight.data = LineData(dataSet)
+        binding.lineChartWeight.invalidate()
+    }
+
+    private fun styleDataSet(dataSet: LineDataSet, color: Int) {
+        dataSet.color = color
+        dataSet.setCircleColor(color)
         dataSet.lineWidth = 2f
         dataSet.circleRadius = 4f
         dataSet.setDrawCircleHole(false)
         dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_primary)
         dataSet.mode = LineDataSet.Mode.CUBIC_BEZIER
-
-        binding.lineChartPR.data = LineData(dataSet)
-        binding.lineChartPR.invalidate()
+        dataSet.setDrawFilled(true)
+        dataSet.fillColor = color
+        dataSet.fillAlpha = 50
     }
 
     override fun onDestroyView() {

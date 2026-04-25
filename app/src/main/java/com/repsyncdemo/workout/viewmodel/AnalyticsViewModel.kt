@@ -3,6 +3,7 @@ package com.repsyncdemo.workout.viewmodel
 import androidx.lifecycle.*
 import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.RestDay
+import com.repsyncdemo.workout.data.model.WeightLog
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.catch
@@ -41,6 +42,10 @@ class AnalyticsViewModel : ViewModel() {
         .catch { emit(emptyList()) }
         .asLiveData()
 
+    val weightHistory: LiveData<List<WeightLog>> = repository.getWeightLogs()
+        .catch { emit(emptyList()) }
+        .asLiveData()
+
     val filteredWorkouts: LiveData<List<WorkoutLog>> = _selectedTimeRange.switchMap { range ->
         workoutLogs.map { logs ->
             if (range.days == null) logs
@@ -62,13 +67,29 @@ class AnalyticsViewModel : ViewModel() {
             if (range.days == null) days
             else {
                 val cutOff = Calendar.getInstance().apply { 
-                    add(Calendar.DAY_OF_YEAR, -range.days)
+                    add(Calendar.DAY_OF_YEAR, -range.days) 
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
                     set(Calendar.MILLISECOND, 0)
                 }.timeInMillis
                 days.filter { it.date >= cutOff }
+            }
+        }
+    }
+
+    val filteredWeightHistory: LiveData<List<WeightLog>> = _selectedTimeRange.switchMap { range ->
+        weightHistory.map { history ->
+            if (range.days == null) history.sortedBy { it.date }
+            else {
+                val cutOff = Calendar.getInstance().apply { 
+                    add(Calendar.DAY_OF_YEAR, -range.days) 
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                history.filter { it.date >= cutOff }.sortedBy { it.date }
             }
         }
     }
@@ -84,6 +105,44 @@ class AnalyticsViewModel : ViewModel() {
     val averageDurationMinutes: LiveData<Int> = filteredWorkouts.map { logs ->
         if (logs.isEmpty()) 0
         else logs.sumOf { it.durationMinutes } / logs.size
+    }
+
+    val muscleGroupDistribution: LiveData<Map<String, Int>> = filteredWorkouts.map { logs ->
+        val distribution = mutableMapOf<String, Int>()
+        logs.forEach { log ->
+            log.exercises.forEach { exercise ->
+                val muscle = ExerciseDatabase.getExerciseByName(exercise.exerciseName)?.primaryBodyPart ?: "Other"
+                val completedSets = exercise.sets.count { it.completed }
+                if (completedSets > 0) {
+                    distribution[muscle] = distribution.getOrDefault(muscle, 0) + completedSets
+                }
+            }
+        }
+        distribution
+    }
+
+    val weeklyConsistency: LiveData<List<Pair<String, Int>>> = workoutLogs.map { logs ->
+        val calendar = Calendar.getInstance()
+        val weeks = mutableListOf<Pair<String, Int>>()
+        
+        // Count workouts for each of the last 8 weeks
+        for (i in 7 downTo 0) {
+            val weekCalendar = Calendar.getInstance()
+            weekCalendar.add(Calendar.WEEK_OF_YEAR, -i)
+            val weekNum = weekCalendar.get(Calendar.WEEK_OF_YEAR)
+            val year = weekCalendar.get(Calendar.YEAR)
+            
+            val count = logs.count { log ->
+                calendar.timeInMillis = log.completedAt
+                calendar.get(Calendar.WEEK_OF_YEAR) == weekNum && calendar.get(Calendar.YEAR) == year
+            }
+            
+            // Format label as "MMM d" (start of week)
+            weekCalendar.set(Calendar.DAY_OF_WEEK, weekCalendar.firstDayOfWeek)
+            val sdf = SimpleDateFormat("MMM d", Locale.getDefault())
+            weeks.add(sdf.format(weekCalendar.time) to count)
+        }
+        weeks
     }
 
     val volumeBreakdown: LiveData<List<ExerciseVolumeBreakdown>> = filteredWorkouts.map { logs ->
@@ -120,7 +179,6 @@ class AnalyticsViewModel : ViewModel() {
     val topMuscleGroups: LiveData<List<StatItem>> = filteredWorkouts.map { logs ->
         logs.flatMap { log -> 
             log.exercises.mapNotNull { exercise ->
-                // Try to find muscle group from the static database if it's not in the log
                 ExerciseDatabase.getExerciseByName(exercise.exerciseName)?.primaryBodyPart
             }
         }.groupingBy { it }.eachCount()

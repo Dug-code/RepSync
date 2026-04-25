@@ -1,5 +1,6 @@
 package com.repsyncdemo.workout.ui.home
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +10,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.*
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
+import com.github.mikephil.charting.utils.ColorTemplate
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prolificinteractive.materialcalendarview.CalendarDay
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView
@@ -35,8 +41,59 @@ class AnalyticsSummaryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupCharts()
         setupObservers()
         setupListeners()
+    }
+
+    private fun setupCharts() {
+        // Muscle Focus Pie Chart
+        binding.pieChartMuscle.apply {
+            description.isEnabled = false
+            holeRadius = 45f
+            transparentCircleRadius = 50f
+            setHoleColor(Color.TRANSPARENT)
+            setEntryLabelColor(Color.WHITE)
+            setEntryLabelTextSize(12f)
+            legend.isEnabled = false
+            setNoDataText("No data to show balance")
+            setNoDataTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+        }
+
+        // Weekly Consistency Bar Chart
+        binding.barChartConsistency.apply {
+            description.isEnabled = false
+            setDrawGridBackground(false)
+            setDrawBarShadow(false)
+            setDrawValueAboveBar(true)
+            setPinchZoom(false)
+            setScaleEnabled(false)
+            
+            xAxis.apply {
+                position = XAxis.XAxisPosition.BOTTOM
+                setDrawGridLines(false)
+                textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
+                textSize = 10f
+                granularity = 1f
+            }
+            
+            axisLeft.apply {
+                setDrawGridLines(true)
+                textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
+                axisMinimum = 0f
+                granularity = 1f
+                // Custom formatter to remove decimal points from the Left Y-Axis
+                valueFormatter = object : ValueFormatter() {
+                    override fun getFormattedValue(value: Float): String {
+                        return value.toInt().toString()
+                    }
+                }
+            }
+            axisRight.isEnabled = false
+            legend.isEnabled = false
+            setNoDataText("Start working out to see momentum")
+            setNoDataTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+        }
     }
 
     private fun setupObservers() {
@@ -77,6 +134,71 @@ class AnalyticsSummaryFragment : Fragment() {
             binding.tvFavMuscleName.text = item?.name ?: "None"
             binding.tvFavMuscleSessions.text = "${item?.count ?: 0} times"
         }
+
+        viewModel.muscleGroupDistribution.observe(viewLifecycleOwner) { distribution ->
+            updatePieChart(distribution)
+        }
+
+        viewModel.weeklyConsistency.observe(viewLifecycleOwner) { weeklyData ->
+            updateBarChart(weeklyData)
+        }
+    }
+
+    private fun updatePieChart(distribution: Map<String, Int>) {
+        if (distribution.isEmpty()) {
+            binding.pieChartMuscle.clear()
+            return
+        }
+
+        val entries = distribution.map { PieEntry(it.value.toFloat(), it.key) }
+        val dataSet = PieDataSet(entries, "")
+        
+        val colors = mutableListOf<Int>()
+        for (c in ColorTemplate.MATERIAL_COLORS) colors.add(c)
+        for (c in ColorTemplate.VORDIPLOM_COLORS) colors.add(c)
+        dataSet.colors = colors
+        
+        dataSet.sliceSpace = 3f
+        dataSet.valueTextSize = 13f
+        dataSet.valueTextColor = Color.WHITE
+        // Format values on the pie chart slices to be integers
+        dataSet.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                return value.toInt().toString()
+            }
+        }
+
+        binding.pieChartMuscle.data = PieData(dataSet)
+        binding.pieChartMuscle.invalidate()
+    }
+
+    private fun updateBarChart(weeklyData: List<Pair<String, Int>>) {
+        if (weeklyData.isEmpty()) {
+            binding.barChartConsistency.clear()
+            return
+        }
+
+        val entries = weeklyData.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.second.toFloat()) }
+        val labels = weeklyData.map { it.first }
+
+        binding.barChartConsistency.xAxis.valueFormatter = IndexAxisValueFormatter(labels)
+
+        val dataSet = BarDataSet(entries, "")
+        dataSet.color = ContextCompat.getColor(requireContext(), R.color.primary)
+        dataSet.valueTextColor = ContextCompat.getColor(requireContext(), R.color.text_primary)
+        dataSet.valueTextSize = 11f
+        // Custom formatter to remove decimal points from the values above the bars
+        dataSet.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                return value.toInt().toString()
+            }
+        }
+
+        val barData = BarData(dataSet)
+        barData.barWidth = 0.6f
+        
+        binding.barChartConsistency.data = barData
+        binding.barChartConsistency.invalidate()
     }
 
     private fun setupListeners() {
@@ -88,6 +210,26 @@ class AnalyticsSummaryFragment : Fragment() {
                     else -> TimeRange.LIFETIME
                 }
                 viewModel.setTimeRange(range)
+            }
+        }
+
+        // Collapsible Logic for Muscle Focus
+        binding.headerMuscleFocus.setOnClickListener {
+            val isVisible = binding.pieChartMuscle.visibility == View.VISIBLE
+            binding.pieChartMuscle.visibility = if (isVisible) View.GONE else View.VISIBLE
+            binding.ivExpandMuscle.rotation = if (isVisible) 0f else 180f
+            if (!isVisible) {
+                binding.pieChartMuscle.animateY(1000)
+            }
+        }
+
+        // Collapsible Logic for Weekly Momentum
+        binding.headerWeeklyMomentum.setOnClickListener {
+            val isVisible = binding.barChartConsistency.visibility == View.VISIBLE
+            binding.barChartConsistency.visibility = if (isVisible) View.GONE else View.VISIBLE
+            binding.ivExpandMomentum.rotation = if (isVisible) 0f else 180f
+            if (!isVisible) {
+                binding.barChartConsistency.animateY(1000)
             }
         }
 
