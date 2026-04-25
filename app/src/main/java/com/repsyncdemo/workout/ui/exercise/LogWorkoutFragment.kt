@@ -23,7 +23,6 @@ import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.WorkoutLog
 import com.repsyncdemo.workout.databinding.FragmentLogWorkoutBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseLogAdapter
-import com.repsyncdemo.workout.ui.dialogs.ShowExercisePickerDialog
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import kotlinx.coroutines.launch
@@ -149,17 +148,12 @@ class LogWorkoutFragment : Fragment() {
             }
         }
 
-        // Observe exercise selection from library
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.selectedExercises.collect { exerciseName ->
-                    if (!exerciseName.isNullOrEmpty()) {
-                        exerciseLogAdapter.addExercise(exerciseName)
-                        isWorkoutModified = true
-                        updateLockState()
-                        viewModel.clearSelectedExercises()
-                    }
-                }
+        // Observe exercise selection from library event stream
+        viewModel.selectedExerciseEvent.observe(viewLifecycleOwner) { exerciseName ->
+            if (!exerciseName.isNullOrEmpty()) {
+                exerciseLogAdapter.addExercise(exerciseName)
+                isWorkoutModified = true
+                updateLockState()
             }
         }
     }
@@ -174,7 +168,7 @@ class LogWorkoutFragment : Fragment() {
         }
 
         binding.btnAddExercise.setOnClickListener {
-            ShowExercisePickerDialog().show(parentFragmentManager, "exercise_picker")
+            findNavController().navigate(R.id.exerciseLibraryFragment)
         }
 
         binding.btnComplete.setOnClickListener {

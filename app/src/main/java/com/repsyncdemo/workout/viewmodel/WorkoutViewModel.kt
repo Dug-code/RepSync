@@ -2,10 +2,12 @@ package com.repsyncdemo.workout.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.*
+import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.*
 import com.repsyncdemo.workout.data.repository.WorkoutRepository
 import com.repsyncdemo.workout.util.SingleLiveEvent
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -13,6 +15,7 @@ import java.util.Calendar
 class WorkoutViewModel : ViewModel() {
 
     private val repository = WorkoutRepository()
+    private val auth = FirebaseAuth.getInstance()
 
     val workouts: LiveData<List<Workout>> = repository.getWorkouts()
         .catch { e -> 
@@ -51,23 +54,30 @@ class WorkoutViewModel : ViewModel() {
     private val _selectedLog = MutableLiveData<WorkoutLog?>()
     val selectedLog: LiveData<WorkoutLog?> = _selectedLog
 
+    // --- Loading State Flags ---
+    var isWorkoutDataLoaded = false
+        private set
+
+    var isLogDataLoaded = false
+        private set
+
     private val _operationResult = SingleLiveEvent<Result<String>>()
     val operationResult: LiveData<Result<String>> = _operationResult
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    private val _selectedExercises = MutableStateFlow<String?>(null)
-    val selectedExercises: StateFlow<String?> = _selectedExercises
+    // --- Selection State ---
+    val selectedExerciseEvent = SingleLiveEvent<String>()
 
-    private val _filterName = MutableStateFlow<String?>(null)
-    val filterName: StateFlow<String?> = _filterName
+    private val _selectedExerciseName = MutableStateFlow<String?>(null)
+    val selectedExerciseName: StateFlow<String?> = _selectedExerciseName
 
-    private val _filterList = MutableStateFlow<List<String>?>(null)
-    val filterList: StateFlow<List<String>?> = _filterList
-
-    private val _selectedFilter = MutableStateFlow<String?>(null)
-    val selectedFilter: StateFlow<String?> = _selectedFilter
+    // --- Cumulative Filtering State ---
+    private val _searchQuery = MutableStateFlow("")
+    private val _filterBodyPart = MutableStateFlow<String?>(null)
+    private val _filterType = MutableStateFlow<ExerciseType?>(null)
+    private val _filterOnlyCustom = MutableStateFlow(false)
 
     // Combined library flow: Static Database + Firestore Custom Exercises
     private val _customExercises = repository.getCustomExercises()
@@ -86,6 +96,43 @@ class WorkoutViewModel : ViewModel() {
         (static + custom).distinctBy { it.name.lowercase() }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, ExerciseDatabase.allExercises)
 
+    val filteredExercises: StateFlow<List<ExerciseDefinition>> = combine(
+        allLibraryExercises,
+        _searchQuery,
+        _filterBodyPart,
+        _filterType,
+        _filterOnlyCustom
+    ) { library, query, bodyPart, type, onlyCustom ->
+        var list = library
+        
+        if (onlyCustom) {
+            list = list.filter { it.isCustom }
+        }
+        
+        if (type != null) {
+            list = list.filter { it.type == type }
+        }
+        
+        if (bodyPart != null) {
+            list = list.filter { 
+                it.primaryBodyPart.equals(bodyPart, ignoreCase = true) || 
+                it.secondaryBodyParts.contains(bodyPart, ignoreCase = true) 
+            }.sortedWith(compareByDescending<ExerciseDefinition> { 
+                it.primaryBodyPart.equals(bodyPart, ignoreCase = true) 
+            }.thenBy { it.name.lowercase() })
+        }
+        
+        if (query.isNotEmpty()) {
+            list = list.filter { 
+                it.name.contains(query, ignoreCase = true) || 
+                it.primaryBodyPart.contains(query, ignoreCase = true) ||
+                it.secondaryBodyParts.contains(query, ignoreCase = true)
+            }
+        }
+        
+        list
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     // Comprehensive list of all exercises the user has interacted with
     val allUniqueExerciseNames: StateFlow<List<String>> = combine(
         allLibraryExercises,
@@ -103,17 +150,58 @@ class WorkoutViewModel : ViewModel() {
         names.toList().filter { it.isNotEmpty() }.sorted()
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    private val _filteredExercises = MutableStateFlow<List<ExerciseDefinition>>(ExerciseDatabase.allExercises)
-    val filteredExercises: StateFlow<List<ExerciseDefinition>> = _filteredExercises
+    // --- Filter Helper LiveData (for the Picker UI) ---
+    private val _filterName = MutableLiveData<String?>(null)
+    val filterName: LiveData<String?> = _filterName
 
-    init {
-        viewModelScope.launch {
-            allLibraryExercises.collect {
-                if (_filterName.value == null && selectedFilter.value == null) {
-                    _filteredExercises.value = it
+    private val _filterList = MutableLiveData<List<String>?>(null)
+    val filterList: LiveData<List<String>?> = _filterList
+
+    // --- Methods ---
+
+    fun selectedFilterCategory(filter: String) {
+        _filterName.value = filter
+        val list = when (filter) {
+            "Body Part" -> ExerciseDatabase.bodyParts
+            "Exercise Type" -> ExerciseDatabase.exerciseTypes
+            else -> emptyList()
+        }
+        _filterList.value = list
+    }
+
+    fun updateFilter(category: String, filter: String) {
+        when (category) {
+            "Body Part" -> _filterBodyPart.value = filter
+            "Exercise Type" -> {
+                _filterType.value = when(filter) {
+                    "Weight Lifting" -> ExerciseType.STRENGTH
+                    "Cardio" -> ExerciseType.CARDIO
+                    "Calisthenics" -> ExerciseType.CALISTHENICS
+                    else -> null
                 }
             }
         }
+    }
+
+    fun toggleCustomFilter(active: Boolean) {
+        _filterOnlyCustom.value = active
+    }
+
+    fun clearFilter() {
+        _filterBodyPart.value = null
+        _filterType.value = null
+        _filterOnlyCustom.value = false
+        _searchQuery.value = ""
+        _filterName.value = null
+        _filterList.value = null
+    }
+
+    fun searchExercises(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun selectExercise(exerciseName: String) {
+        selectedExerciseEvent.value = exerciseName
     }
 
     private fun calculateStreak(logs: List<WorkoutLog>): Int {
@@ -194,8 +282,26 @@ class WorkoutViewModel : ViewModel() {
 
     fun copyWorkout(workout: Workout) {
         viewModelScope.launch {
+            val uid = auth.currentUser?.uid ?: return@launch
+            
+            // Sync custom exercises to the copier's library
+            workout.exercises.forEach { exercise ->
+                if (exercise.isCustom) {
+                    val exists = allLibraryExercises.value.any { it.name.equals(exercise.name, ignoreCase = true) }
+                    if (!exists) {
+                        addCustomExercise(
+                            name = exercise.name,
+                            type = exercise.type,
+                            primary = exercise.primaryMuscleGroup,
+                            secondary = exercise.secondaryMuscleGroup
+                        )
+                    }
+                }
+            }
+
             val newWorkout = workout.copy(
                 id = "",
+                userId = uid,
                 createdAt = System.currentTimeMillis()
             )
             repository.addWorkout(newWorkout)
@@ -204,6 +310,7 @@ class WorkoutViewModel : ViewModel() {
 
     fun loadWorkout(workoutId: String) {
         _isLoading.value = true
+        isWorkoutDataLoaded = false // Reset load flag
         viewModelScope.launch {
             val result = repository.getWorkout(workoutId)
             result.onSuccess { _selectedWorkout.value = it }
@@ -212,14 +319,23 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    fun notifyWorkoutLoaded() {
+        isWorkoutDataLoaded = true
+    }
+
     fun loadWorkoutLog(logId: String) {
         _isLoading.value = true
+        isLogDataLoaded = false // Reset load flag
         viewModelScope.launch {
             val result = repository.getWorkoutLog(logId)
             result.onSuccess { _selectedLog.value = it }
             result.onFailure { _operationResult.value = Result.failure(it) }
             _isLoading.value = false
         }
+    }
+
+    fun notifyLogLoaded() {
+        isLogDataLoaded = true
     }
 
     fun addWorkout(workout: Workout) {
@@ -329,65 +445,8 @@ class WorkoutViewModel : ViewModel() {
     fun clearSelection() {
         _selectedWorkout.value = null
         _selectedLog.value = null
-    }
-
-    // RESTORED: These methods were accidentally removed during cleanup and are required for the Exercise Picker
-    fun selectWorkout(workout: Workout) {
-        _selectedWorkout.value = workout
-    }
-
-    fun selectedExercises(exerciseName: String) {
-        _selectedExercises.value = exerciseName
-    }
-
-    fun clearSelectedExercises() {
-        _selectedExercises.value = null
-    }
-
-    fun selectedFilterCategory(filter: String) {
-        _filterName.value = filter
-        val filtered = when (filter) {
-            "Body Part" -> ExerciseDatabase.bodyParts
-            "Equipment" -> ExerciseDatabase.equipmentTypes
-            "Movement" -> ExerciseDatabase.movementPatterns
-            else -> emptyList()
-        }
-        _filterList.value = filtered
-    }
-
-    fun clearFilter() {
-        _selectedFilter.value = null
-        _filterName.value = null
-        _filteredExercises.value = allLibraryExercises.value
-    }
-
-    fun selectFilter(filter: String) {
-        _selectedFilter.value = filter
-    }
-
-    fun updateFilter(category: String, filter: String) {
-        _filterName.value = category
-        _selectedFilter.value = filter
-        
-        val baseList = allLibraryExercises.value
-        _filteredExercises.value = when (category) {
-            "Body Part" -> baseList.filter { it.primaryBodyPart.equals(filter, ignoreCase = true) }
-            "Equipment" -> baseList.filter { it.equipment.equals(filter, ignoreCase = true) }
-            "Movement" -> baseList.filter { it.movementPattern.equals(filter, ignoreCase = true) }
-            else -> baseList
-        }
-    }
-
-    fun searchExercises(query: String) {
-        val baseList = allLibraryExercises.value
-        if (query.isEmpty()) {
-            _filteredExercises.value = baseList
-        } else {
-            _filteredExercises.value = baseList.filter { 
-                it.name.contains(query, ignoreCase = true) || 
-                it.primaryBodyPart.contains(query, ignoreCase = true)
-            }
-        }
+        isWorkoutDataLoaded = false
+        isLogDataLoaded = false
     }
 
     fun addCustomExercise(name: String, type: ExerciseType, primary: String?, secondary: String?) {
@@ -396,10 +455,20 @@ class WorkoutViewModel : ViewModel() {
                 name = name,
                 type = type,
                 primaryBodyPart = primary ?: "",
-                secondaryBodyParts = if (secondary == "None") "" else (secondary ?: ""),
+                secondaryBodyParts = if (secondary == "None" || secondary == null) "" else secondary,
                 isCustom = true
             )
-            repository.addCustomExercise(definition)
+            val result = repository.addCustomExercise(definition)
+            if (result.isSuccess) {
+                // Automatically select the new exercise so it gets added to the current workout
+                selectExercise(name)
+            }
+        }
+    }
+
+    fun deleteCustomExercise(exerciseId: String) {
+        viewModelScope.launch {
+            repository.deleteCustomExercise(exerciseId)
         }
     }
 }

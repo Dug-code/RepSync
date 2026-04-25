@@ -19,7 +19,7 @@ import com.repsyncdemo.workout.ui.adapter.ExerciseLibraryAdapter
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import kotlinx.coroutines.launch
 
-class ShowExercisePickerDialog : Fragment() {
+class ExerciseLibraryFragment : Fragment() {
 
     private val viewModel: WorkoutViewModel by activityViewModels()
     private var _binding: FragmentExerciseLibraryBinding? = null
@@ -35,17 +35,20 @@ class ShowExercisePickerDialog : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        pickerAdapter = ExerciseLibraryAdapter { exerciseDef ->
-            viewModel.selectExercise(exerciseDef.name)
-            findNavController().popBackStack()
-        }
+        pickerAdapter = ExerciseLibraryAdapter(
+            onDeleteCustom = { id -> viewModel.deleteCustomExercise(id) },
+            onClick = { exerciseDef ->
+                viewModel.selectExercise(exerciseDef.name)
+                findNavController().popBackStack()
+            }
+        )
 
         binding.rvExercises.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = pickerAdapter
         }
 
-        // Observe the combined library (Built-in + Custom)
+        // Observe the combined and ranked library
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.filteredExercises.collect { newList ->
@@ -57,16 +60,28 @@ class ShowExercisePickerDialog : Fragment() {
         }
 
         // Setup filter chip listeners
-        binding.chipBodyPart.setOnClickListener {
-            viewModel.selectedFilterCategory(binding.chipBodyPart.text.toString())
+        binding.chipExerciseType.setOnClickListener {
+            viewModel.selectedFilterCategory("Exercise Type")
             findNavController().navigate(R.id.exercisePickerFilterDialog)
+        }
+
+        binding.chipBodyPart.setOnClickListener {
+            viewModel.selectedFilterCategory("Body Part")
+            findNavController().navigate(R.id.exercisePickerFilterDialog)
+        }
+
+        // Make the Custom chip a toggle
+        binding.chipCustomOnly.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.toggleCustomFilter(isChecked)
+            updateClearButtonVisibility()
         }
 
         binding.chipClearFilters.setOnClickListener {
             viewModel.clearFilter()
-            binding.tvResultCount.visibility = View.GONE
-            binding.chipClearFilters.visibility = View.GONE
             binding.chipBodyPart.isChecked = false
+            binding.chipExerciseType.isChecked = false
+            binding.chipCustomOnly.isChecked = false
+            binding.chipClearFilters.visibility = View.GONE
         }
 
         binding.etSearch.addTextChangedListener(object : TextWatcher {
@@ -74,13 +89,22 @@ class ShowExercisePickerDialog : Fragment() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
                 viewModel.searchExercises(s.toString().trim())
-                binding.chipClearFilters.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
+                updateClearButtonVisibility()
             }
         })
         
         binding.fabAddCustom.setOnClickListener {
             findNavController().navigate(R.id.createCustomExerciseFragment)
         }
+    }
+
+    private fun updateClearButtonVisibility() {
+        val hasActiveFilter = binding.chipBodyPart.isChecked || 
+                             binding.chipExerciseType.isChecked || 
+                             binding.chipCustomOnly.isChecked ||
+                             binding.etSearch.text?.isNotEmpty() == true
+        
+        binding.chipClearFilters.visibility = if (hasActiveFilter) View.VISIBLE else View.GONE
     }
 
     override fun onDestroyView() {

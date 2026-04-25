@@ -1,6 +1,7 @@
 package com.repsyncdemo.workout.ui.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -29,6 +30,9 @@ class ExerciseAdapter : ListAdapter<Exercise, ExerciseAdapter.ViewHolder>(Exerci
             binding.tvExerciseName.text = exercise.name
             binding.tvSetsReps.text = "${exercise.sets} sets x ${exercise.reps} reps"
             binding.tvWeight.text = if (exercise.weight > 0) "${exercise.weight} lbs" else ""
+            
+            // Show subtle "Custom" label for user-created exercises
+            binding.tvCustomLabel.visibility = if (exercise.isCustom) View.VISIBLE else View.GONE
         }
     }
 

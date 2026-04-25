@@ -29,12 +29,12 @@ import com.repsyncdemo.workout.data.model.FeedPostType
 import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.databinding.FragmentCreateWorkoutBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseInputAdapter
-import com.repsyncdemo.workout.ui.dialogs.ShowExercisePickerDialog
 import com.repsyncdemo.workout.util.DragToReorderCallBack
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class CreateWorkoutFragment : Fragment() {
@@ -47,9 +47,18 @@ class CreateWorkoutFragment : Fragment() {
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
-    private lateinit var exerciseInputAdapter: ExerciseInputAdapter
+    private var exerciseInputAdapter: ExerciseInputAdapter? = null
     private var existingWorkoutId: String? = null
     private var isPublic: Boolean = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (exerciseInputAdapter == null) {
+            exerciseInputAdapter = ExerciseInputAdapter(onDataChanged = {
+                updateLockState()
+            })
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,10 +72,20 @@ class CreateWorkoutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        existingWorkoutId = arguments?.getString("workoutId")
+        val workoutIdArg = arguments?.getString("workoutId")
+        if (workoutIdArg != existingWorkoutId) {
+            existingWorkoutId = workoutIdArg
+            // If the ID changed, we need to reload
+            if (existingWorkoutId != null) {
+                workoutViewModel.loadWorkout(existingWorkoutId!!)
+            } else {
+                exerciseInputAdapter?.clearItems()
+                exerciseInputAdapter?.addExercise()
+            }
+        }
 
-        // Handle Back Navigation with Warning
-        val backCallback = object : OnBackPressedCallback(true) {
+        // Handle Back Navigation
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (hasUnsavedChanges()) {
                     showUnsavedChangesDialog {
@@ -79,16 +98,11 @@ class CreateWorkoutFragment : Fragment() {
                     requireActivity().onBackPressedDispatcher.onBackPressed()
                 }
             }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+        })
 
         setupChangeListeners()
 
         profileViewModel.loadProfile()
-
-        exerciseInputAdapter = ExerciseInputAdapter(onDataChanged = {
-            updateLockState()
-        })
 
         binding.rvExercises.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -96,102 +110,76 @@ class CreateWorkoutFragment : Fragment() {
         }
 
         val dragHandler = DragToReorderCallBack { fromPosition, toPosition ->
-            exerciseInputAdapter.moveExercise(fromPosition, toPosition)
+            exerciseInputAdapter?.moveExercise(fromPosition, toPosition)
         }
-        val itemTouchHelper = ItemTouchHelper(dragHandler)
-        itemTouchHelper.attachToRecyclerView(binding.rvExercises)
+        ItemTouchHelper(dragHandler).attachToRecyclerView(binding.rvExercises)
 
         if (existingWorkoutId != null) {
-            workoutViewModel.loadWorkout(existingWorkoutId!!)
             binding.btnSave.text = "Update Workout"
-        } else {
-            if (exerciseInputAdapter.itemCount == 0) {
-                exerciseInputAdapter.addExercise()
-            }
         }
 
         workoutViewModel.selectedWorkout.observe(viewLifecycleOwner) { workout ->
-            if (existingWorkoutId != null && workout != null) {
+            if (existingWorkoutId != null && workout != null && workout.id == existingWorkoutId && !workoutViewModel.isWorkoutDataLoaded) {
                 binding.etName.setText(workout.name)
                 binding.etDescription.setText(workout.description)
                 isPublic = workout.isPublic
                 updatePrivacyIcon()
                 
-                exerciseInputAdapter.clearItems()
+                exerciseInputAdapter?.clearItems()
                 workout.exercises.forEach { exercise ->
-                    exerciseInputAdapter.addExerciseFromObject(exercise)
+                    exerciseInputAdapter?.addExerciseFromObject(exercise)
                 }
+                workoutViewModel.notifyWorkoutLoaded()
             }
         }
 
         binding.btnPrivacyMenu.setOnClickListener { showPrivacyPopupMenu(it) }
+        binding.btnAddExercise.setOnClickListener { findNavController().navigate(R.id.createCustomExerciseFragment) }
+        binding.btnPickExercise.setOnClickListener { findNavController().navigate(R.id.exerciseLibraryFragment) }
+        binding.btnSave.setOnClickListener { saveWorkout() }
 
-        binding.btnAddExercise.setOnClickListener {
-            showCustomExerciseDialog()
+        // Observer for library selection
+        workoutViewModel.selectedExerciseEvent.observe(viewLifecycleOwner) { exerciseName ->
+            if (!exerciseName.isNullOrEmpty()) {
+                exerciseInputAdapter?.addExerciseFromLibrary(exerciseName)
+                updateLockState()
+            }
         }
 
-        binding.btnPickExercise.setOnClickListener {
-            ShowExercisePickerDialog().show(parentFragmentManager, "exercise_picker")
-        }
-
-        binding.btnSave.setOnClickListener {
-            saveWorkout()
-        }
-
-        workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
-            result.onSuccess { workoutId ->
-                navigationLockViewModel.setLocked(false)
-                if (isPublic && existingWorkoutId == null) {
-                    val username = profileViewModel.myProfile.value?.username ?: ""
-                    val post = FeedPost(
-                        userId = profileViewModel.myProfile.value?.userId ?: "",
-                        username = username,
-                        type = FeedPostType.WORKOUT_SHARED,
-                        workoutId = workoutId,
-                        workoutName = binding.etName.text.toString().trim(),
-                        description = binding.etDescription.text.toString().trim()
-                    )
-                    feedViewModel.createPost(post)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                workoutViewModel.allLibraryExercises.collectLatest { exercises ->
+                    exerciseInputAdapter?.updateLibrary(exercises)
                 }
-                Toast.makeText(requireContext(), if (existingWorkoutId == null) "Workout saved!" else "Workout updated!", Toast.LENGTH_SHORT).show()
+            }
+        }
+        
+        workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
+            result.onSuccess {
+                navigationLockViewModel.setLocked(false)
+                Toast.makeText(requireContext(), "Workout saved!", Toast.LENGTH_SHORT).show()
+                resetState()
                 findNavController().popBackStack()
             }
             result.onFailure { e ->
                 Toast.makeText(requireContext(), e.message ?: "Save failed", Toast.LENGTH_SHORT).show()
             }
         }
+    }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                workoutViewModel.selectedExercises.collect { exerciseName ->
-                    if (!exerciseName.isNullOrEmpty()) {
-                        exerciseInputAdapter.addExerciseFromLibrary(exerciseName)
-                        updateLockState()
-                        workoutViewModel.clearSelectedExercises()
-                    }
-                }
-            }
-        }
+    private fun resetState() {
+        exerciseInputAdapter?.clearItems()
+        workoutViewModel.clearSelection()
+        existingWorkoutId = null
     }
 
     private fun showPrivacyPopupMenu(view: View) {
         val popup = PopupMenu(requireContext(), view)
         popup.menuInflater.inflate(R.menu.menu_workout_privacy, popup.menu)
-        
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_public -> {
-                    isPublic = true
-                    updatePrivacyIcon()
-                    updateLockState()
-                    true
-                }
-                R.id.action_private -> {
-                    isPublic = false
-                    updatePrivacyIcon()
-                    updateLockState()
-                    true
-                }
+                R.id.action_public -> { isPublic = true; updatePrivacyIcon(); updateLockState(); true }
+                R.id.action_private -> { isPublic = false; updatePrivacyIcon(); updateLockState(); true }
                 else -> false
             }
         }
@@ -202,48 +190,12 @@ class CreateWorkoutFragment : Fragment() {
         binding.ivPrivacyIcon.setImageResource(if (isPublic) R.drawable.ic_public else R.drawable.ic_private)
     }
 
-    private fun showCustomExerciseDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_create_custom_exercise, null)
-        val etName = dialogView.findViewById<EditText>(R.id.etCustomName)
-        val spinnerType = dialogView.findViewById<Spinner>(R.id.spinnerType)
-        val spinnerPrimary = dialogView.findViewById<Spinner>(R.id.spinnerPrimaryMuscle)
-        val spinnerSecondary = dialogView.findViewById<Spinner>(R.id.spinnerSecondaryMuscle)
-
-        val typeAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, ExerciseType.values())
-        spinnerType.adapter = typeAdapter
-
-        val muscleGroups = listOf("None") + ExerciseDatabase.bodyParts
-        val muscleAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, muscleGroups)
-        spinnerPrimary.adapter = muscleAdapter
-        spinnerSecondary.adapter = muscleAdapter
-
-        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
-            .setTitle("New Custom Exercise")
-            .setView(dialogView)
-            .setPositiveButton("Add") { _, _ ->
-                val name = etName.text.toString().trim()
-                val type = spinnerType.selectedItem as ExerciseType
-                val primary = spinnerPrimary.selectedItem.toString()
-                val secondary = spinnerSecondary.selectedItem.toString()
-                
-                if (name.isNotEmpty()) {
-                    exerciseInputAdapter.addExercise(name, type, primary, secondary)
-                    updateLockState()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
     private fun setupChangeListeners() {
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                updateLockState()
-            }
+            override fun afterTextChanged(s: Editable?) { updateLockState() }
         }
-
         binding.etName.addTextChangedListener(watcher)
         binding.etDescription.addTextChangedListener(watcher)
     }
@@ -255,16 +207,17 @@ class CreateWorkoutFragment : Fragment() {
     private fun hasUnsavedChanges(): Boolean {
         val name = binding.etName.text.toString().trim()
         val description = binding.etDescription.text.toString().trim()
-        val exercises = exerciseInputAdapter.getExercises()
+        val exerciseCount = exerciseInputAdapter?.itemCount ?: 0
         
-        return name.isNotEmpty() || description.isNotEmpty() || exercises.isNotEmpty()
+        return name.isNotEmpty() || description.isNotEmpty() || exerciseCount > 1 || 
+               (exerciseCount == 1 && exerciseInputAdapter?.getExercises()?.get(0)?.name?.isNotEmpty() == true)
     }
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Discard Changes?")
             .setMessage("You have unsaved changes. Are you sure you want to discard them?")
-            .setPositiveButton("Discard") { _, _ -> onDiscard() }
+            .setPositiveButton("Discard") { _, _ -> resetState(); onDiscard() }
             .setNegativeButton("Keep Editing", null)
             .show()
     }
@@ -272,34 +225,16 @@ class CreateWorkoutFragment : Fragment() {
     private fun saveWorkout() {
         val name = binding.etName.text.toString().trim()
         val description = binding.etDescription.text.toString().trim()
+        if (name.isEmpty()) { binding.etName.error = "Name is required"; return }
+        val exercises = exerciseInputAdapter?.getExercises()?.filter { it.name.isNotEmpty() } ?: emptyList()
+        if (exercises.isEmpty()) { Toast.makeText(requireContext(), "Add at least one exercise", Toast.LENGTH_SHORT).show(); return }
 
-        if (name.isEmpty()) {
-            binding.etName.error = "Name is required"
-            Toast.makeText(requireContext(), "Please enter a workout name", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val exercises = exerciseInputAdapter.getExercises().filter { it.name.isNotEmpty() }
-
-        if (exercises.isEmpty()) {
-            Toast.makeText(requireContext(), "Add at least one exercise", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val workout = Workout(
-            id = existingWorkoutId ?: "",
-            name = name,
-            description = description,
-            exercises = exercises,
-            isPublic = isPublic
-        )
-
-        if (existingWorkoutId == null) {
-            workoutViewModel.addWorkout(workout)
-        } else {
+        val workout = Workout(id = existingWorkoutId ?: "", name = name, description = description, exercises = exercises, isPublic = isPublic)
+        if (existingWorkoutId == null) workoutViewModel.addWorkout(workout)
+        else {
             workoutViewModel.updateWorkout(workout)
-            Toast.makeText(requireContext(), "Workout updated!", Toast.LENGTH_SHORT).show()
             navigationLockViewModel.setLocked(false)
+            resetState()
             findNavController().popBackStack()
         }
     }

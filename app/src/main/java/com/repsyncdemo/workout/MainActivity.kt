@@ -1,6 +1,7 @@
 package com.repsyncdemo.workout
 
 import android.content.Context
+import android.graphics.Rect
 import android.os.Bundle
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -60,14 +61,12 @@ class MainActivity : AppCompatActivity() {
             val userId = arguments?.getString("userId")
             val isOtherUserProfile = destination.id == R.id.profileFragment && userId != null
             
-            // Hide action bar for main tabs, but SHOW it for other users' profiles
             if (appBarConfiguration.topLevelDestinations.contains(destination.id) && !isOtherUserProfile) {
                 supportActionBar?.hide()
             } else {
                 supportActionBar?.show()
                 supportActionBar?.setDisplayHomeAsUpEnabled(true)
             }
-            // Hide keyboard on any destination change
             hideKeyboard()
         }
 
@@ -102,18 +101,32 @@ class MainActivity : AppCompatActivity() {
             binding.bottomNav.alpha = if (isLocked) 0.5f else 1.0f
         }
 
-        // Check for weigh-in on startup
         profileViewModel.myProfile.observe(this) { profile ->
             profile?.let { checkWeighInSchedule(it) }
         }
 
-        // Observe unread notifications for popups
         notificationViewModel.unreadNotifications.observe(this) { notifications ->
             if (notifications.isNotEmpty()) {
                 val nextNotification = notifications.first()
                 showNotificationPopup(nextNotification)
             }
         }
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            val v = currentFocus
+            if (v is EditText) {
+                val outRect = Rect()
+                v.getGlobalVisibleRect(outRect)
+                if (!outRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                    v.clearFocus()
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.hideSoftInputFromWindow(v.windowToken, 0)
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event)
     }
 
     private fun showNotificationPopup(notification: com.repsyncdemo.workout.data.model.Notification) {
@@ -140,14 +153,13 @@ class MainActivity : AppCompatActivity() {
         val now = Calendar.getInstance()
         val lastLog = Calendar.getInstance().apply { timeInMillis = profile.lastWeighInDate }
         
-        // Already weighed in today
         if (now.get(Calendar.YEAR) == lastLog.get(Calendar.YEAR) && 
             now.get(Calendar.DAY_OF_YEAR) == lastLog.get(Calendar.DAY_OF_YEAR)) return
 
         val shouldWeighIn = when (profile.weighInFrequency) {
             "daily" -> true
             "custom" -> {
-                val dayOfWeek = now.get(Calendar.DAY_OF_WEEK) // 1 (Sun) to 7 (Sat)
+                val dayOfWeek = now.get(Calendar.DAY_OF_WEEK)
                 val ourDay = if (dayOfWeek == Calendar.SUNDAY) 7 else dayOfWeek - 1
                 profile.weighInDays.contains(ourDay)
             }
@@ -304,7 +316,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean {
-        if (navigationLockViewModel.isLocked.value == true) {
+        // Safe destinations that are part of the workout creation flow
+        val safeDestinations = setOf(R.id.exerciseLibraryFragment, R.id.createCustomExerciseFragment, R.id.exercisePickerFilterDialog)
+        val currentDest = navController.currentDestination?.id
+        
+        if (navigationLockViewModel.isLocked.value == true && !safeDestinations.contains(currentDest)) {
             showLockWarning {
                 navigationLockViewModel.setLocked(false)
                 navController.navigateUp()
@@ -312,10 +328,5 @@ class MainActivity : AppCompatActivity() {
             return true
         }
         return navController.navigateUp() || super.onSupportNavigateUp()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        notificationViewModel.refreshUser()
     }
 }

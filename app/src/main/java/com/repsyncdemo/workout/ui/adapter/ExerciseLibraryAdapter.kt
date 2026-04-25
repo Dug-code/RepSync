@@ -4,11 +4,15 @@ import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.ExerciseDefinition
+import com.repsyncdemo.workout.data.model.ExerciseType
 import com.repsyncdemo.workout.databinding.ItemExerciseLibraryBinding
 
 
@@ -17,10 +21,9 @@ import com.repsyncdemo.workout.databinding.ItemExerciseLibraryBinding
  * Displays a list of predefined exercises that the user can pick from.
  */
 class ExerciseLibraryAdapter(
+    private val onDeleteCustom: ((String) -> Unit)? = null,
     private val onClick: ((ExerciseDefinition) -> Unit)? = null
 ) : ListAdapter<ExerciseDefinition, ExerciseLibraryAdapter.ViewHolder>(ExerciseDefDiffCallback()) {
-
-    private val selectedNames = mutableSetOf<String>()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseLibraryBinding.inflate(
@@ -31,7 +34,8 @@ class ExerciseLibraryAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
-        holder.bind(item, selectedNames.contains(item.name))
+        // Note: Selection state was simplified out for better UX in full-screen mode
+        holder.bind(item, false)
     }
 
     inner class ViewHolder(
@@ -40,38 +44,73 @@ class ExerciseLibraryAdapter(
 
         fun bind(exercise: ExerciseDefinition, isSelected: Boolean) {
             binding.tvExerciseName.text = exercise.name
-            binding.tvEquipment.text = exercise.equipment
-            binding.tvMovement.text = exercise.movementPattern
+            
+            val typeText = when(exercise.type) {
+                ExerciseType.STRENGTH -> "Weight Lifting"
+                ExerciseType.CARDIO -> "Cardio"
+                ExerciseType.CALISTHENICS -> "Calisthenics"
+            }
 
-            // Display Muscle Groups (Optional)
-            val primary = exercise.primaryBodyPart
+            // Tag 1: Primary Muscle Group
+            if (exercise.primaryBodyPart.isNotEmpty() && exercise.primaryBodyPart != typeText) {
+                binding.tvPrimaryMuscle.text = exercise.primaryBodyPart
+                binding.tvPrimaryMuscle.visibility = View.VISIBLE
+            } else {
+                binding.tvPrimaryMuscle.visibility = View.GONE
+            }
+
+            // Tag 2: Exercise Type
+            binding.tvMovement.text = typeText
+            binding.tvMovement.visibility = View.VISIBLE
+
+            // Custom Identifier (Star & Tag)
+            if (exercise.isCustom) {
+                binding.ivCustomStar.visibility = View.VISIBLE
+                binding.tvEquipment.text = "Custom"
+                binding.tvEquipment.visibility = View.VISIBLE
+                binding.tvEquipment.setBackgroundColor(ContextCompat.getColor(itemView.context, R.color.primary))
+            } else {
+                binding.ivCustomStar.visibility = View.GONE
+                binding.tvEquipment.visibility = View.GONE
+            }
+
+            // Optional: Show secondary muscles in the subtle footer text
             val secondary = exercise.secondaryBodyParts
-            if (primary.isNotEmpty()) {
-                val text = if (secondary.isNotEmpty() && secondary != "None") "$primary, $secondary" else primary
-                binding.tvMuscleGroups.text = text
+            if (secondary.isNotEmpty() && secondary != "None") {
+                binding.tvMuscleGroups.text = "Focus: $secondary"
                 binding.tvMuscleGroups.visibility = View.VISIBLE
             } else {
                 binding.tvMuscleGroups.visibility = View.GONE
             }
 
-            val strokeColor = if (isSelected) "#E31E24".toColorInt() else "#44474E".toColorInt()
-            binding.root.setStrokeColor(ColorStateList.valueOf(strokeColor))
-
             binding.root.setOnClickListener {
-                if (selectedNames.contains(exercise.name)) {
-                    selectedNames.remove(exercise.name)
-                } else {
-                    selectedNames.add(exercise.name)
-                }
-                notifyItemChanged(bindingAdapterPosition)
                 onClick?.invoke(exercise)
             }
+
+            binding.root.setOnLongClickListener {
+                if (exercise.isCustom && onDeleteCustom != null) {
+                    showDeleteConfirmation(exercise)
+                    true
+                } else false
+            }
+        }
+
+        private fun showDeleteConfirmation(exercise: ExerciseDefinition) {
+            AlertDialog.Builder(itemView.context, R.style.ThemeOverlay_App_MaterialAlertDialog)
+                .setTitle("Delete Custom Exercise")
+                .setMessage("Are you sure you want to delete \"${exercise.name}\" from your library?")
+                .setPositiveButton("Delete") { _, _ ->
+                    // Use firebaseId which is the actual Firestore document ID
+                    onDeleteCustom?.invoke(exercise.firebaseId)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
     }
 
     class ExerciseDefDiffCallback : DiffUtil.ItemCallback<ExerciseDefinition>() {
         override fun areItemsTheSame(oldItem: ExerciseDefinition, newItem: ExerciseDefinition) =
-            oldItem.name == newItem.name
+            oldItem.firebaseId == newItem.firebaseId
 
         override fun areContentsTheSame(oldItem: ExerciseDefinition, newItem: ExerciseDefinition) =
             oldItem == newItem

@@ -27,6 +27,9 @@ class WorkoutListFragment : Fragment() {
 
     private lateinit var workoutAdapter: WorkoutAdapter
     private var allWorkouts: MutableList<Workout> = mutableListOf()
+    private var currentSort = SortType.MANUAL
+
+    enum class SortType { MANUAL, DATE, NAME }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -40,7 +43,6 @@ class WorkoutListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Pass isReorderable = true for the main list
         workoutAdapter = WorkoutAdapter(isReorderable = true) { workout ->
             val bundle = Bundle().apply { putString("workoutId", workout.id) }
             findNavController().navigate(R.id.action_workoutList_to_workoutDetail, bundle)
@@ -52,7 +54,11 @@ class WorkoutListFragment : Fragment() {
         }
 
         setupDragAndDrop()
+        setupListeners()
+        setupObservers()
+    }
 
+    private fun setupListeners() {
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_workoutList_to_createWorkout)
         }
@@ -61,11 +67,28 @@ class WorkoutListFragment : Fragment() {
             findNavController().navigate(R.id.action_workoutList_to_createWorkout)
         }
 
-        setupSearch()
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                applyFiltersAndSort()
+            }
+        })
 
+        binding.chipGroupSort.setOnCheckedStateChangeListener { _, checkedIds ->
+            currentSort = when (checkedIds.firstOrNull()) {
+                R.id.chipSortDate -> SortType.DATE
+                R.id.chipSortName -> SortType.NAME
+                else -> SortType.MANUAL
+            }
+            applyFiltersAndSort()
+        }
+    }
+
+    private fun setupObservers() {
         viewModel.workouts.observe(viewLifecycleOwner) { workouts ->
             allWorkouts = workouts.toMutableList()
-            filterWorkouts(binding.etSearch.text.toString())
+            applyFiltersAndSort()
         }
     }
 
@@ -78,6 +101,8 @@ class WorkoutListFragment : Fragment() {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
+                if (currentSort != SortType.MANUAL) return false
+                
                 val fromPos = viewHolder.bindingAdapterPosition
                 val toPos = target.bindingAdapterPosition
                 
@@ -90,31 +115,30 @@ class WorkoutListFragment : Fragment() {
 
             override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
-                // Persist the new order to Firestore
-                viewModel.updateWorkoutOrder(allWorkouts)
+                if (currentSort == SortType.MANUAL) {
+                    viewModel.updateWorkoutOrder(allWorkouts)
+                }
             }
         })
         itemTouchHelper.attachToRecyclerView(binding.rvWorkouts)
     }
 
-    private fun setupSearch() {
-        binding.etSearch.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: Editable?) {
-                filterWorkouts(s.toString())
-            }
-        })
-    }
-
-    private fun filterWorkouts(query: String) {
-        val filteredList = if (query.isEmpty()) {
-            allWorkouts
+    private fun applyFiltersAndSort() {
+        val query = binding.etSearch.text.toString().trim()
+        
+        var filteredList = if (query.isEmpty()) {
+            allWorkouts.toList()
         } else {
             allWorkouts.filter { it.name.contains(query, ignoreCase = true) }
         }
+
+        filteredList = when (currentSort) {
+            SortType.DATE -> filteredList.sortedByDescending { it.createdAt }
+            SortType.NAME -> filteredList.sortedBy { it.name.lowercase() }
+            SortType.MANUAL -> filteredList // Already in order from Firestore/Drag
+        }
         
-        workoutAdapter.submitList(filteredList.toList())
+        workoutAdapter.submitList(filteredList)
         
         val isEmpty = filteredList.isEmpty()
         binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE

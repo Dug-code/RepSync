@@ -1,86 +1,93 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:background="?attr/colorSurface"
-    android:minWidth="320dp">
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilSearch"
-        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+    <LinearLayout
+        android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:startIconDrawable="@android:drawable/ic_menu_search"
-        app:boxStrokeColor="@color/primary"
-        app:hintTextColor="@color/primary"
-        app:boxBackgroundColor="?attr/android:windowBackground"
-        app:boxCornerRadiusTopStart="12dp"
-        app:boxCornerRadiusTopEnd="12dp"
-        app:boxCornerRadiusBottomStart="12dp"
-        app:boxCornerRadiusBottomEnd="12dp">
+        android:orientation="vertical"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etSearch"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilSearch"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Search exercises..."
-            android:textColor="?attr/colorOnSurface"
-            android:textSize="14sp" />
-    </com.google.android.material.textfield.TextInputLayout>
+            android:layout_margin="16dp"
+            app:startIconDrawable="@android:drawable/ic_menu_search"
+            app:boxStrokeColor="@color/primary"
+            app:hintTextColor="@color/primary"
+            app:boxBackgroundColor="?attr/android:windowBackground"
+            app:boxCornerRadiusTopStart="24dp"
+            app:boxCornerRadiusTopEnd="24dp"
+            app:boxCornerRadiusBottomStart="24dp"
+            app:boxCornerRadiusBottomEnd="24dp">
 
-    <HorizontalScrollView
-        android:id="@+id/scrollFilters"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:scrollbars="none"
-        android:paddingHorizontal="12dp"
-        android:layout_marginBottom="8dp">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSearch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Search exercises..."
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="14sp" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupFilters"
-            android:layout_width="wrap_content"
+        <HorizontalScrollView
+            android:id="@+id/scrollFilters"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:singleLine="true">
+            android:scrollbars="none"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="12dp">
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipBodyPart"
-                style="@style/Widget.MaterialComponents.Chip.Filter"
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupFilters"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Body Part"
-                app:chipBackgroundColor="?attr/android:windowBackground"
-                android:textColor="?attr/colorOnSurface" />
+                app:singleLine="true">
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipEquipment"
-                style="@style/Widget.MaterialComponents.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Equipment"
-                app:chipBackgroundColor="?attr/android:windowBackground"
-                android:textColor="?attr/colorOnSurface" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipExerciseType"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Exercise Type"
+                    app:chipBackgroundColor="?attr/android:windowBackground"
+                    android:textColor="?attr/colorOnSurface" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipMovement"
-                style="@style/Widget.MaterialComponents.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Movement"
-                app:chipBackgroundColor="?attr/android:windowBackground"
-                android:textColor="?attr/colorOnSurface" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipBodyPart"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Body Part"
+                    app:chipBackgroundColor="?attr/android:windowBackground"
+                    android:textColor="?attr/colorOnSurface" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipClearFilters"
-                style="@style/Widget.MaterialComponents.Chip.Action"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Clear"
-                android:visibility="gone" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipCustomOnly"
+                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Custom"
+                    android:checkable="true"
+                    app:chipBackgroundColor="?attr/android:windowBackground"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipClearFilters"
+                    style="@style/Widget.MaterialComponents.Chip.Action"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Clear"
+                    android:visibility="gone" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvResultCount"
@@ -88,14 +95,29 @@
         android:layout_height="wrap_content"
         android:textSize="11sp"
         android:textColor="?attr/colorTextSecondary"
-        android:paddingHorizontal="16dp"
-        android:textStyle="italic" />
+        android:paddingHorizontal="20dp"
+        android:textStyle="italic"
+        app:layout_constraintTop_toBottomOf="@id/layoutHeader" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvExercises"
         android:layout_width="match_parent"
-        android:layout_height="350dp"
+        android:layout_height="0dp"
         android:padding="8dp"
-        android:clipToPadding="false" />
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/tvResultCount"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-</LinearLayout>
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddCustom"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@android:drawable/ic_input_add"
+        app:backgroundTint="@color/primary"
+        app:tint="@color/white"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:contentDescription="Add Custom Exercise" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

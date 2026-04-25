@@ -81,7 +81,7 @@
             app:nullable="true" />
         <action
             android:id="@+id/action_createWorkoutFragment_to_showExercisePickerDialog"
-            app:destination="@id/showExercisePickerDialog" />
+            app:destination="@id/exerciseLibraryFragment" />
     </fragment>
 
     <fragment
@@ -130,18 +130,28 @@
         android:label="@string/nav_history"
         tools:layout="@layout/fragment_history" />
 
-    <dialog
-        android:id="@+id/showExercisePickerDialog"
-        android:name="com.repsyncdemo.workout.ui.dialogs.ShowExercisePickerDialog"
-        android:label="ShowExercisePickerDialog" >
+    <fragment
+        android:id="@+id/exerciseLibraryFragment"
+        android:name="com.repsyncdemo.workout.ui.dialogs.ExerciseLibraryFragment"
+        android:label="Exercise Library" >
         <action
-            android:id="@+id/action_showExercisePickerDialog_to_exercisePickerFilterDialog"
+            android:id="@+id/action_exerciseLibrary_to_exercisePickerFilterDialog"
             app:destination="@id/exercisePickerFilterDialog" />
-    </dialog>
+        <action
+            android:id="@+id/action_exerciseLibrary_to_createCustomExerciseFragment"
+            app:destination="@id/createCustomExerciseFragment" />
+    </fragment>
+
     <dialog
         android:id="@+id/exercisePickerFilterDialog"
         android:name="com.repsyncdemo.workout.ui.dialogs.ExercisePickerFilterDialog"
         android:label="ExercisePickerFilterDialog" />
+
+    <fragment
+        android:id="@+id/createCustomExerciseFragment"
+        android:name="com.repsyncdemo.workout.ui.dialogs.CreateCustomExerciseFragment"
+        android:label="Create Custom Exercise"
+        tools:layout="@layout/fragment_create_custom_exercise" />
 
     <fragment
         android:id="@+id/trophyShelfFragment"

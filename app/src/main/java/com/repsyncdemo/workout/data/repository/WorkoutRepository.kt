@@ -263,7 +263,7 @@ class WorkoutRepository {
             .whereEqualTo("userId", uid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(emptyList())
+                    close(error)
                     return@addSnapshotListener
                 }
                 val exercises = snapshot?.toObjects(ExerciseDefinition::class.java) ?: emptyList()
@@ -276,6 +276,15 @@ class WorkoutRepository {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
             customExercisesCollection.add(exercise.copy(userId = uid, isCustom = true)).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteCustomExercise(exerciseId: String): Result<Unit> {
+        return try {
+            customExercisesCollection.document(exerciseId).delete().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
