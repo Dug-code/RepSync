@@ -1,12 +1,16 @@
 package com.repsyncdemo.workout.ui.goals
 
+import android.content.Context
+import android.graphics.Color.argb
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -20,10 +24,17 @@ import com.repsyncdemo.workout.data.model.Goal
 import com.repsyncdemo.workout.data.model.GoalType
 import com.repsyncdemo.workout.databinding.FragmentGoalsBinding
 import com.repsyncdemo.workout.ui.adapter.GoalAdapter
+import com.repsyncdemo.workout.ui.home.HomeFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.effet.FlickerEffect
+import com.takusemba.spotlight.shape.Circle
+import com.takusemba.spotlight.shape.RoundedRectangle
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -38,6 +49,13 @@ class GoalsFragment : Fragment() {
 
     private lateinit var goalAdapter: GoalAdapter
 
+    private var spotlight: Spotlight? = null
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_HOME_TUTORIAL_COMPLETED = "home_tutorial_completed"
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -49,6 +67,8 @@ class GoalsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        checkTutorial()
 
         goalAdapter = GoalAdapter(
             isMyProfile = true,
@@ -74,6 +94,7 @@ class GoalsFragment : Fragment() {
 
         binding.fabAddGoal.setOnClickListener {
             showCreateGoalDialog()
+            spotlight?.finish()
         }
 
         viewModel.goals.observe(viewLifecycleOwner) { goals ->
@@ -81,6 +102,67 @@ class GoalsFragment : Fragment() {
             binding.tvEmpty.visibility = if (goals.isEmpty()) View.VISIBLE else View.GONE
             binding.rvGoals.visibility = if (goals.isEmpty()) View.GONE else View.VISIBLE
         }
+    }
+
+    private fun checkTutorial() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        //set to false for testing
+        val isCompleted = false//prefs.getBoolean(KEY_HOME_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post {
+                showTutorial()
+            }
+        }
+    }
+
+    private fun showTutorial() {
+        val targets = ArrayList<com.takusemba.spotlight.Target>()
+
+        // Start Workout Button
+        targets.add(
+            com.takusemba.spotlight.Target.Builder()
+                .setAnchor(binding.fabAddGoal)
+                .setShape(Circle(binding.fabAddGoal.height.toFloat() / 2))
+                .setEffect(FlickerEffect(100f, argb(255,68,71,78)))
+                .setOverlay(goalCreateOverlay("Add Goal", "Lets add a goal to track your progress \n\n Tap the flashing icon to add a new goal."))
+                .build()
+        )
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(400L)
+            .setAnimation(DecelerateInterpolator(2f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() {}
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun goalCreateOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+
+        overlay.findViewById<Button>(R.id.btnNext).visibility = View.GONE
+
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            markTutorialCompleted()
+        }
+
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_HOME_TUTORIAL_COMPLETED, true) }
     }
 
     private fun showRenameGoalDialog(goal: Goal) {

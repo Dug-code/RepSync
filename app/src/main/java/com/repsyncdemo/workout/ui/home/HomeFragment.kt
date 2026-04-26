@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.Button
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -25,13 +24,12 @@ import com.takusemba.spotlight.OnSpotlightListener
 import com.takusemba.spotlight.Spotlight
 import com.takusemba.spotlight.Target
 import com.takusemba.spotlight.effet.FlickerEffect
-import com.takusemba.spotlight.effet.RippleEffect
 import com.takusemba.spotlight.shape.Circle
 import com.takusemba.spotlight.shape.RoundedRectangle
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
-import java.util.*
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 class HomeFragment : Fragment() {
@@ -85,44 +83,44 @@ class HomeFragment : Fragment() {
     private fun showTutorial() {
         val targets = ArrayList<Target>()
 
-        // Recent Tab
-        val recentTab = binding.homeTabs.getTabAt(0)?.view
-        recentTab?.let {
-            targets.add(createTarget(it, "Recent Workouts", "Quickly access your most recent training sessions and see your progress."))
-        }
-
-        // Saved Tab
-        val savedTab = binding.homeTabs.getTabAt(1)?.view
-        savedTab?.let {
-            targets.add(createTarget(it, "Saved Workouts", "See your stored workouts and pick your favorite routines here for easy access."))
-        }
-
-        // Start Workout Button
-        targets.add(
-            Target.Builder()
-                .setAnchor(binding.btnStartWorkout)
-                .setShape(RoundedRectangle(binding.btnStartWorkout.height.toFloat(), binding.btnStartWorkout.width.toFloat(), 16f))
-                .setOverlay(createOverlay("Start Training", "Ready to hit the gym? Tap here to start a new workout or pick a saved one."))
-                .build()
-        )
-
-        // Rest Day Button
-        targets.add(
-            Target.Builder()
-                .setAnchor(binding.btnRestDay)
-                .setShape(Circle(binding.btnRestDay.height.toFloat() / 2 + 20f))
-                .setOverlay(createOverlay("Log Recovery", "Recovery is just as important as training. Log your rest days to keep your streak!"))
-                .build()
-        )
-
-        // Calendar Button
-        targets.add(
-            Target.Builder()
-                .setAnchor(binding.layoutCalendar)
-                .setShape(Circle(binding.layoutCalendar.height.toFloat() / 2 + 10f))
-                .setOverlay(createOverlay("Calendar", "View your workouts and rest consistency over time in the calendar."))
-                .build()
-        )
+//        // Recent Tab
+//        val recentTab = binding.homeTabs.getTabAt(0)?.view
+//        recentTab?.let {
+//            targets.add(createTarget(it, "Recent Workouts", "Quickly access your most recent training sessions and see your progress."))
+//        }
+//
+//        // Saved Tab
+//        val savedTab = binding.homeTabs.getTabAt(1)?.view
+//        savedTab?.let {
+//            targets.add(createTarget(it, "Saved Workouts", "See your stored workouts and pick your favorite routines here for easy access."))
+//        }
+//
+//        // Start Workout Button
+//        targets.add(
+//            Target.Builder()
+//                .setAnchor(binding.btnStartWorkout)
+//                .setShape(RoundedRectangle(binding.btnStartWorkout.height.toFloat(), binding.btnStartWorkout.width.toFloat(), 16f))
+//                .setOverlay(createOverlay("Start Training", "Ready to hit the gym? Tap here to start a new workout or pick a saved one."))
+//                .build()
+//        )
+//
+//        // Rest Day Button
+//        targets.add(
+//            Target.Builder()
+//                .setAnchor(binding.btnRestDay)
+//                .setShape(Circle(binding.btnRestDay.height.toFloat() / 2 + 20f))
+//                .setOverlay(createOverlay("Log Recovery", "Recovery is just as important as training. Log your rest days to keep your streak!"))
+//                .build()
+//        )
+//
+//        // Calendar Button
+//        targets.add(
+//            Target.Builder()
+//                .setAnchor(binding.layoutCalendar)
+//                .setShape(Circle(binding.layoutCalendar.height.toFloat() / 2 + 10f))
+//                .setOverlay(createOverlay("Calendar", "View your workouts and rest consistency over time in the calendar."))
+//                .build()
+//        )
 
         // Goals Button
         targets.add(
