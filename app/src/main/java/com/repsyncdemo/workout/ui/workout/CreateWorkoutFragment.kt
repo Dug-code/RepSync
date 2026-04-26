@@ -143,6 +143,11 @@ class CreateWorkoutFragment : Fragment() {
         binding.btnPrivacyMenu.setOnClickListener { showPrivacyPopupMenu(it) }
         binding.btnAddExercise.setOnClickListener { findNavController().navigate(R.id.createCustomExerciseFragment) }
         binding.btnPickExercise.setOnClickListener { findNavController().navigate(R.id.exerciseLibraryFragment) }
+        binding.btnAddBlankExercise.setOnClickListener {
+            exerciseInputAdapter?.addExercise()
+            updateLockState()
+            updateTopIcons()
+        }
         binding.btnSave.setOnClickListener { saveWorkout() }
 
         // Observer for library selection
