@@ -91,6 +91,9 @@ dependencies {
     implementation("nl.dionsegijn:konfetti-xml:2.0.4")
     implementation("androidx.cardview:cardview:1.0.0")
 
+    // Spotlight
+    implementation("com.github.takusemba:spotlight:2.0.5")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

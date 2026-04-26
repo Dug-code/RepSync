@@ -36,4 +36,5 @@
     <color name="text_secondary">#909094</color>
     <color name="divider">#44474E</color>
     <color name="grey_inactive_dark">#333333</color>
+    <color name="spotlight_background">#CC000000</color>
 </resources>

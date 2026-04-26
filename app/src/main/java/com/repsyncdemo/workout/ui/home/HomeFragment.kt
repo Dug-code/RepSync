@@ -1,10 +1,16 @@
 package com.repsyncdemo.workout.ui.home
 
+import android.content.Context
+import android.graphics.Color.argb
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.widget.Button
+import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -15,6 +21,13 @@ import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentHomeBinding
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.effet.FlickerEffect
+import com.takusemba.spotlight.effet.RippleEffect
+import com.takusemba.spotlight.shape.Circle
+import com.takusemba.spotlight.shape.RoundedRectangle
 import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
@@ -30,6 +43,12 @@ class HomeFragment : Fragment() {
 
     private var logoClickCount = 0
     private var lastClickTime: Long = 0
+    private var spotlight: Spotlight? = null
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_HOME_TUTORIAL_COMPLETED = "home_tutorial_completed"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,6 +66,133 @@ class HomeFragment : Fragment() {
         setupListeners()
         observeData()
         setupEasterEgg()
+
+        checkTutorial()
+    }
+
+    private fun checkTutorial() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        //set to false for testing
+        val isCompleted = false//prefs.getBoolean(KEY_HOME_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post {
+                showTutorial()
+            }
+        }
+    }
+
+    private fun showTutorial() {
+        val targets = ArrayList<Target>()
+
+        // Recent Tab
+        val recentTab = binding.homeTabs.getTabAt(0)?.view
+        recentTab?.let {
+            targets.add(createTarget(it, "Recent Workouts", "Quickly access your most recent training sessions and see your progress."))
+        }
+
+        // Saved Tab
+        val savedTab = binding.homeTabs.getTabAt(1)?.view
+        savedTab?.let {
+            targets.add(createTarget(it, "Saved Workouts", "See your stored workouts and pick your favorite routines here for easy access."))
+        }
+
+        // Start Workout Button
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.btnStartWorkout)
+                .setShape(RoundedRectangle(binding.btnStartWorkout.height.toFloat(), binding.btnStartWorkout.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Start Training", "Ready to hit the gym? Tap here to start a new workout or pick a saved one."))
+                .build()
+        )
+
+        // Rest Day Button
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.btnRestDay)
+                .setShape(Circle(binding.btnRestDay.height.toFloat() / 2 + 20f))
+                .setOverlay(createOverlay("Log Recovery", "Recovery is just as important as training. Log your rest days to keep your streak!"))
+                .build()
+        )
+
+        // Calendar Button
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.layoutCalendar)
+                .setShape(Circle(binding.layoutCalendar.height.toFloat() / 2 + 10f))
+                .setOverlay(createOverlay("Calendar", "View your workouts and rest consistency over time in the calendar."))
+                .build()
+        )
+
+        // Goals Button
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.layoutGoals)
+                .setShape(Circle(binding.layoutGoals.height.toFloat() / 2 + 10f))
+                .setEffect(FlickerEffect(100f, argb(255,68,71,78)))
+                .setOverlay(goalCreateOverlay("Goals", "Set and track personal milestones like PRs and weight targets.\n\n Lets set your first goal click on the flashing icon."))
+                .build()
+        )
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(400L)
+            .setAnimation(DecelerateInterpolator(2f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() {}
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun createTarget(view: View, title: String, description: String): Target {
+        return Target.Builder()
+            .setAnchor(view)
+            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 8f))
+            .setOverlay(createOverlay(title, description))
+            .build()
+    }
+
+    private fun createOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+        
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
+            spotlight?.next()
+        }
+        
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            markTutorialCompleted()
+        }
+        
+        return overlay
+    }
+
+    private fun goalCreateOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+
+        overlay.findViewById<Button>(R.id.btnNext).visibility = View.GONE
+
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            markTutorialCompleted()
+        }
+
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_HOME_TUTORIAL_COMPLETED, true) }
     }
 
     private fun setupViewPager() {
@@ -66,6 +212,7 @@ class HomeFragment : Fragment() {
     private fun setupListeners() {
         binding.layoutGoals.setOnClickListener {
             findNavController().navigate(R.id.goalsFragment)
+            spotlight?.finish()
         }
 
         binding.layoutCalendar.setOnClickListener {
