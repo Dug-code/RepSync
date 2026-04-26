@@ -40,6 +40,9 @@
         <action
             android:id="@+id/action_feed_to_profile"
             app:destination="@id/profileFragment" />
+        <action
+            android:id="@+id/action_feed_to_notifications"
+            app:destination="@id/notificationsFragment" />
     </fragment>
 
     <fragment
@@ -164,5 +167,11 @@
         android:name="com.repsyncdemo.workout.ui.admin.AdminDashboardFragment"
         android:label="Admin Dashboard"
         tools:layout="@layout/fragment_admin_dashboard" />
+
+    <fragment
+        android:id="@+id/notificationsFragment"
+        android:name="com.repsyncdemo.workout.ui.profile.NotificationsFragment"
+        android:label="Notifications"
+        tools:layout="@layout/fragment_notifications" />
 
 </navigation>

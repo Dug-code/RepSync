@@ -13,23 +13,35 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel responsible for managing and providing notification data to the UI.
- * Watches for unread notifications and handles marking them as read.
+ * Watches for both unread (pop-ups) and all (list view) notifications.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class NotificationViewModel : ViewModel() {
     private val repository = NotificationRepository()
     private val auth = FirebaseAuth.getInstance()
 
-    //Holds the current user's ID to reactively update the notification stream on login/logout
+    // Holds the current user's ID to reactively update the notification stream on login/logout
     private val _userId = MutableStateFlow(auth.currentUser?.uid)
 
     /**
      * A LiveData stream of unread notifications for the currently logged-in user.
-     * Uses flatMapLatest to automatically switch the Firestore listener if the user ID changes.
+     * Used for real-time pop-up alerts and badges.
      */
     val unreadNotifications = _userId.flatMapLatest { id ->
         if (id != null) {
             repository.observeUnreadNotifications(id)
+        } else {
+            flowOf(emptyList())
+        }
+    }.asLiveData()
+
+    /**
+     * A LiveData stream of ALL notifications for the currently logged-in user.
+     * Used for the main Notifications history screen.
+     */
+    val allNotifications = _userId.flatMapLatest { id ->
+        if (id != null) {
+            repository.observeAllNotifications(id)
         } else {
             flowOf(emptyList())
         }
@@ -44,7 +56,6 @@ class NotificationViewModel : ViewModel() {
 
     /**
      * Marks a specific notification as read in the database.
-     * This will trigger the stream to update and remove the notification from the unread list.
      */
     fun markAsRead(notificationId: String) {
         viewModelScope.launch {

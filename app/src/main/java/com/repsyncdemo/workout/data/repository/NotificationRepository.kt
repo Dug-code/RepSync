@@ -1,5 +1,6 @@
 package com.repsyncdemo.workout.data.repository
 
+import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.repsyncdemo.workout.data.model.Notification
@@ -46,19 +47,41 @@ class NotificationRepository {
 
     /**
      * Provides a real-time stream of unread notifications for a specific user.
-     * Used to trigger pop-ups in the UI as soon as a notification is created.
+     * Sorting is done in-memory to avoid mandatory Firestore composite index requirements.
      */
     fun observeUnreadNotifications(userId: String): Flow<List<Notification>> = callbackFlow {
         val listener = notificationsCollection
             .whereEqualTo("userId", userId)
             .whereEqualTo("isRead", false)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    Log.e("NotificationRepo", "Error observing unread notifications", error)
+                    trySend(emptyList()) // Emit empty list so UI can show empty state or handle error
                     return@addSnapshotListener
                 }
                 val notifications = snapshot?.toObjects(Notification::class.java) ?: emptyList()
-                trySend(notifications)
+                // Sort by creation date descending
+                trySend(notifications.sortedByDescending { it.createdAt })
+            }
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Provides a real-time stream of ALL notifications for a specific user.
+     * Sorting is done in-memory to avoid mandatory Firestore composite index requirements.
+     */
+    fun observeAllNotifications(userId: String): Flow<List<Notification>> = callbackFlow {
+        val listener = notificationsCollection
+            .whereEqualTo("userId", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e("NotificationRepo", "Error observing all notifications", error)
+                    trySend(emptyList()) // Emit empty list so UI can show empty state or handle error
+                    return@addSnapshotListener
+                }
+                val notifications = snapshot?.toObjects(Notification::class.java) ?: emptyList()
+                // Sort by creation date descending
+                trySend(notifications.sortedByDescending { it.createdAt })
             }
         awaitClose { listener.remove() }
     }
