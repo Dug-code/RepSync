@@ -60,7 +60,9 @@ class TrophyShelfFragment : Fragment() {
     private fun updateTrophies(workoutCount: Int, restDayCount: Int, adapter: TrophyAdapter) {
         val trophies = listOf(
             Trophy("gym_rat", "Gym Rat", "Total workouts completed in RepSync", workoutCount, TrophyType.GYM_RAT),
-            Trophy("recovery", "Recovery", "Total rest days recorded", restDayCount, TrophyType.RECOVERY)
+            Trophy("recovery", "Recovery", "Total rest days recorded", restDayCount, TrophyType.RECOVERY),
+            Trophy("bench_press", "Bench Champion", "Bench Max", benchPressMax, TrophyType.Bench_Press)
+
         )
         adapter.submitList(trophies)
     }

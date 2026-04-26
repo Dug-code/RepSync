@@ -326,7 +326,7 @@ class ProfileFragment : Fragment() {
                 transformations(CircleCropTransformation())
             }
         } else {
-            val resId = when(url) {
+            val resId = when(url) { //default profiles
                 "red" -> R.drawable.ic_profile_red
                 "blue" -> R.drawable.ic_profile_blue
                 "green" -> R.drawable.ic_profile_green

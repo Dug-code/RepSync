@@ -38,6 +38,8 @@ class TrophyAdapter(
 
             // Set the Icon based on Rank and Type
             val iconRes = when (trophy.type) {
+
+                //gymrat trophies (total workouts)
                 TrophyType.GYM_RAT -> when (rank) {
                     TrophyRank.BRONZE -> R.drawable.gym_rat_bronze
                     TrophyRank.SILVER -> R.drawable.gym_rat_silver
@@ -45,7 +47,135 @@ class TrophyAdapter(
                     TrophyRank.DIAMOND -> R.drawable.gym_rat_diamond
                     else -> R.drawable.gym_rat_locked
                 }
+
+                //recovery trophies (rest days)
                 TrophyType.RECOVERY -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //liftking trophies (total volume)
+                TrophyType.LIFT_KING -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //bench press trophies (max bench press)
+                TrophyType.BENCH_PRESS -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //squat trophies (max squat)
+                TrophyType.SQUAT -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //deadlift trophies (max deadlift)
+                TrophyType.DEADLIFT -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //shoulder press trophies (max shoulder press)
+                TrophyType.SHOULDER_PRESS -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //cardio bunny trophies (total cardio minutes)
+                TrophyType.CARDIO_BUNNY -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //dumbbell master trophies (max weight lifted with dumbbell)
+                TrophyType.DUMBBELL_MASTER -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //abs master trophies (total abs minutes)
+                TrophyType.ABS_MASTER -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //all star trophies (combined total SBD)
+                TrophyType.ALL_STAR -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //full time trophies (total time working out)
+                TrophyType.FULL_TIME -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //gym bro trophies (total amount of friends)
+                TrophyType.GYM_BRO -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //pushup master trophies (total pushups)
+                TrophyType.PUSHUP_MASTER -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //pullup master trophies (total pullups)
+                TrophyType.PULLUP_MASTER -> when (rank) {
+                    TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
+                    TrophyRank.SILVER -> R.drawable.zzz_icon_silver
+                    TrophyRank.GOLD -> R.drawable.zzz_icon_gold
+                    TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
+                    else -> R.drawable.zzz_icon_locked
+                }
+
+                //situp master trophies (total situps)
+                TrophyType.SITUP_MASTER -> when (rank) {
                     TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
                     TrophyRank.SILVER -> R.drawable.zzz_icon_silver
                     TrophyRank.GOLD -> R.drawable.zzz_icon_gold
