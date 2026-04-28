@@ -47,6 +47,8 @@ class ProfileFragment : Fragment() {
     private var targetUserId: String? = null
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
+    private var tabMediator: TabLayoutMediator? = null
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         return binding.root
@@ -55,43 +57,63 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         targetUserId = arguments?.getString("userId")
-        setupViewPager()
+        
         setupListeners()
         observeViewModel()
         loadData()
     }
 
-    private fun setupViewPager() {
+    private fun setupViewPager(isFriendsListPublic: Boolean) {
+        val showFriendsTab = isFriendsListPublic || targetUserId == null
+        val totalTabs = if (showFriendsTab) 4 else 3
+
         val adapter = object : FragmentStateAdapter(this) {
-            override fun getItemCount(): Int = 4
+            override fun getItemCount(): Int = totalTabs
             override fun createFragment(position: Int): Fragment {
                 val bundle = Bundle().apply { putString("userId", targetUserId) }
-                return when (position) {
-                    0 -> ProfilePostsFragment().apply { arguments = bundle }
-                    1 -> ProfileFriendsFragment().apply { arguments = bundle }
-                    2 -> ProfileWorkoutsFragment().apply { arguments = bundle }
-                    else -> ProfileGoalsFragment().apply { arguments = bundle }
+                return if (showFriendsTab) {
+                    when (position) {
+                        0 -> ProfilePostsFragment().apply { arguments = bundle }
+                        1 -> ProfileFriendsFragment().apply { arguments = bundle }
+                        2 -> ProfileWorkoutsFragment().apply { arguments = bundle }
+                        else -> ProfileGoalsFragment().apply { arguments = bundle }
+                    }
+                } else {
+                    when (position) {
+                        0 -> ProfilePostsFragment().apply { arguments = bundle }
+                        1 -> ProfileWorkoutsFragment().apply { arguments = bundle }
+                        else -> ProfileGoalsFragment().apply { arguments = bundle }
+                    }
                 }
             }
         }
         binding.viewPager.adapter = adapter
         binding.viewPager.offscreenPageLimit = 3
         
-        // Dismiss keyboard when switching sub-tabs on profile
         binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 hideKeyboard()
             }
         })
 
-        TabLayoutMediator(binding.profileTabs, binding.viewPager) { tab, position ->
-            tab.text = when (position) {
-                0 -> if (targetUserId == null) "My Posts" else "Posts"
-                1 -> "Friends"
-                2 -> "Shared Workouts"
-                else -> "Goals"
+        tabMediator?.detach()
+        tabMediator = TabLayoutMediator(binding.profileTabs, binding.viewPager) { tab, position ->
+            tab.text = if (showFriendsTab) {
+                when (position) {
+                    0 -> if (targetUserId == null) "My Posts" else "Posts"
+                    1 -> "Friends"
+                    2 -> "Shared Templates"
+                    else -> "Goals"
+                }
+            } else {
+                when (position) {
+                    0 -> if (targetUserId == null) "My Posts" else "Posts"
+                    1 -> "Shared Templates"
+                    else -> "Goals"
+                }
             }
-        }.attach()
+        }
+        tabMediator?.attach()
     }
 
     private fun setupListeners() {
@@ -103,7 +125,6 @@ class ProfileFragment : Fragment() {
             binding.btnTrophyShelf.setOnClickListener { findNavController().navigate(R.id.action_profile_to_trophyShelf) }
             binding.btnAdminDashboard.setOnClickListener { findNavController().navigate(R.id.action_profile_to_adminDashboard) }
             
-            // WEIGH-IN: Allow user to tap weight to log it
             binding.layoutWeight.setOnClickListener { showWeighInDialog() }
             binding.layoutWeight.isClickable = true
             binding.layoutWeight.isFocusable = true
@@ -200,6 +221,7 @@ class ProfileFragment : Fragment() {
             profileViewModel.observeProfile(targetUserId)
             profileViewModel.loadUserPosts(targetUserId!!)
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
+            socialViewModel.loadFriendsForUser(targetUserId!!)
             workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
             goalViewModel.loadGoalsForUser(targetUserId!!)
         } else {
@@ -210,7 +232,6 @@ class ProfileFragment : Fragment() {
     }
 
     private fun observeViewModel() {
-        // Observe currentProfile (handles both my profile and other users)
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
@@ -229,12 +250,14 @@ class ProfileFragment : Fragment() {
                 
                 updateTrophyUI()
 
-                // Admin Dashboard visibility
                 if (targetUserId == null) {
                     binding.btnAdminDashboard.visibility = if (it.isAdmin) View.VISIBLE else View.GONE
                 } else {
                     binding.btnAdminDashboard.visibility = View.GONE
                 }
+
+                // Re-setup viewpager based on privacy setting
+                setupViewPager(it.isFriendsListPublic)
             }
         }
         
@@ -315,7 +338,6 @@ class ProfileFragment : Fragment() {
     }
 
     private fun updateProfilePicture(url: String) {
-        // Clear previous image to prevent flickering/misloading during data updates
         binding.ivProfilePic.setImageDrawable(null)
 
         if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
@@ -326,7 +348,7 @@ class ProfileFragment : Fragment() {
                 transformations(CircleCropTransformation())
             }
         } else {
-            val resId = when(url) { //default profiles
+            val resId = when(url) { 
                 "red" -> R.drawable.ic_profile_red
                 "blue" -> R.drawable.ic_profile_blue
                 "green" -> R.drawable.ic_profile_green
@@ -394,6 +416,8 @@ class ProfileFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        tabMediator?.detach()
+        tabMediator = null
         _binding = null
     }
 }

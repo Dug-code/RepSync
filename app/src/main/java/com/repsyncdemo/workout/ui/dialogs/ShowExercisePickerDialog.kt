@@ -35,10 +35,10 @@ class ShowExercisePickerDialog : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        pickerAdapter = ExerciseLibraryAdapter { exerciseDef ->
+        pickerAdapter = ExerciseLibraryAdapter(onClick = { exerciseDef ->
             viewModel.selectExercise(exerciseDef.name)
             findNavController().popBackStack()
-        }
+        })
 
         binding.rvExercises.apply {
             layoutManager = LinearLayoutManager(requireContext())

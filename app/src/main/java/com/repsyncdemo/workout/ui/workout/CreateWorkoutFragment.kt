@@ -117,7 +117,7 @@ class CreateWorkoutFragment : Fragment() {
             if (!workoutViewModel.isWorkoutDataLoaded) {
                 workoutViewModel.loadWorkout(existingWorkoutId!!)
             }
-            binding.btnSave.text = "Update Workout"
+            binding.btnSave.text = "Update Template"
         } else {
             if (exerciseInputAdapter?.itemCount == 0) {
                 exerciseInputAdapter?.addExercise()
@@ -181,7 +181,7 @@ class CreateWorkoutFragment : Fragment() {
         workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
             result.onSuccess {
                 navigationLockViewModel.setLocked(false)
-                Toast.makeText(requireContext(), "Workout saved!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Template saved!", Toast.LENGTH_SHORT).show()
                 resetState()
                 findNavController().popBackStack()
             }
@@ -274,9 +274,9 @@ class CreateWorkoutFragment : Fragment() {
     private fun saveWorkout() {
         val name = binding.etName.text.toString().trim()
         val description = binding.etDescription.text.toString().trim()
-        if (name.isEmpty()) { binding.etName.error = "Name is required"; return }
+        if (name.isEmpty()) { binding.etName.error = "Template name is required"; return }
         val exercises = exerciseInputAdapter?.getExercises()?.filter { it.name.isNotEmpty() } ?: emptyList()
-        if (exercises.isEmpty()) { Toast.makeText(requireContext(), "Add at least one exercise", Toast.LENGTH_SHORT).show(); return }
+        if (exercises.isEmpty()) { Toast.makeText(requireContext(), "Add at least one template exercise", Toast.LENGTH_SHORT).show(); return }
 
         val workout = Workout(id = existingWorkoutId ?: "", name = name, description = description, exercises = exercises, isPublic = isPublic)
         if (existingWorkoutId == null) workoutViewModel.addWorkout(workout)

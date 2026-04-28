@@ -82,6 +82,7 @@ class FeedExploreFragment : Fragment() {
                 binding.layoutRadiusFilter.alpha = 1.0f
                 binding.radiusSlider.isEnabled = true
                 binding.switchGlobal.isEnabled = true
+                updateFilters()
             } else {
                 if (!binding.switchGlobal.isChecked) {
                     binding.layoutLocationRequired.visibility = View.VISIBLE
@@ -103,7 +104,9 @@ class FeedExploreFragment : Fragment() {
             }
         }
 
-        binding.radiusSlider.addOnChangeListener { _, _, _ -> updateFilters() }
+        binding.radiusSlider.addOnChangeListener { _, _, fromUser ->
+            if (fromUser) updateFilters()
+        }
 
         binding.btnEnableLocation.setOnClickListener {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)

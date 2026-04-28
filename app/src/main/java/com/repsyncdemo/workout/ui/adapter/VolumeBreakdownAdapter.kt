@@ -27,7 +27,7 @@ class VolumeBreakdownAdapter : ListAdapter<ExerciseVolumeBreakdown, VolumeBreakd
         fun bind(item: ExerciseVolumeBreakdown) {
             binding.tvExerciseName.text = item.name
             val formattedVolume = NumberFormat.getNumberInstance(Locale.US).format(item.totalVolume)
-            binding.tvVolumeDetails.text = "$formattedVolume lbs over ${item.workoutCount} workouts"
+            binding.tvVolumeDetails.text = "$formattedVolume lbs over ${item.workoutCount} sessions"
         }
     }
 

@@ -48,13 +48,18 @@ class SocialViewModel : ViewModel() {
     private var profileObservationJob: Job? = null
 
     init {
-        // Observe profiles for the current user's friends/requests
-        friends.observeForever { updateProfileObservation(it, pendingRequests.value ?: emptyList()) }
-        pendingRequests.observeForever { updateProfileObservation(friends.value ?: emptyList(), it) }
+        // Observe profiles for the current user's friends/requests AND target user friends
+        friends.observeForever { updateProfileObservation() }
+        pendingRequests.observeForever { updateProfileObservation() }
+        _targetUserFriends.observeForever { updateProfileObservation() }
     }
 
-    private fun updateProfileObservation(friends: List<Friendship>, requests: List<Friendship>) {
-        val userIds = (friends + requests).flatMap { listOf(it.requesterId, it.receiverId) }.distinct()
+    private fun updateProfileObservation() {
+        val allFriendships = (friends.value ?: emptyList()) + 
+                           (pendingRequests.value ?: emptyList()) + 
+                           (_targetUserFriends.value ?: emptyList())
+        
+        val userIds = allFriendships.flatMap { listOf(it.requesterId, it.receiverId) }.distinct()
         if (userIds.isEmpty()) return
 
         profileObservationJob?.cancel()
@@ -108,5 +113,13 @@ class SocialViewModel : ViewModel() {
         viewModelScope.launch {
             repository.removeFriendship(friendshipId)
         }
+    }
+
+    override fun onCleared() {
+        // Cleaning up observers to prevent leaks
+        friends.removeObserver { updateProfileObservation() }
+        pendingRequests.removeObserver { updateProfileObservation() }
+        _targetUserFriends.removeObserver { updateProfileObservation() }
+        super.onCleared()
     }
 }

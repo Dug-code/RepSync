@@ -19,7 +19,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Workout History"
+            android:text="Completed Sessions"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="@color/text_primary" />
@@ -64,7 +64,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
-                android:text="Workout"
+                android:text="Session"
                 android:textSize="12sp"
                 android:textColor="@color/text_secondary" />
         </LinearLayout>
@@ -111,7 +111,7 @@
         android:id="@+id/tvEmpty"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="No workouts on this day."
+        android:text="No completed sessions on this day."
         android:textColor="@color/text_secondary"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/divider"

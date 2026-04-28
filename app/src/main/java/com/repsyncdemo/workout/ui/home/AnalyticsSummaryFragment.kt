@@ -349,11 +349,11 @@ class AnalyticsSummaryFragment : Fragment() {
         }
 
         binding.cardTotalVolume.setOnClickListener { showVolumeBreakdownDialog() }
-        binding.cardWorkouts.setOnClickListener { showCalendarDialog("Workout History", true) }
+        binding.cardWorkouts.setOnClickListener { showCalendarDialog("Completed Sessions", true) }
         binding.cardRestDays.setOnClickListener { showCalendarDialog("Rest Day History", false) }
 
         binding.cardFavWorkout.setOnClickListener {
-            viewModel.topWorkouts.value?.let { showTopTenDialog("Top Workouts", it, "sessions") }
+            viewModel.topWorkouts.value?.let { showTopTenDialog("Top Sessions", it, "sessions") }
         }
 
         binding.cardFavMuscle.setOnClickListener {

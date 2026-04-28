@@ -100,6 +100,14 @@ class ExerciseLogAdapter(
         }
     }
 
+    fun getTotalCompletedSets(): Int {
+        var total = 0
+        setData.values.forEach { sets ->
+            total += sets.count { it.completed }
+        }
+        return total
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseLogBinding.inflate(
             LayoutInflater.from(parent.context), parent, false

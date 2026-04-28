@@ -60,6 +60,7 @@ class ProfileFriendsFragment : Fragment() {
     private fun setupAdapters() {
         friendsAdapter = FriendAdapter(
             isMyProfile = targetUserId == null,
+            profileOwnerId = targetUserId ?: currentUserId, // Correctly identify the profile owner
             onRemove = { friendship ->
                 socialViewModel.removeFriendship(friendship.id)
                 Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()

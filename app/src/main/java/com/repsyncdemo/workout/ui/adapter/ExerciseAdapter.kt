@@ -29,10 +29,23 @@ class ExerciseAdapter : ListAdapter<Exercise, ExerciseAdapter.ViewHolder>(Exerci
         fun bind(exercise: Exercise) {
             binding.tvExerciseName.text = exercise.name
             binding.tvSetsReps.text = "${exercise.sets} sets x ${exercise.reps} reps"
-            binding.tvWeight.text = if (exercise.weight > 0) "${exercise.weight} lbs" else ""
+            if (exercise.weight > 0) {
+                binding.tvWeight.text = "${exercise.weight.toCleanString()} lbs"
+                binding.tvWeight.visibility = View.VISIBLE
+            } else {
+                binding.tvWeight.visibility = View.GONE
+            }
             
             // Show subtle "Custom" label for user-created exercises
             binding.tvCustomLabel.visibility = if (exercise.isCustom) View.VISIBLE else View.GONE
+        }
+
+        private fun Double.toCleanString(): String {
+            return if (this % 1.0 == 0.0) {
+                toInt().toString()
+            } else {
+                toString()
+            }
         }
     }
 

@@ -29,25 +29,31 @@
             android:orientation="horizontal"
             android:layout_marginTop="8dp">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Set"
+                android:textSize="11sp"
+                android:textColor="@color/text_secondary"
+                android:textStyle="bold"
+                android:textAllCaps="true"
+                android:layout_marginStart="36dp" />
+
             <View
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:layout_weight="1" />
 
-            <!-- Spacer for inputs -->
-            <View
-                android:layout_width="128dp"
-                android:layout_height="0dp" />
-
             <TextView
+                android:id="@+id/tvCompleteHeader"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Complete"
+                android:text="Reps / Weight"
                 android:textSize="11sp"
                 android:textColor="@color/text_secondary"
                 android:textStyle="bold"
                 android:textAllCaps="true"
-                android:layout_marginEnd="32dp" />
+                android:layout_marginEnd="48dp" />
 
         </LinearLayout>
 

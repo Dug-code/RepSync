@@ -14,8 +14,10 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.repsyncdemo.workout.R
+import com.repsyncdemo.workout.data.model.ExerciseType
 import com.repsyncdemo.workout.databinding.FragmentExerciseLibraryBinding
 import com.repsyncdemo.workout.ui.adapter.ExerciseLibraryAdapter
+import com.repsyncdemo.workout.viewmodel.ExerciseLibraryFilterState
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import kotlinx.coroutines.launch
 
@@ -26,6 +28,7 @@ class ExerciseLibraryFragment : Fragment() {
     private val binding get() = _binding!!
 
     private lateinit var pickerAdapter: ExerciseLibraryAdapter
+    private var isSyncingFilterUi = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentExerciseLibraryBinding.inflate(inflater, container, false)
@@ -61,37 +64,53 @@ class ExerciseLibraryFragment : Fragment() {
             }
         }
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.exerciseLibraryFilterState.collect { state ->
+                    syncFilterUi(state)
+                }
+            }
+        }
+
         // Setup filter chip listeners
         binding.chipExerciseType.setOnClickListener {
-            viewModel.selectedFilterCategory("Exercise Type")
-            findNavController().navigate(R.id.exercisePickerFilterDialog)
+            if (viewModel.exerciseLibraryFilterState.value.type != null) {
+                viewModel.clearExerciseTypeFilter()
+            } else {
+                syncFilterUi(viewModel.exerciseLibraryFilterState.value)
+                viewModel.selectedFilterCategory("Exercise Type")
+                findNavController().navigate(R.id.exercisePickerFilterDialog)
+            }
         }
 
         binding.chipBodyPart.setOnClickListener {
-            viewModel.selectedFilterCategory("Body Part")
-            findNavController().navigate(R.id.exercisePickerFilterDialog)
+            if (viewModel.exerciseLibraryFilterState.value.bodyPart != null) {
+                viewModel.clearBodyPartFilter()
+            } else {
+                syncFilterUi(viewModel.exerciseLibraryFilterState.value)
+                viewModel.selectedFilterCategory("Body Part")
+                findNavController().navigate(R.id.exercisePickerFilterDialog)
+            }
         }
 
         // Make the Custom chip a toggle
         binding.chipCustomOnly.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.toggleCustomFilter(isChecked)
-            updateClearButtonVisibility()
+            if (!isSyncingFilterUi) {
+                viewModel.toggleCustomFilter(isChecked)
+            }
         }
 
         binding.chipClearFilters.setOnClickListener {
             viewModel.clearFilter()
-            binding.chipBodyPart.isChecked = false
-            binding.chipExerciseType.isChecked = false
-            binding.chipCustomOnly.isChecked = false
-            binding.chipClearFilters.visibility = View.GONE
         }
 
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                viewModel.searchExercises(s.toString().trim())
-                updateClearButtonVisibility()
+                if (!isSyncingFilterUi) {
+                    viewModel.searchExercises(s.toString().trim())
+                }
             }
         })
         
@@ -100,13 +119,34 @@ class ExerciseLibraryFragment : Fragment() {
         }
     }
 
-    private fun updateClearButtonVisibility() {
-        val hasActiveFilter = binding.chipBodyPart.isChecked || 
-                             binding.chipExerciseType.isChecked || 
-                             binding.chipCustomOnly.isChecked ||
-                             binding.etSearch.text?.isNotEmpty() == true
-        
-        binding.chipClearFilters.visibility = if (hasActiveFilter) View.VISIBLE else View.GONE
+    private fun syncFilterUi(state: ExerciseLibraryFilterState) {
+        if (_binding == null) return
+
+        isSyncingFilterUi = true
+
+        if (binding.etSearch.text?.toString() != state.searchQuery) {
+            binding.etSearch.setText(state.searchQuery)
+            binding.etSearch.setSelection(state.searchQuery.length)
+        }
+
+        binding.chipExerciseType.isChecked = state.type != null
+        binding.chipExerciseType.text = state.type?.let { "Type: ${it.toDisplayName()}" } ?: "Exercise Type"
+
+        binding.chipBodyPart.isChecked = state.bodyPart != null
+        binding.chipBodyPart.text = state.bodyPart?.let { "Body: $it" } ?: "Body Part"
+
+        binding.chipCustomOnly.isChecked = state.onlyCustom
+        binding.chipCustomOnly.text = if (state.onlyCustom) "Custom only" else "Custom"
+
+        binding.chipClearFilters.visibility = if (state.hasActiveFilters) View.VISIBLE else View.GONE
+
+        isSyncingFilterUi = false
+    }
+
+    private fun ExerciseType.toDisplayName(): String = when (this) {
+        ExerciseType.STRENGTH -> "Weight Lifting"
+        ExerciseType.CARDIO -> "Cardio"
+        ExerciseType.CALISTHENICS -> "Calisthenics"
     }
 
     override fun onDestroyView() {

@@ -41,7 +41,7 @@ class WorkoutAdapter(
         fun bind(workout: Workout) {
             binding.tvName.text = workout.name
             val count = workout.exercises.size
-            binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
+            binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"} copied into each session"
             
             // Set privacy icon based on workout status
             if (workout.isPublic) {

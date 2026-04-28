@@ -40,9 +40,9 @@ class HomeSavedFragment : Fragment() {
             workoutAdapter.submitList(workouts)
             val isEmpty = workouts.isEmpty()
             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
-            binding.tvEmptyTitle.text = "No saved routines"
-            binding.tvEmptySubtitle.text = "Create a custom workout plan to stay consistent."
-            binding.btnEmptyAction.text = "Create Routine"
+            binding.tvEmptyTitle.text = "No routine templates yet"
+            binding.tvEmptySubtitle.text = "Templates are reusable starting points. Each workout session can be changed as you log it."
+            binding.btnEmptyAction.text = "Create Template"
             binding.btnEmptyAction.setOnClickListener {
                 findNavController().navigate(R.id.action_home_to_createWorkout)
             }

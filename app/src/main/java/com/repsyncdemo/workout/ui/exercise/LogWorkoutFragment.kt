@@ -2,7 +2,6 @@ package com.repsyncdemo.workout.ui.exercise
 
 import android.app.AlertDialog
 import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,9 +13,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.repsyncdemo.workout.R
@@ -180,6 +177,16 @@ class LogWorkoutFragment : Fragment() {
                 addOrQueueExerciseFromLibrary(exerciseName)
             }
         }
+
+        viewModel.operationResult.observe(viewLifecycleOwner) { result ->
+            result.onSuccess { logId ->
+                if (logId.isNotEmpty() && !isBindingLog) {
+                    val bundle = Bundle().apply { putString("logId", logId) }
+                    // Navigate using action to trigger popUpTo behavior
+                    findNavController().navigate(R.id.action_logWorkout_to_workoutSummary, bundle)
+                }
+            }
+        }
     }
 
     private fun loadWorkoutTemplate(workoutId: String) {
@@ -264,7 +271,7 @@ class LogWorkoutFragment : Fragment() {
         }
 
         binding.btnComplete.setOnClickListener {
-            completeWorkout()
+            checkCompletionAndSave()
         }
 
         binding.btnDeleteLog.setOnClickListener {
@@ -322,7 +329,7 @@ class LogWorkoutFragment : Fragment() {
 
         AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Manual Duration")
-            .setMessage("Enter the total workout time in minutes:")
+            .setMessage("Enter the total session time in minutes:")
             .setView(input)
             .setPositiveButton("Set") { _, _ ->
                 val min = input.text.toString().toLongOrNull() ?: 0L
@@ -336,9 +343,25 @@ class LogWorkoutFragment : Fragment() {
             .show()
     }
 
+    private fun checkCompletionAndSave() {
+        val totalCompleted = exerciseLogAdapter?.getTotalCompletedSets() ?: 0
+        if (totalCompleted == 0) {
+            AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+                .setTitle("Finish Workout?")
+                .setMessage("You haven't checked off any sets. Are you sure you want to finish without completing any?")
+                .setPositiveButton("Finish Anyway") { _, _ ->
+                    completeWorkout()
+                }
+                .setNegativeButton("Keep Training", null)
+                .show()
+        } else {
+            completeWorkout()
+        }
+    }
+
     private fun completeWorkout() {
         if (existingLogId == null && activeWorkoutId != null && templateWorkoutIdApplied == null) {
-            Toast.makeText(requireContext(), "Workout template is still loading", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Routine template is still loading", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -368,10 +391,8 @@ class LogWorkoutFragment : Fragment() {
 
         navigationLockViewModel.setLocked(false)
         viewModel.logWorkout(log)
-        Toast.makeText(requireContext(), if (existingLogId == null) "Workout Completed!" else "Workout Updated!", Toast.LENGTH_SHORT).show()
-        viewModel.clearSelection()
+        Toast.makeText(requireContext(), if (existingLogId == null) "Session completed!" else "Session log updated!", Toast.LENGTH_SHORT).show()
         isWorkoutModified = false
-        findNavController().popBackStack()
     }
 
     private fun updateLockState() {
@@ -390,7 +411,7 @@ class LogWorkoutFragment : Fragment() {
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
         AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
-            .setTitle("Discard Workout?")
+            .setTitle("Discard Session?")
             .setMessage("Your current progress will be lost. Are you sure?")
             .setPositiveButton("Discard") { _, _ -> onDiscard() }
             .setNegativeButton("Keep Training", null)
@@ -400,11 +421,11 @@ class LogWorkoutFragment : Fragment() {
     private fun showDeleteConfirmation() {
         AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Delete Log")
-            .setMessage("Are you sure you want to delete this workout log? This cannot be undone.")
+            .setMessage("Are you sure you want to delete this session log? This cannot be undone.")
             .setPositiveButton("Delete") { _, _ ->
                 existingLogId?.let { id ->
                     viewModel.deleteWorkoutLog(id)
-                    Toast.makeText(requireContext(), "Workout deleted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Session log deleted", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 }
             }

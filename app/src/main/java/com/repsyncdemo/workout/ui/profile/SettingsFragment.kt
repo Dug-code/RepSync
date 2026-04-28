@@ -265,7 +265,7 @@ class SettingsFragment : Fragment() {
     private fun showClearHistoryConfirmation() {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Clear All Data?")
-            .setMessage("This will permanently delete all your workout logs and reset your stats. This cannot be undone.")
+            .setMessage("This will permanently delete all completed session logs and reset your stats. This cannot be undone.")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Clear Everything") { _, _ ->
                 analyticsViewModel.clearAllHistory()

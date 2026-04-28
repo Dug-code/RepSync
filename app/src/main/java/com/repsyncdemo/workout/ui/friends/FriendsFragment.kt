@@ -51,6 +51,7 @@ class FriendsFragment : Fragment() {
         // Updated FriendAdapter to match the new constructor
         friendAdapter = FriendAdapter(
             isMyProfile = true,
+            profileOwnerId = currentUserId, // Added profileOwnerId
             onRemove = { friendship ->
                 socialViewModel.removeFriendship(friendship.id)
                 Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()

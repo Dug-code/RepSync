@@ -59,7 +59,7 @@ class HomeFragment : Fragment() {
         binding.viewPager.adapter = adapter
 
         TabLayoutMediator(binding.homeTabs, binding.viewPager) { tab, position ->
-            tab.text = if (position == 0) "Recent" else "Saved"
+            tab.text = if (position == 0) "Logs" else "Templates"
         }.attach()
     }
 

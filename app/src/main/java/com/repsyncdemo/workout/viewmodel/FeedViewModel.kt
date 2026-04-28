@@ -50,12 +50,16 @@ class FeedViewModel : ViewModel() {
     
     private var exploreRadius: Double? = null
     private var showMyPostsInFriends = true
+    private var userLocationUpdatedAt: Long = 0L
+
+    private val maxLocationAgeMillis = 10 * 60 * 1000L
 
     private val currentUserId: String
         get() = auth.currentUser?.uid ?: ""
 
     fun setUserLocation(latitude: Double, longitude: Double) {
         userLocation = GeoPoint(latitude, longitude)
+        userLocationUpdatedAt = System.currentTimeMillis()
         _isLocationAvailable.value = true
         loadExploreFeed()
         loadChatFeed()
@@ -63,6 +67,7 @@ class FeedViewModel : ViewModel() {
 
     fun setLocationDisabled() {
         userLocation = null
+        userLocationUpdatedAt = 0L
         _isLocationAvailable.value = false
         if (exploreRadius != null) {
             applyExploreFilters(radius = null)
@@ -92,10 +97,11 @@ class FeedViewModel : ViewModel() {
     fun loadExploreFeed() {
         exploreJob?.cancel()
         _isLoading.value = true
+        val locationForFeed = getFreshUserLocation()
         exploreJob = viewModelScope.launch {
             try {
                 repository.getFeed(
-                    userLocation = userLocation,
+                    userLocation = locationForFeed,
                     friendIds = emptyList(),
                     showChat = false,
                     onlyFriends = false,
@@ -118,13 +124,14 @@ class FeedViewModel : ViewModel() {
 
     fun loadFriendsFeed() {
         friendsJob?.cancel()
+        val locationForFeed = getFreshUserLocation()
         friendsJob = viewModelScope.launch {
             try {
                 val friendIds = socialRepository.getFriends().first().map { 
                     if (it.requesterId == currentUserId) it.receiverId else it.requesterId 
                 }
                 repository.getFeed(
-                    userLocation = userLocation,
+                    userLocation = locationForFeed,
                     friendIds = friendIds,
                     showChat = false,
                     onlyFriends = true,
@@ -145,10 +152,11 @@ class FeedViewModel : ViewModel() {
 
     fun loadChatFeed() {
         chatJob?.cancel()
+        val locationForFeed = getFreshUserLocation()
         chatJob = viewModelScope.launch {
             try {
                 repository.getFeed(
-                    userLocation = userLocation,
+                    userLocation = locationForFeed,
                     friendIds = emptyList(),
                     showChat = true,
                     onlyFriends = false,
@@ -193,7 +201,7 @@ class FeedViewModel : ViewModel() {
                 userProfilePicture = profile?.profilePictureUrl ?: "red",
                 description = message,
                 type = FeedPostType.CHAT_MESSAGE,
-                location = userLocation
+                location = getFreshUserLocation()
             )
             repository.createPost(post)
         }
@@ -216,7 +224,7 @@ class FeedViewModel : ViewModel() {
         viewModelScope.launch {
             val profile = profileRepository.getProfile().getOrNull()
             val postWithExtras = post.copy(
-                location = userLocation,
+                location = getFreshUserLocation(),
                 userProfilePicture = profile?.profilePictureUrl ?: "red"
             )
             repository.createPost(postWithExtras)
@@ -239,6 +247,17 @@ class FeedViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    private fun getFreshUserLocation(): GeoPoint? {
+        val location = userLocation ?: return null
+        val isFresh = System.currentTimeMillis() - userLocationUpdatedAt <= maxLocationAgeMillis
+        if (isFresh) return location
+
+        userLocation = null
+        userLocationUpdatedAt = 0L
+        _isLocationAvailable.value = false
+        return null
     }
 
     override fun onCleared() {

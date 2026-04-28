@@ -26,13 +26,14 @@ class HomeRecentFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        historyAdapter = HistoryAdapter { log ->
-            val bundle = Bundle().apply { 
-                putString("workoutId", log.workoutId)
-                putString("logId", log.id)
+        historyAdapter = HistoryAdapter(
+            onItemClick = { log ->
+                val bundle = Bundle().apply { 
+                    putString("logId", log.id)
+                }
+                findNavController().navigate(R.id.workoutSummaryFragment, bundle)
             }
-            findNavController().navigate(R.id.logWorkoutFragment, bundle)
-        }
+        )
 
         binding.rvContent.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -44,11 +45,11 @@ class HomeRecentFragment : Fragment() {
             historyAdapter.submitList(sortedLogs)
             val isEmpty = sortedLogs.isEmpty()
             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
-            binding.tvEmptyTitle.text = "No workouts yet"
-            binding.tvEmptySubtitle.text = "Time to get active! Log your first workout."
-            binding.btnEmptyAction.text = "Start a Workout"
+            binding.tvEmptyTitle.text = "No completed sessions yet"
+            binding.tvEmptySubtitle.text = "Workout logs appear here after you finish a session."
+            binding.btnEmptyAction.text = "Browse Templates"
             binding.btnEmptyAction.setOnClickListener {
-                findNavController().navigate(R.id.action_home_to_createWorkout)
+                findNavController().navigate(R.id.workoutListFragment)
             }
         }
     }

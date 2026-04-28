@@ -38,11 +38,11 @@ class ProfileWorkoutsFragment : Fragment() {
         workoutAdapter = WorkoutAdapter { workout ->
             if (targetUserId != null) {
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Copy Workout")
-                    .setMessage("Do you want to copy this workout routine to your collection?")
+                    .setTitle("Copy Routine Template")
+                    .setMessage("Do you want to copy this routine template to your collection?")
                     .setPositiveButton("Copy") { _, _ ->
                         workoutViewModel.copyWorkout(workout)
-                        Toast.makeText(requireContext(), "Workout copied!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Template copied!", Toast.LENGTH_SHORT).show()
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
@@ -63,8 +63,8 @@ class ProfileWorkoutsFragment : Fragment() {
         if (targetUserId != null && !isWorkoutsPublic) {
             workoutAdapter.submitList(emptyList())
             binding.layoutEmpty.visibility = View.VISIBLE
-            binding.tvEmptyTitle.text = "Private Workouts"
-            binding.tvEmptySubtitle.text = "This user's workouts are private."
+            binding.tvEmptyTitle.text = "Private Routine Templates"
+            binding.tvEmptySubtitle.text = "This user's routine templates are private."
             binding.btnEmptyAction.visibility = View.GONE
         } else {
             val workoutsSource = if (targetUserId != null) workoutViewModel.targetUserWorkouts else workoutViewModel.workouts
@@ -77,7 +77,7 @@ class ProfileWorkoutsFragment : Fragment() {
                 binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 
                 if (targetUserId != null) {
-                    binding.tvEmptyTitle.text = "No shared workouts."
+                    binding.tvEmptyTitle.text = "No shared templates."
                     binding.tvEmptySubtitle.text = "This user hasn't made any routines public yet."
                 } else {
                     binding.tvEmptyTitle.text = "Nothing shared yet."

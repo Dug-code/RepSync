@@ -3,6 +3,7 @@ package com.repsyncdemo.workout.data.repository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.Query
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
 import kotlinx.coroutines.channels.awaitClose
@@ -30,6 +31,7 @@ class FeedRepository {
     ): Flow<List<FeedPost>> = callbackFlow {
         val currentUid = userId
         val listener = feedCollection
+            .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -56,19 +58,20 @@ class FeedRepository {
                     posts = posts.filter { targetIds.contains(it.userId) }
                 }
 
-                // Filter by distance and calculate transient distance field
-                if (userLocation != null) {
-                    if (radius != null && !showChat && !onlyFriends) {
-                        posts.forEach { post ->
-                            if (post.location != null) {
-                                post.distanceMiles = distanceMiles(userLocation, post.location)
-                            }
-                        }
-
-                        posts = posts.filter { 
-                            it.distanceMiles != null && it.distanceMiles!! <= radius 
+                // Only attach/display distances while the user is actively using radius mode.
+                val currentLocation = userLocation
+                val activeRadius = radius
+                if (currentLocation != null && activeRadius != null && !onlyFriends) {
+                    posts.forEach { post ->
+                        post.distanceMiles = post.location?.let { location ->
+                            distanceMiles(currentLocation, location)
                         }
                     }
+                    posts = posts.filter {
+                        it.distanceMiles != null && it.distanceMiles!! <= activeRadius
+                    }
+                } else {
+                    posts.forEach { it.distanceMiles = null }
                 }
 
                 trySend(posts.sortedByDescending { it.createdAt })

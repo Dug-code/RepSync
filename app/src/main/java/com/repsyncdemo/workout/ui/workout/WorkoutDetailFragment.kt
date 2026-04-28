@@ -83,7 +83,7 @@ class WorkoutDetailFragment : Fragment() {
                 .setMessage(R.string.confirm_delete)
                 .setPositiveButton(R.string.yes) { _, _ ->
                     viewModel.deleteWorkout(workoutId)
-                    Toast.makeText(requireContext(), "Workout deleted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Routine template deleted", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 }
                 .setNegativeButton(R.string.no, null)

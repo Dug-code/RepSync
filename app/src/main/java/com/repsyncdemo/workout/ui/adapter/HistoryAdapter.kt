@@ -13,7 +13,8 @@ import java.util.Date
 import java.util.Locale
 
 class HistoryAdapter(
-    private val onEditClick: (WorkoutLog) -> Unit
+    private val onItemClick: (WorkoutLog) -> Unit,
+    private val onEditClick: ((WorkoutLog) -> Unit)? = null
 ) : ListAdapter<WorkoutLog, HistoryAdapter.ViewHolder>(HistoryDiffCallback()) {
 
     private val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
@@ -43,7 +44,11 @@ class HistoryAdapter(
             val count = log.exercises.size
             binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
             
-            binding.btnEdit.setOnClickListener { onEditClick(log) }
+            binding.root.setOnClickListener { onItemClick(log) }
+            
+            binding.btnEdit.setOnClickListener { 
+                onEditClick?.invoke(log) ?: onItemClick(log)
+            }
         }
 
         private fun getDayWithSuffix(timestamp: Long): String {

@@ -11,6 +11,16 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+data class ExerciseLibraryFilterState(
+    val searchQuery: String = "",
+    val bodyPart: String? = null,
+    val type: ExerciseType? = null,
+    val onlyCustom: Boolean = false
+) {
+    val hasActiveFilters: Boolean
+        get() = searchQuery.isNotEmpty() || bodyPart != null || type != null || onlyCustom
+}
+
 class WorkoutViewModel : ViewModel() {
 
     private val repository = WorkoutRepository()
@@ -78,6 +88,15 @@ class WorkoutViewModel : ViewModel() {
     private val _filterType = MutableStateFlow<ExerciseType?>(null)
     private val _filterOnlyCustom = MutableStateFlow(false)
 
+    val exerciseLibraryFilterState: StateFlow<ExerciseLibraryFilterState> = combine(
+        _searchQuery,
+        _filterBodyPart,
+        _filterType,
+        _filterOnlyCustom
+    ) { query, bodyPart, type, onlyCustom ->
+        ExerciseLibraryFilterState(query, bodyPart, type, onlyCustom)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ExerciseLibraryFilterState())
+
     // Combined library flow: Static Database + Firestore Custom Exercises
     private val _customExercises = repository.getCustomExercises()
         .onStart { emit(emptyList()) }
@@ -116,9 +135,7 @@ class WorkoutViewModel : ViewModel() {
             list = list.filter { 
                 it.primaryBodyPart.equals(bodyPart, ignoreCase = true) || 
                 it.secondaryBodyParts.contains(bodyPart, ignoreCase = true) 
-            }.sortedWith(compareByDescending<ExerciseDefinition> { 
-                it.primaryBodyPart.equals(bodyPart, ignoreCase = true) 
-            }.thenBy { it.name.lowercase() })
+            }
         }
         
         if (query.isNotEmpty()) {
@@ -129,8 +146,45 @@ class WorkoutViewModel : ViewModel() {
             }
         }
         
-        list
+        sortLibraryExercises(list, query, bodyPart)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private fun sortLibraryExercises(
+        exercises: List<ExerciseDefinition>,
+        query: String,
+        bodyPart: String?
+    ): List<ExerciseDefinition> {
+        val normalizedQuery = query.lowercase()
+        return exercises.sortedWith(
+            compareBy<ExerciseDefinition> {
+                searchRank(it, normalizedQuery)
+            }.thenByDescending {
+                bodyPart != null && it.primaryBodyPart.equals(bodyPart, ignoreCase = true)
+            }.thenBy {
+                it.name.lowercase()
+            }.thenBy {
+                it.type.name
+            }
+        )
+    }
+
+    private fun searchRank(exercise: ExerciseDefinition, query: String): Int {
+        if (query.isEmpty()) return 0
+
+        val name = exercise.name.lowercase()
+        val primary = exercise.primaryBodyPart.lowercase()
+        val secondary = exercise.secondaryBodyParts.lowercase()
+
+        return when {
+            name == query -> 0
+            name.startsWith(query) -> 1
+            name.split(" ", "-", "(", ")").any { it.startsWith(query) } -> 2
+            name.contains(query) -> 3
+            primary.contains(query) -> 4
+            secondary.contains(query) -> 5
+            else -> 6
+        }
+    }
 
     // Comprehensive list of all exercises the user has interacted with
     val allUniqueExerciseNames: StateFlow<List<String>> = combine(
@@ -180,6 +234,14 @@ class WorkoutViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    fun clearBodyPartFilter() {
+        _filterBodyPart.value = null
+    }
+
+    fun clearExerciseTypeFilter() {
+        _filterType.value = null
     }
 
     fun toggleCustomFilter(active: Boolean) {

@@ -1,8 +1,10 @@
 package com.repsyncdemo.workout.ui.feed
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -15,7 +17,10 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.tabs.TabLayoutMediator
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.databinding.FragmentFeedBinding
@@ -103,22 +108,61 @@ class FeedFragment : Fragment() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun fetchLocation() {
         try {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-                if (location != null) {
-                    feedViewModel.setUserLocation(location.latitude, location.longitude)
-                    profileViewModel.updateLocation(location.latitude, location.longitude)
-                } else {
-                    feedViewModel.setLocationDisabled()
+            val cancellationTokenSource = CancellationTokenSource()
+
+            fusedLocationClient
+                .getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    cancellationTokenSource.token
+                )
+                .addOnSuccessListener { location ->
+                    if (isUsableLocation(location)) {
+                        applyLocation(location.latitude, location.longitude)
+                    } else {
+                        fetchRecentCachedLocation(fusedLocationClient)
+                    }
                 }
-            }.addOnFailureListener {
-                feedViewModel.setLocationDisabled()
-            }
+                .addOnFailureListener {
+                    fetchRecentCachedLocation(fusedLocationClient)
+                }
         } catch (e: SecurityException) {
             feedViewModel.setLocationDisabled()
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun fetchRecentCachedLocation(fusedLocationClient: FusedLocationProviderClient) {
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            if (isUsableLocation(location)) {
+                location?.let {
+                    applyLocation(it.latitude, it.longitude)
+                }
+            } else {
+                feedViewModel.setLocationDisabled()
+            }
+        }.addOnFailureListener {
+            feedViewModel.setLocationDisabled()
+        }
+    }
+
+    private fun isUsableLocation(location: Location?): Boolean {
+        if (location == null) return false
+
+        val maxLocationAgeMillis = 10 * 60 * 1000L
+        val ageMillis = System.currentTimeMillis() - location.time
+        val isRecent = ageMillis in 0..maxLocationAgeMillis
+        val isAccurateEnough = !location.hasAccuracy() || location.accuracy <= 5_000f
+
+        return isRecent && isAccurateEnough
+    }
+
+    private fun applyLocation(latitude: Double, longitude: Double) {
+        feedViewModel.setUserLocation(latitude, longitude)
+        profileViewModel.updateLocation(latitude, longitude)
     }
 
     private fun setupViewPager() {
