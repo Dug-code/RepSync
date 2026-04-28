@@ -75,6 +75,12 @@ dependencies {
     // RecyclerView
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
+    // Camera + QR scanning
+    implementation("androidx.camera:camera-camera2:1.3.2")
+    implementation("androidx.camera:camera-lifecycle:1.3.2")
+    implementation("androidx.camera:camera-view:1.3.2")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
     // Google Play Services - Location
     implementation("com.google.android.gms:play-services-location:21.0.1")
 

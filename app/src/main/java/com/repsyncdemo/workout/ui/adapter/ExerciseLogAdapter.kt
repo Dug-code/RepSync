@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.Exercise
+import com.repsyncdemo.workout.data.model.ExerciseDefinition
 import com.repsyncdemo.workout.data.model.ExerciseLog
 import com.repsyncdemo.workout.data.model.ExerciseType
 import com.repsyncdemo.workout.data.model.SetLog
@@ -74,6 +75,10 @@ class ExerciseLogAdapter(
         setData[exercises.size - 1] = mutableListOf(SetLogData())
         notifyItemInserted(exercises.size - 1)
         onDataChanged()
+    }
+
+    fun addExercise(exercise: ExerciseDefinition) {
+        addExercise(exercise.name, exercise.type)
     }
 
     fun getExerciseLogs(): List<ExerciseLog> {
@@ -194,6 +199,7 @@ class ExerciseLogAdapter(
             etDistance.setText(data.distance)
             etFloors.setText(data.floors)
 
+            etDuration.addTextChangedListener(createWatcher { data.duration = parseDurationInput(it) })
             etDistance.addTextChangedListener(createWatcher { data.distance = it })
             etFloors.addTextChangedListener(createWatcher { data.floors = it })
 
@@ -234,6 +240,17 @@ class ExerciseLogAdapter(
             val mins = seconds / 60
             val secs = seconds % 60
             return String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+        }
+
+        private fun parseDurationInput(value: String): Int {
+            val parts = value.split(":")
+            return if (parts.size == 2) {
+                val minutes = parts[0].toIntOrNull() ?: 0
+                val seconds = parts[1].toIntOrNull() ?: 0
+                (minutes * 60) + seconds.coerceIn(0, 59)
+            } else {
+                (value.toIntOrNull() ?: 0) * 60
+            }
         }
     }
 }

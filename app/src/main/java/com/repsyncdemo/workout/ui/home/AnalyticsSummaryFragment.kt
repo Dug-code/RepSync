@@ -1,10 +1,13 @@
 package com.repsyncdemo.workout.ui.home
 
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -14,7 +17,8 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
-import com.github.mikephil.charting.utils.ColorTemplate
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prolificinteractive.materialcalendarview.CalendarDay
 import com.prolificinteractive.materialcalendarview.MaterialCalendarView
@@ -33,6 +37,19 @@ class AnalyticsSummaryFragment : Fragment() {
     private var _binding: FragmentAnalyticsSummaryBinding? = null
     private val binding get() = _binding!!
     private val viewModel: AnalyticsViewModel by activityViewModels()
+    private var muscleDistribution: Map<String, Int> = emptyMap()
+    private var muscleColors: Map<String, Int> = emptyMap()
+
+    private val chartColors = listOf(
+        Color.rgb(227, 30, 36),
+        Color.rgb(255, 143, 0),
+        Color.rgb(76, 175, 80),
+        Color.rgb(3, 169, 244),
+        Color.rgb(156, 39, 176),
+        Color.rgb(255, 193, 7),
+        Color.rgb(0, 188, 212),
+        Color.rgb(233, 30, 99)
+    )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAnalyticsSummaryBinding.inflate(inflater, container, false)
@@ -58,6 +75,19 @@ class AnalyticsSummaryFragment : Fragment() {
             legend.isEnabled = false
             setNoDataText("No data to show balance")
             setNoDataTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+            centerText = "Set balance"
+            setCenterTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+            setCenterTextSize(12f)
+            setUsePercentValues(false)
+            setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                override fun onValueSelected(e: Entry?, h: Highlight?) {
+                    val entry = e as? PieEntry ?: return
+                    val color = muscleColors[entry.label] ?: return
+                    showMuscleColorDialog(entry.label, entry.value.toInt(), color)
+                }
+
+                override fun onNothingSelected() = Unit
+            })
         }
 
         // Weekly Consistency Bar Chart
@@ -68,6 +98,7 @@ class AnalyticsSummaryFragment : Fragment() {
             setDrawValueAboveBar(true)
             setPinchZoom(false)
             setScaleEnabled(false)
+            setExtraOffsets(4f, 8f, 8f, 4f)
             
             xAxis.apply {
                 position = XAxis.XAxisPosition.BOTTOM
@@ -147,21 +178,23 @@ class AnalyticsSummaryFragment : Fragment() {
     private fun updatePieChart(distribution: Map<String, Int>) {
         if (distribution.isEmpty()) {
             binding.pieChartMuscle.clear()
+            binding.layoutMuscleLegend.removeAllViews()
+            binding.tvMuscleFocusHint.text = "Log completed sets to see your muscle balance"
             return
         }
 
+        muscleDistribution = distribution
+        muscleColors = distribution.keys.mapIndexed { index, muscle ->
+            muscle to chartColors[index % chartColors.size]
+        }.toMap()
+
         val entries = distribution.map { PieEntry(it.value.toFloat(), it.key) }
         val dataSet = PieDataSet(entries, "")
-        
-        val colors = mutableListOf<Int>()
-        for (c in ColorTemplate.MATERIAL_COLORS) colors.add(c)
-        for (c in ColorTemplate.VORDIPLOM_COLORS) colors.add(c)
-        dataSet.colors = colors
+        dataSet.colors = entries.map { muscleColors[it.label] ?: ContextCompat.getColor(requireContext(), R.color.primary) }
         
         dataSet.sliceSpace = 3f
-        dataSet.valueTextSize = 13f
+        dataSet.valueTextSize = 12f
         dataSet.valueTextColor = Color.WHITE
-        // Format values on the pie chart slices to be integers
         dataSet.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 return value.toInt().toString()
@@ -170,6 +203,86 @@ class AnalyticsSummaryFragment : Fragment() {
 
         binding.pieChartMuscle.data = PieData(dataSet)
         binding.pieChartMuscle.invalidate()
+        binding.tvMuscleFocusHint.text = "Completed sets by primary muscle group"
+        updateMuscleLegend(distribution)
+    }
+
+    private fun updateMuscleLegend(distribution: Map<String, Int>) {
+        val total = distribution.values.sum().coerceAtLeast(1)
+        binding.layoutMuscleLegend.removeAllViews()
+
+        distribution.entries.sortedByDescending { it.value }.forEach { (muscle, count) ->
+            val color = muscleColors[muscle] ?: ContextCompat.getColor(requireContext(), R.color.primary)
+            val percent = (count * 100) / total
+            val row = LinearLayout(requireContext()).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dp(8), 0, dp(8))
+                isClickable = true
+                isFocusable = true
+                foreground = android.util.TypedValue().let { typedValue ->
+                    requireContext().theme.resolveAttribute(android.R.attr.selectableItemBackground, typedValue, true)
+                    ContextCompat.getDrawable(requireContext(), typedValue.resourceId)
+                }
+                setOnClickListener { showMuscleColorDialog(muscle, count, color) }
+            }
+
+            val swatch = View(requireContext()).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(8).toFloat()
+                    setColor(color)
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(18), dp(18))
+            }
+
+            val label = TextView(requireContext()).apply {
+                text = muscle
+                setTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
+                textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginStart = dp(12)
+                }
+            }
+
+            val value = TextView(requireContext()).apply {
+                text = "$count sets • $percent%"
+                setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
+                textSize = 12f
+            }
+
+            row.addView(swatch)
+            row.addView(label)
+            row.addView(value)
+            binding.layoutMuscleLegend.addView(row)
+        }
+    }
+
+    private fun showMuscleColorDialog(muscle: String, count: Int, color: Int) {
+        val total = muscleDistribution.values.sum().coerceAtLeast(1)
+        val percent = (count * 100) / total
+        val swatch = TextView(requireContext()).apply {
+            text = "$muscle\n$count completed sets • $percent% of this range"
+            setTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
+            textSize = 15f
+            setPadding(dp(32), dp(28), dp(32), dp(28))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(20).toFloat()
+                setColor(Color.argb(36, Color.red(color), Color.green(color), Color.blue(color)))
+                setStroke(dp(1), color)
+            }
+        }
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Color key")
+            .setView(swatch)
+            .setPositiveButton("Close", null)
+            .show()
+    }
+
+    private fun dp(value: Int): Int {
+        return (value * resources.displayMetrics.density).toInt()
     }
 
     private fun updateBarChart(weeklyData: List<Pair<String, Int>>) {
@@ -217,6 +330,8 @@ class AnalyticsSummaryFragment : Fragment() {
         binding.headerMuscleFocus.setOnClickListener {
             val isVisible = binding.pieChartMuscle.visibility == View.VISIBLE
             binding.pieChartMuscle.visibility = if (isVisible) View.GONE else View.VISIBLE
+            binding.tvMuscleFocusHint.visibility = if (isVisible) View.GONE else View.VISIBLE
+            binding.layoutMuscleLegend.visibility = if (isVisible) View.GONE else View.VISIBLE
             binding.ivExpandMuscle.rotation = if (isVisible) 0f else 180f
             if (!isVisible) {
                 binding.pieChartMuscle.animateY(1000)

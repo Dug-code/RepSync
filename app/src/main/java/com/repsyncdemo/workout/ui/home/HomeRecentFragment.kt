@@ -40,7 +40,7 @@ class HomeRecentFragment : Fragment() {
         }
 
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { logs ->
-            val sortedLogs = logs.take(10)
+            val sortedLogs = logs.sortedByDescending { it.completedAt }.take(10)
             historyAdapter.submitList(sortedLogs)
             val isEmpty = sortedLogs.isEmpty()
             binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE

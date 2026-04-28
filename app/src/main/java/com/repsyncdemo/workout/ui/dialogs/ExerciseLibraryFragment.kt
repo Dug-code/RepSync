@@ -38,7 +38,9 @@ class ExerciseLibraryFragment : Fragment() {
         pickerAdapter = ExerciseLibraryAdapter(
             onDeleteCustom = { id -> viewModel.deleteCustomExercise(id) },
             onClick = { exerciseDef ->
-                viewModel.selectExercise(exerciseDef.name)
+                findNavController().previousBackStackEntry
+                    ?.savedStateHandle
+                    ?.set("selectedExerciseName", exerciseDef.name)
                 findNavController().popBackStack()
             }
         )

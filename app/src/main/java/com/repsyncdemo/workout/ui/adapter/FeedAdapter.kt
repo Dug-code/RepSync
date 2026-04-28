@@ -42,9 +42,7 @@ class FeedAdapter(
      * Updates the local profile cache with new data from the ViewModel.
      */
     fun updateProfiles(profiles: Map<String, UserProfile>) {
-        val merged = userProfiles.toMutableMap()
-        merged.putAll(profiles)
-        this.userProfiles = merged
+        this.userProfiles = profiles
         notifyDataSetChanged()
     }
 
@@ -194,19 +192,20 @@ class FeedAdapter(
                 .show()
         }
 
-        private fun loadProfilePicture(url: String) {
-            // Clear the image to prevent old profile pictures from showing during recycle
-            binding.ivUserProfile.setImageDrawable(null)
+        private fun loadProfilePicture(value: String) {
+            val profilePicture = value.trim()
 
-            if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
-                binding.ivUserProfile.load(url) {
+            if (profilePicture.startsWith("http://", ignoreCase = true) ||
+                profilePicture.startsWith("https://", ignoreCase = true)
+            ) {
+                binding.ivUserProfile.load(profilePicture) {
                     crossfade(true)
                     placeholder(R.drawable.ic_profile_red)
                     error(R.drawable.ic_profile_red)
                     transformations(CircleCropTransformation())
                 }
             } else {
-                val resId = when(url) {
+                val resId = when(profilePicture.lowercase(Locale.US)) {
                     "red" -> R.drawable.ic_profile_red
                     "blue" -> R.drawable.ic_profile_blue
                     "green" -> R.drawable.ic_profile_green
@@ -215,7 +214,9 @@ class FeedAdapter(
                     "grey" -> R.drawable.ic_profile_grey
                     else -> R.drawable.ic_profile_red
                 }
-                binding.ivUserProfile.setImageResource(resId)
+                binding.ivUserProfile.load(resId) {
+                    transformations(CircleCropTransformation())
+                }
             }
         }
     }

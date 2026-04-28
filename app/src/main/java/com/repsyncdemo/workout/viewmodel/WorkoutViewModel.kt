@@ -318,6 +318,10 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    suspend fun getWorkoutTemplate(workoutId: String): Result<Workout> {
+        return repository.getWorkout(workoutId)
+    }
+
     fun notifyWorkoutLoaded() {
         isWorkoutDataLoaded = true
     }

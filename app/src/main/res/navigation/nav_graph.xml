@@ -145,6 +145,12 @@
             app:destination="@id/createCustomExerciseFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/qrExerciseScannerFragment"
+        android:name="com.repsyncdemo.workout.ui.dialogs.QrExerciseScannerFragment"
+        android:label="Scan Exercise"
+        tools:layout="@layout/fragment_qr_exercise_scanner" />
+
     <dialog
         android:id="@+id/exercisePickerFilterDialog"
         android:name="com.repsyncdemo.workout.ui.dialogs.ExercisePickerFilterDialog"

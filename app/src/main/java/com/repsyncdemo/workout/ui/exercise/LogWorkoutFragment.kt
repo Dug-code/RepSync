@@ -36,15 +36,21 @@ class LogWorkoutFragment : Fragment() {
     private val viewModel: WorkoutViewModel by activityViewModels()
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
-    private lateinit var exerciseLogAdapter: ExerciseLogAdapter
+    private var exerciseLogAdapter: ExerciseLogAdapter? = null
     
     private var startCalendar = Calendar.getInstance()
     private var endCalendar = Calendar.getInstance()
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    private val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
     
     private var existingLogId: String? = null
+    private var loadedLog: WorkoutLog? = null
     private var isWorkoutModified = false
+    private var isBindingLog = false
+    private var selectedDateChanged = false
+    private var activeWorkoutId: String? = null
+    private var activeWorkoutName: String? = null
+    private var templateWorkoutIdApplied: String? = null
+    private val pendingExerciseAdds = mutableListOf<String>()
 
     // Timer Variables
     private var timerHandler = Handler(Looper.getMainLooper())
@@ -93,10 +99,12 @@ class LogWorkoutFragment : Fragment() {
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
 
-        exerciseLogAdapter = ExerciseLogAdapter(onDataChanged = {
-            isWorkoutModified = true
-            updateLockState()
-        })
+        if (exerciseLogAdapter == null) {
+            exerciseLogAdapter = ExerciseLogAdapter(onDataChanged = {
+                isWorkoutModified = true
+                updateLockState()
+            })
+        }
 
         binding.rvExerciseLogs.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -104,15 +112,20 @@ class LogWorkoutFragment : Fragment() {
         }
 
         existingLogId = arguments?.getString("logId")
-        val workoutId = arguments?.getString("workoutId")
+        activeWorkoutId = arguments?.getString("workoutId")
 
         if (existingLogId != null) {
             viewModel.loadWorkoutLog(existingLogId!!)
             binding.btnComplete.text = "UPDATE WORKOUT"
             binding.btnDeleteLog.visibility = View.VISIBLE
             binding.cardTimer.visibility = View.GONE // Hide timer for past logs
-        } else if (workoutId != null) {
-            viewModel.loadWorkout(workoutId)
+        } else if (activeWorkoutId != null) {
+            if (templateWorkoutIdApplied == activeWorkoutId && activeWorkoutName != null) {
+                binding.tvWorkoutName.text = activeWorkoutName
+            } else {
+                binding.tvWorkoutName.text = "Loading workout..."
+                loadWorkoutTemplate(activeWorkoutId!!)
+            }
             binding.btnComplete.text = "COMPLETE WORKOUT"
             binding.btnDeleteLog.visibility = View.GONE
             startWorkoutTimer()
@@ -123,43 +136,118 @@ class LogWorkoutFragment : Fragment() {
     }
 
     private fun setupObservers() {
-        viewModel.selectedWorkout.observe(viewLifecycleOwner) { workout ->
-            if (existingLogId == null) {
-                workout?.let {
-                    binding.tvWorkoutName.text = it.name
-                    exerciseLogAdapter.setExercises(it.exercises)
-                }
-            }
-        }
-
         viewModel.selectedLog.observe(viewLifecycleOwner) { log ->
             log?.let {
+                if (existingLogId != it.id || loadedLog?.id == it.id) return@observe
+
+                loadedLog = it
+                isBindingLog = true
+                activeWorkoutName = it.workoutName
                 binding.tvWorkoutName.text = it.workoutName
                 binding.etNotes.setText(it.notes)
-                exerciseLogAdapter.setExerciseLogs(it.exercises)
+                exerciseLogAdapter?.setExerciseLogs(it.exercises)
                 startCalendar.timeInMillis = it.startedAt
                 endCalendar.timeInMillis = it.completedAt
+                secondsElapsed = (it.durationMinutes.coerceAtLeast(1) * 60).toLong()
                 
-                // For past logs, show the duration manually
                 val durationMin = it.durationMinutes
                 binding.tvManualDuration.text = "$durationMin min"
+                updateTimerDisplay()
                 
                 updateDateTimeDisplays()
+                isWorkoutModified = false
+                isBindingLog = false
+                selectedDateChanged = false
+                updateLockState()
             }
         }
 
         // Observe exercise selection from library event stream
+        findNavController().currentBackStackEntry
+            ?.savedStateHandle
+            ?.getLiveData<String>("selectedExerciseName")
+            ?.observe(viewLifecycleOwner) { exerciseName ->
+                if (!exerciseName.isNullOrEmpty()) {
+                    addOrQueueExerciseFromLibrary(exerciseName)
+                    findNavController().currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.remove<String>("selectedExerciseName")
+                }
+            }
+
         viewModel.selectedExerciseEvent.observe(viewLifecycleOwner) { exerciseName ->
             if (!exerciseName.isNullOrEmpty()) {
-                exerciseLogAdapter.addExercise(exerciseName)
-                isWorkoutModified = true
-                updateLockState()
+                addOrQueueExerciseFromLibrary(exerciseName)
             }
         }
     }
 
+    private fun loadWorkoutTemplate(workoutId: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = viewModel.getWorkoutTemplate(workoutId)
+            result.onSuccess { workout ->
+                if (_binding == null || existingLogId != null) return@onSuccess
+                if (templateWorkoutIdApplied == workoutId) return@onSuccess
+
+                templateWorkoutIdApplied = workoutId
+                activeWorkoutName = workout.name
+                binding.tvWorkoutName.text = workout.name
+                exerciseLogAdapter?.setExercises(workout.exercises)
+                drainPendingExerciseAdds()
+            }.onFailure { error ->
+                Toast.makeText(
+                    requireContext(),
+                    error.message ?: "Could not load workout template",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun addOrQueueExerciseFromLibrary(exerciseName: String) {
+        val isStartingFromTemplate = existingLogId == null && activeWorkoutId != null
+        if (isStartingFromTemplate && templateWorkoutIdApplied == null) {
+            pendingExerciseAdds.add(exerciseName)
+            return
+        }
+
+        addExerciseFromLibrary(exerciseName)
+    }
+
+    private fun drainPendingExerciseAdds() {
+        if (pendingExerciseAdds.isEmpty()) return
+
+        val exercisesToAdd = pendingExerciseAdds.toList()
+        pendingExerciseAdds.clear()
+        exercisesToAdd.forEach { addExerciseFromLibrary(it) }
+    }
+
+    private fun addExerciseFromLibrary(exerciseName: String) {
+        val exerciseDefinition = viewModel.allLibraryExercises.value
+            .find { it.name.equals(exerciseName, ignoreCase = true) }
+
+        if (exerciseDefinition != null) {
+            exerciseLogAdapter?.addExercise(exerciseDefinition)
+        } else {
+            exerciseLogAdapter?.addExercise(exerciseName)
+        }
+        isWorkoutModified = true
+        updateLockState()
+    }
+
     private fun setupListeners() {
         binding.tvSelectedDate.setOnClickListener { showDatePicker() }
+
+        binding.etNotes.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (!isBindingLog) {
+                    isWorkoutModified = true
+                    updateLockState()
+                }
+            }
+        })
         
         binding.tvManualDuration.setOnClickListener { showManualDurationDialog() }
 
@@ -169,6 +257,10 @@ class LogWorkoutFragment : Fragment() {
 
         binding.btnAddExercise.setOnClickListener {
             findNavController().navigate(R.id.exerciseLibraryFragment)
+        }
+
+        binding.btnScanExercise.setOnClickListener {
+            findNavController().navigate(R.id.qrExerciseScannerFragment)
         }
 
         binding.btnComplete.setOnClickListener {
@@ -221,7 +313,11 @@ class LogWorkoutFragment : Fragment() {
         input.hint = "Minutes"
         
         // Pre-fill with current duration if available
-        val currentMin = if (secondsElapsed > 0) (secondsElapsed / 60) else 0
+        val currentMin = if (secondsElapsed > 0) {
+            secondsElapsed / 60
+        } else {
+            loadedLog?.durationMinutes?.toLong() ?: 0L
+        }
         input.setText(currentMin.toString())
 
         AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
@@ -241,24 +337,32 @@ class LogWorkoutFragment : Fragment() {
     }
 
     private fun completeWorkout() {
+        if (existingLogId == null && activeWorkoutId != null && templateWorkoutIdApplied == null) {
+            Toast.makeText(requireContext(), "Workout template is still loading", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         stopTimer()
-        
-        val now = System.currentTimeMillis()
-        endCalendar.timeInMillis = now
-        
-        val durationMin = (secondsElapsed / 60).toInt()
+
+        val durationMin = (secondsElapsed / 60).toInt().coerceAtLeast(1)
+        val completedAt = when {
+            existingLogId != null -> endCalendar.timeInMillis
+            selectedDateChanged -> endCalendar.timeInMillis
+            else -> System.currentTimeMillis()
+        }
+        val startedAt = completedAt - (durationMin * 60_000L)
 
         val workoutName = binding.tvWorkoutName.text.toString()
-        val workoutId = arguments?.getString("workoutId") ?: viewModel.selectedLog.value?.workoutId ?: ""
+        val workoutId = arguments?.getString("workoutId") ?: loadedLog?.workoutId ?: ""
 
         val log = WorkoutLog(
             id = existingLogId ?: "",
             workoutId = workoutId,
             workoutName = workoutName,
-            exercises = exerciseLogAdapter.getExerciseLogs(),
-            startedAt = startCalendar.timeInMillis,
-            completedAt = endCalendar.timeInMillis,
-            durationMinutes = if (durationMin > 0) durationMin else 1,
+            exercises = exerciseLogAdapter?.getExerciseLogs() ?: emptyList(),
+            startedAt = startedAt,
+            completedAt = completedAt,
+            durationMinutes = durationMin,
             notes = binding.etNotes.text.toString().trim()
         )
 
@@ -275,9 +379,13 @@ class LogWorkoutFragment : Fragment() {
     }
 
     private fun hasUnsavedChanges(): Boolean {
+        if (existingLogId != null) {
+            return isWorkoutModified
+        }
+
         return isWorkoutModified || isTimerRunning || secondsElapsed > 0 ||
-               binding.etNotes.text.toString().isNotEmpty() || 
-               exerciseLogAdapter.itemCount > 0
+               binding.etNotes.text.toString().isNotEmpty() ||
+               (exerciseLogAdapter?.itemCount ?: 0) > 0
     }
 
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
@@ -305,7 +413,7 @@ class LogWorkoutFragment : Fragment() {
     }
 
     private fun updateDateTimeDisplays() {
-        binding.tvSelectedDate.text = dateFormat.format(startCalendar.time)
+        binding.tvSelectedDate.text = dateFormat.format(endCalendar.time)
     }
 
     private fun showDatePicker() {
@@ -315,6 +423,10 @@ class LogWorkoutFragment : Fragment() {
                 startCalendar.set(Calendar.YEAR, year)
                 startCalendar.set(Calendar.MONTH, month)
                 startCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                endCalendar.set(Calendar.YEAR, year)
+                endCalendar.set(Calendar.MONTH, month)
+                endCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                selectedDateChanged = true
                 updateDateTimeDisplays()
                 isWorkoutModified = true
                 updateLockState()
@@ -328,8 +440,9 @@ class LogWorkoutFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
         stopTimer()
+        binding.rvExerciseLogs.adapter = null
+        super.onDestroyView()
         _binding = null
     }
 }

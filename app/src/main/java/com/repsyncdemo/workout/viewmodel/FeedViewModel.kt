@@ -178,9 +178,7 @@ class FeedViewModel : ViewModel() {
         profileObservationJob?.cancel()
         profileObservationJob = viewModelScope.launch {
             profileRepository.observeProfiles(userIds).collect { profiles ->
-                val currentMap = _userProfiles.value?.toMutableMap() ?: mutableMapOf()
-                currentMap.putAll(profiles)
-                _userProfiles.value = currentMap
+                _userProfiles.value = profiles
             }
         }
     }

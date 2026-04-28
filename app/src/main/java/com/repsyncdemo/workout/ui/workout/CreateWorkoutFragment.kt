@@ -143,6 +143,7 @@ class CreateWorkoutFragment : Fragment() {
         binding.btnPrivacyMenu.setOnClickListener { showPrivacyPopupMenu(it) }
         binding.btnAddExercise.setOnClickListener { findNavController().navigate(R.id.createCustomExerciseFragment) }
         binding.btnPickExercise.setOnClickListener { findNavController().navigate(R.id.exerciseLibraryFragment) }
+        binding.btnScanExercise.setOnClickListener { findNavController().navigate(R.id.qrExerciseScannerFragment) }
         binding.btnAddBlankExercise.setOnClickListener {
             exerciseInputAdapter?.addExercise()
             updateLockState()
@@ -151,11 +152,21 @@ class CreateWorkoutFragment : Fragment() {
         binding.btnSave.setOnClickListener { saveWorkout() }
 
         // Observer for library selection
+        findNavController().currentBackStackEntry
+            ?.savedStateHandle
+            ?.getLiveData<String>("selectedExerciseName")
+            ?.observe(viewLifecycleOwner) { exerciseName ->
+                if (!exerciseName.isNullOrEmpty()) {
+                    addExerciseFromLibrary(exerciseName)
+                    findNavController().currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.remove<String>("selectedExerciseName")
+                }
+            }
+
         workoutViewModel.selectedExerciseEvent.observe(viewLifecycleOwner) { exerciseName ->
             if (!exerciseName.isNullOrEmpty()) {
-                exerciseInputAdapter?.addExerciseFromLibrary(exerciseName)
-                updateLockState()
-                updateTopIcons()
+                addExerciseFromLibrary(exerciseName)
             }
         }
 
@@ -178,6 +189,12 @@ class CreateWorkoutFragment : Fragment() {
                 Toast.makeText(requireContext(), e.message ?: "Save failed", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun addExerciseFromLibrary(exerciseName: String) {
+        exerciseInputAdapter?.addExerciseFromLibrary(exerciseName)
+        updateLockState()
+        updateTopIcons()
     }
 
     private fun resetState() {

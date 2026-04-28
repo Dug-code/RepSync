@@ -43,6 +43,9 @@ class AnalyticsAdvancedFragment : Fragment() {
         chart.description.isEnabled = false
         chart.setTouchEnabled(true)
         chart.setPinchZoom(true)
+        chart.setScaleEnabled(true)
+        chart.setDrawGridBackground(false)
+        chart.setExtraOffsets(8f, 12f, 12f, 8f)
         chart.setNoDataText(emptyText)
         chart.setNoDataTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
 
@@ -50,6 +53,7 @@ class AnalyticsAdvancedFragment : Fragment() {
         xAxis.position = XAxis.XAxisPosition.BOTTOM
         xAxis.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
         xAxis.setDrawGridLines(false)
+        xAxis.granularity = 1f
         xAxis.valueFormatter = object : ValueFormatter() {
             private val sdf = SimpleDateFormat("MMM d", Locale.getDefault())
             override fun getFormattedValue(value: Float): String {
@@ -57,9 +61,17 @@ class AnalyticsAdvancedFragment : Fragment() {
             }
         }
 
-        chart.axisLeft.textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
+        chart.axisLeft.apply {
+            textColor = ContextCompat.getColor(requireContext(), R.color.text_secondary)
+            gridColor = ContextCompat.getColor(requireContext(), R.color.divider)
+            axisLineColor = ContextCompat.getColor(requireContext(), R.color.divider)
+            setDrawZeroLine(false)
+        }
         chart.axisRight.isEnabled = false
-        chart.legend.textColor = ContextCompat.getColor(requireContext(), R.color.text_primary)
+        chart.legend.apply {
+            textColor = ContextCompat.getColor(requireContext(), R.color.text_primary)
+            textSize = 11f
+        }
     }
 
     private fun observeData() {
@@ -94,7 +106,11 @@ class AnalyticsAdvancedFragment : Fragment() {
         val dataSet = LineDataSet(entries, "Max Weight (lbs)")
         styleDataSet(dataSet, ContextCompat.getColor(requireContext(), R.color.primary))
 
-        binding.lineChartPR.data = LineData(dataSet)
+        binding.lineChartPR.data = LineData(dataSet).apply {
+            setValueTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
+            setValueTextSize(10f)
+        }
+        binding.lineChartPR.animateX(600)
         binding.lineChartPR.invalidate()
     }
 
@@ -108,10 +124,13 @@ class AnalyticsAdvancedFragment : Fragment() {
 
         val entries = history.map { Entry(it.date.toFloat(), it.weightLbs.toFloat()) }
         val dataSet = LineDataSet(entries, "Body Weight (lbs)")
-        // Use a distinct color for weight (e.g., a blue shade if available, or just primary)
-        styleDataSet(dataSet, ContextCompat.getColor(requireContext(), R.color.primary))
+        styleDataSet(dataSet, android.graphics.Color.rgb(3, 169, 244))
 
-        binding.lineChartWeight.data = LineData(dataSet)
+        binding.lineChartWeight.data = LineData(dataSet).apply {
+            setValueTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))
+            setValueTextSize(10f)
+        }
+        binding.lineChartWeight.animateX(600)
         binding.lineChartWeight.invalidate()
     }
 
