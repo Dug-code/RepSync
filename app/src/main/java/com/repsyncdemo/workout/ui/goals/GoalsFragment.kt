@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
@@ -53,7 +54,7 @@ class GoalsFragment : Fragment() {
 
     companion object {
         private const val PREFS_NAME = "repsync_prefs"
-        private const val KEY_HOME_TUTORIAL_COMPLETED = "home_tutorial_completed"
+        private const val KEY_GOAL_TUTORIAL_COMPLETED = "goal_tutorial_completed"
     }
 
     override fun onCreateView(
@@ -108,11 +109,13 @@ class GoalsFragment : Fragment() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         //set to false for testing
-        val isCompleted = false//prefs.getBoolean(KEY_HOME_TUTORIAL_COMPLETED, false)
+        val isCompleted = prefs.getBoolean(KEY_GOAL_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
             binding.root.post {
                 showTutorial()
             }
+
+
         }
     }
 
@@ -137,7 +140,8 @@ class GoalsFragment : Fragment() {
             .setOnSpotlightListener(object : OnSpotlightListener {
                 override fun onStarted() {}
                 override fun onEnded() {
-                    markTutorialCompleted()
+                    //removing markTutorialCompleted() because if user leaves app tutorial will not show again
+                    //markTutorialCompleted()
                 }
             })
             .build()
@@ -162,7 +166,7 @@ class GoalsFragment : Fragment() {
 
     private fun markTutorialCompleted() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit { putBoolean(KEY_HOME_TUTORIAL_COMPLETED, true) }
+        prefs.edit { putBoolean(KEY_GOAL_TUTORIAL_COMPLETED, true) }
     }
 
     private fun showRenameGoalDialog(goal: Goal) {
@@ -252,61 +256,222 @@ class GoalsFragment : Fragment() {
             if (isChecked) cbUnitLbs.isChecked = false
         }
 
+
+        // Set default values for create goal dialog
         rbPR.isChecked = true
         ivPreview.setImageResource(R.drawable.ic_medal)
         tilUnit.visibility = View.GONE
 
-        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Create Goal")
             .setView(dialogView)
-            .setPositiveButton("Create") { _, _ ->
-                val title = etTitle.text.toString().trim()
-                if (title.isEmpty()) {
-                    Toast.makeText(requireContext(), "Title is required", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
+            .setPositiveButton("Create", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.show()
+
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val title = etTitle.text.toString().trim()
+            if (title.isEmpty()) {
+                Toast.makeText(requireContext(), "Title is required", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val goalType = when (rgGoalType.checkedRadioButtonId) {
+                R.id.rbPR -> GoalType.PR
+                R.id.rbWeightLoss -> GoalType.WEIGHT_LOSS
+                R.id.rbWeightGain -> GoalType.WEIGHT_GAIN
+                else -> GoalType.PR
+            }
+
+            val unit = when (rgGoalType.checkedRadioButtonId) {
+                R.id.rbPR -> if (cbUnitLbs.isChecked) "lbs" else "reps"
+                R.id.rbWeightLoss, R.id.rbWeightGain -> "lbs"
+                else -> etUnit.text.toString().trim().ifEmpty { "sets" }
+            }
+
+            val initialVal = etCurrentValue.text.toString().toDoubleOrNull() ?: 0.0
+            
+            if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
+                if (initialVal > 1400) {
+                    Toast.makeText(requireContext(), "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
                 }
+                profileViewModel.updateWeight(initialVal)
+            }
 
-                val goalType = when (rgGoalType.checkedRadioButtonId) {
-                    R.id.rbPR -> GoalType.PR
-                    R.id.rbWeightLoss -> GoalType.WEIGHT_LOSS
-                    R.id.rbWeightGain -> GoalType.WEIGHT_GAIN
-                    else -> GoalType.PR
-                }
+            val goal = Goal(
+                title = title,
+                type = goalType,
+                exerciseName = if (goalType == GoalType.PR) etExerciseName.text.toString().trim() else "",
+                startingValue = initialVal,
+                currentValue = initialVal,
+                targetValue = etTargetValue.text.toString().toDoubleOrNull() ?: 0.0,
+                unit = unit,
+                isPublic = switchPublic.isChecked
+            )
 
-                val unit = when (rgGoalType.checkedRadioButtonId) {
-                    R.id.rbPR -> if (cbUnitLbs.isChecked) "lbs" else "reps"
-                    R.id.rbWeightLoss, R.id.rbWeightGain -> "lbs"
-                    else -> etUnit.text.toString().trim().ifEmpty { "sets" }
-                }
+            viewModel.addGoal(goal)
+            
+            if (switchPublic.isChecked) {
+                shareGoalToFeed(goal, FeedPostType.GOAL_CREATED)
+            }
 
-                val initialVal = etCurrentValue.text.toString().toDoubleOrNull() ?: 0.0
-                val goal = Goal(
-                    title = title,
-                    type = goalType,
-                    exerciseName = if (goalType == GoalType.PR) etExerciseName.text.toString().trim() else "",
-                    startingValue = initialVal,
-                    currentValue = initialVal,
-                    targetValue = etTargetValue.text.toString().toDoubleOrNull() ?: 0.0,
-                    unit = unit,
-                    isPublic = switchPublic.isChecked
-                )
+            markTutorialCompleted()
+            dialog.dismiss()
+        }
 
-                viewModel.addGoal(goal)
+        checkTutorial(dialogView, dialog)
 
-                if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
-                    if (initialVal > 1400) {
-                        Toast.makeText(requireContext(), "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
-                        return@setPositiveButton
-                    }
-                    profileViewModel.updateWeight(initialVal)
-                }
-                
-                if (switchPublic.isChecked) {
-                    shareGoalToFeed(goal, FeedPostType.GOAL_CREATED)
+    }
+
+    //overloaded method for checking tutorial
+    private fun checkTutorial(dialogView: View, dialog: androidx.appcompat.app.AlertDialog) {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        //set to false for testing
+        val isCompleted = prefs.getBoolean(KEY_GOAL_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            showDialogTutorial(dialogView, dialog)
+        }
+    }
+    private fun showDialogTutorial(dialogView: View, dialog: androidx.appcompat.app.AlertDialog) {
+        val inflater = LayoutInflater.from(requireContext())
+        val overlayLayout = inflater.inflate(R.layout.fragment_goal_overlay, null)
+
+        //finds the root of the dailog window
+        val dialogWindowDecor = dialog.window?.decorView as? ViewGroup
+
+        //adds the overlay layout to the dialog window
+        dialogWindowDecor?.addView(overlayLayout)
+
+        val focusView = overlayLayout.findViewById<View>(R.id.tutorialFocus)
+        val titleTxt = overlayLayout.findViewById<TextView>(R.id.tvTutorialTitle)
+        val nextBtn = overlayLayout.findViewById<Button>(R.id.btnTutorialNext)
+        val skipBtn = overlayLayout.findViewById<Button>(R.id.btnSkip2)
+
+        // Define our steps
+        var currentStep = 0
+        val etTitle = dialogView.findViewById<EditText>(R.id.etGoalTitle)
+        val rgType = dialogView.findViewById<RadioGroup>(R.id.rgGoalType)
+        val llCurrentTarget = dialogView.findViewById<LinearLayout>(R.id.llCurrentTarget)
+        val etUnit = dialogView.findViewById<EditText>(R.id.etUnit)
+        val switchPublic = dialogView.findViewById<SwitchMaterial>(R.id.switchPublicGoal)
+
+        //Goal type text view and radio button for tutorial ease
+        val tvGoalType = dialogView.findViewById<TextView>(R.id.tvGoalType)
+        val rbPR = dialogView.findViewById<RadioButton>(R.id.rbPR)
+        val rbWeightLoss = dialogView.findViewById<RadioButton>(R.id.rbWeightLoss)
+        val rbWeightGain = dialogView.findViewById<RadioButton>(R.id.rbWeightGain)
+        val rbOther = dialogView.findViewById<RadioButton>(R.id.rbOther)
+
+
+        //goal type weight loss is checked for ease of tutorial
+        rbWeightLoss.isChecked = true
+
+        //Maybe used for create button at bottom of dialog
+        val createBtn = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+
+        fun moveToStep(step: Int) {
+            val target = when (step) {
+                0 -> etTitle
+                1 -> rgType
+                2 -> llCurrentTarget
+                3 -> etUnit
+                4 -> switchPublic
+                5 -> createBtn
+                else -> {
+                    overlayLayout.visibility = View.GONE
+                    return
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+
+            target.post {
+
+                //gets the X and Y location of targets to be used for positioning the overlay
+                val location = IntArray(2)
+                target.getLocationOnScreen(location)
+
+                //gets the X and Y location of the dialog window for positioning targets
+                val dialogLocation = IntArray(2)
+                dialogWindowDecor?.getLocationOnScreen(dialogLocation)
+
+                // Calculate the relative position
+                val relativeX = location[0] - dialogLocation[0]
+                val relativeY = location[1] - dialogLocation[1]
+
+                val params = focusView.layoutParams as ConstraintLayout.LayoutParams
+                params.width = target.width + 40
+                params.height = target.height + 50
+                params.leftMargin = relativeX - 85
+                params.topMargin = relativeY - 235
+                focusView.layoutParams = params
+
+                when(step) {
+                    0 -> {
+                        rbPR.isClickable = false
+                        rbWeightGain.isClickable = false
+                        rbOther.isClickable = false
+                        titleTxt.text = "Lets give your goal a title"
+                    }
+                    1 -> {
+                        tvGoalType.alpha = 0.0f
+                        titleTxt.text = "For this tutorial we will use weight loss as your goal type"
+                    }
+                    2 -> {
+                        tvGoalType.alpha = 1.0f
+                        rbOther.alpha = 0.0f
+                        titleTxt.text = "Lets set your current weight value and weight target"
+                    }
+                    3 -> {
+                        rbOther.alpha = 1.0f
+                        llCurrentTarget.alpha = 0.0f
+                        titleTxt.text = "unit of measurement is set to lbs for this goal"
+                    }
+                    4 -> {
+                        llCurrentTarget.alpha = 1.0f
+                        etUnit.alpha = 0.0f
+                        titleTxt.text = "Toggle switch to allow anyone to view your goals"
+                    }
+                    5 ->  {
+                        //adjusting highlight size for create button
+                        val params = focusView.layoutParams as ConstraintLayout.LayoutParams
+                        params.width = target.width + 0
+                        params.height = target.height - 20
+                        params.leftMargin = relativeX - 60
+                        params.topMargin = relativeY - 205
+                        focusView.layoutParams = params
+
+                        //Makes next button invisible to allow user to hit create
+                        nextBtn.visibility = View.GONE
+
+                        //makes radio buttons clickable again after tutorial completed
+                        rbPR.isClickable = true
+                        rbWeightGain.isClickable = true
+                        rbOther.isClickable = true
+                        etUnit.alpha = 1.0f
+                        titleTxt.text = "Ready to create"
+                    }
+                }
+            }
+
+
+        }
+
+        nextBtn.setOnClickListener {
+            currentStep++
+            moveToStep(currentStep)
+        }
+
+        skipBtn.setOnClickListener {
+            rbPR.isClickable = true
+            rbWeightGain.isClickable = true
+            rbOther.isClickable = true
+            markTutorialCompleted()
+            overlayLayout.visibility = View.GONE
+        }
+        moveToStep(0)
     }
 
     private fun hideKeyboard(view: View) {
