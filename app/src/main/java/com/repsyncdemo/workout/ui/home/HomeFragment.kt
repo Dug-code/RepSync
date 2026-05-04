@@ -72,7 +72,7 @@ class HomeFragment : Fragment() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         //set to false for testing
-        val isCompleted = false//prefs.getBoolean(KEY_HOME_TUTORIAL_COMPLETED, false)
+        val isCompleted = prefs.getBoolean(KEY_HOME_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
             binding.root.post {
                 showTutorial()
@@ -83,44 +83,44 @@ class HomeFragment : Fragment() {
     private fun showTutorial() {
         val targets = ArrayList<Target>()
 
-//        // Recent Tab
-//        val recentTab = binding.homeTabs.getTabAt(0)?.view
-//        recentTab?.let {
-//            targets.add(createTarget(it, "Recent Workouts", "Quickly access your most recent training sessions and see your progress."))
-//        }
-//
-//        // Saved Tab
-//        val savedTab = binding.homeTabs.getTabAt(1)?.view
-//        savedTab?.let {
-//            targets.add(createTarget(it, "Saved Workouts", "See your stored workouts and pick your favorite routines here for easy access."))
-//        }
-//
-//        // Start Workout Button
-//        targets.add(
-//            Target.Builder()
-//                .setAnchor(binding.btnStartWorkout)
-//                .setShape(RoundedRectangle(binding.btnStartWorkout.height.toFloat(), binding.btnStartWorkout.width.toFloat(), 16f))
-//                .setOverlay(createOverlay("Start Training", "Ready to hit the gym? Tap here to start a new workout or pick a saved one."))
-//                .build()
-//        )
-//
-//        // Rest Day Button
-//        targets.add(
-//            Target.Builder()
-//                .setAnchor(binding.btnRestDay)
-//                .setShape(Circle(binding.btnRestDay.height.toFloat() / 2 + 20f))
-//                .setOverlay(createOverlay("Log Recovery", "Recovery is just as important as training. Log your rest days to keep your streak!"))
-//                .build()
-//        )
-//
-//        // Calendar Button
-//        targets.add(
-//            Target.Builder()
-//                .setAnchor(binding.layoutCalendar)
-//                .setShape(Circle(binding.layoutCalendar.height.toFloat() / 2 + 10f))
-//                .setOverlay(createOverlay("Calendar", "View your workouts and rest consistency over time in the calendar."))
-//                .build()
-//        )
+        // Recent Tab
+        val recentTab = binding.homeTabs.getTabAt(0)?.view
+        recentTab?.let {
+            targets.add(createTarget(it, "Recent Workouts", "Quickly access your most recent training sessions and see your progress."))
+        }
+
+        // Saved Tab
+        val savedTab = binding.homeTabs.getTabAt(1)?.view
+        savedTab?.let {
+            targets.add(createTarget(it, "Saved Workouts", "See your stored workouts and pick your favorite routines here for easy access."))
+        }
+
+        // Start Workout Button
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.btnStartWorkout)
+                .setShape(RoundedRectangle(binding.btnStartWorkout.height.toFloat(), binding.btnStartWorkout.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Start Training", "Ready to hit the gym? Tap here to start a new workout or pick a saved one."))
+                .build()
+        )
+
+        // Rest Day Button
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.btnRestDay)
+                .setShape(Circle(binding.btnRestDay.height.toFloat() / 2 + 20f))
+                .setOverlay(createOverlay("Log Recovery", "Recovery is just as important as training. Log your rest days to keep your streak!"))
+                .build()
+        )
+
+        // Calendar Button
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.layoutCalendar)
+                .setShape(Circle(binding.layoutCalendar.height.toFloat() / 2 + 10f))
+                .setOverlay(createOverlay("Calendar", "View your workouts and rest consistency over time in the calendar."))
+                .build()
+        )
 
         // Goals Button
         targets.add(
@@ -160,11 +160,11 @@ class HomeFragment : Fragment() {
         val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
         overlay.findViewById<TextView>(R.id.tvTitle).text = title
         overlay.findViewById<TextView>(R.id.tvDescription).text = description
-        
+
         overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
             spotlight?.next()
         }
-        
+
         overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
             spotlight?.finish()
             markTutorialCompleted()

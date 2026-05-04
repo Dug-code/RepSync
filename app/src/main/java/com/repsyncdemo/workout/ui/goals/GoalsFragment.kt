@@ -8,7 +8,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
-import android.widget.*
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import android.widget.TextView
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
@@ -25,17 +35,14 @@ import com.repsyncdemo.workout.data.model.Goal
 import com.repsyncdemo.workout.data.model.GoalType
 import com.repsyncdemo.workout.databinding.FragmentGoalsBinding
 import com.repsyncdemo.workout.ui.adapter.GoalAdapter
-import com.repsyncdemo.workout.ui.home.HomeFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
 import com.takusemba.spotlight.OnSpotlightListener
 import com.takusemba.spotlight.Spotlight
-import com.takusemba.spotlight.Target
 import com.takusemba.spotlight.effet.FlickerEffect
 import com.takusemba.spotlight.shape.Circle
-import com.takusemba.spotlight.shape.RoundedRectangle
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 

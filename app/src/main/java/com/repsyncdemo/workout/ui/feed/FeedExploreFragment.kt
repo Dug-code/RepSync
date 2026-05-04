@@ -18,6 +18,7 @@ import com.repsyncdemo.workout.ui.adapter.FeedAdapter
 import com.repsyncdemo.workout.ui.dialogs.ReactionDialogFragment
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import com.takusemba.spotlight.Spotlight
 
 class FeedExploreFragment : Fragment() {
     private var _binding: FragmentFeedExploreBinding? = null
@@ -27,6 +28,7 @@ class FeedExploreFragment : Fragment() {
     private lateinit var feedAdapter: FeedAdapter
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFeedExploreBinding.inflate(inflater, container, false)
         return binding.root
@@ -34,6 +36,7 @@ class FeedExploreFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
 
         feedAdapter = FeedAdapter(
             onUserClick = { userId ->
@@ -113,6 +116,8 @@ class FeedExploreFragment : Fragment() {
         }
 
         updateFilters()
+
+
     }
 
     private fun updateFilters() {
