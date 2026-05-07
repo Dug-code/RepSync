@@ -32,11 +32,16 @@ import com.repsyncdemo.workout.databinding.FragmentProfileBinding
 import com.repsyncdemo.workout.ui.adapter.*
 import com.repsyncdemo.workout.viewmodel.*
 
+/**
+ * ProfileFragment displays user information, social links, trophies, and active goals.
+ * It supports viewing both the logged-in user's profile and other users' profiles.
+ */
 class ProfileFragment : Fragment() {
 
     private var _binding: FragmentProfileBinding? = null
     private val binding get() = _binding!!
     
+    // ViewModels shared across the activity scope
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private val socialViewModel: SocialViewModel by activityViewModels()
     private val workoutViewModel: WorkoutViewModel by activityViewModels()
@@ -44,6 +49,7 @@ class ProfileFragment : Fragment() {
     
     private lateinit var miniGoalAdapter: MiniGoalAdapter
     
+    // ID of the user being viewed. If null, displays the current logged-in user's profile.
     private var targetUserId: String? = null
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
@@ -56,6 +62,7 @@ class ProfileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // Retrieve target userId from navigation arguments if viewing someone else
         targetUserId = arguments?.getString("userId")
         
         setupListeners()
@@ -63,6 +70,10 @@ class ProfileFragment : Fragment() {
         loadData()
     }
 
+    /**
+     * Configures the ViewPager2 and TabLayout based on user settings and privacy.
+     * @param isFriendsListPublic Whether the user's friends list is visible to others.
+     */
     private fun setupViewPager(isFriendsListPublic: Boolean) {
         val showFriendsTab = isFriendsListPublic || targetUserId == null
         val totalTabs = if (showFriendsTab) 4 else 3
@@ -116,8 +127,12 @@ class ProfileFragment : Fragment() {
         tabMediator?.attach()
     }
 
+    /**
+     * Initializes UI component listeners and basic visibility logic.
+     */
     private fun setupListeners() {
         if (targetUserId == null) {
+            // Own profile: show settings, trophy shelf, and admin dashboard (if applicable)
             binding.btnSettings.visibility = View.VISIBLE
             binding.btnTrophyShelf.visibility = View.VISIBLE
             binding.btnFriendAction.visibility = View.GONE
@@ -125,10 +140,12 @@ class ProfileFragment : Fragment() {
             binding.btnTrophyShelf.setOnClickListener { findNavController().navigate(R.id.action_profile_to_trophyShelf) }
             binding.btnAdminDashboard.setOnClickListener { findNavController().navigate(R.id.action_profile_to_adminDashboard) }
             
+            // Allow clicking on weight layout to update it
             binding.layoutWeight.setOnClickListener { showWeighInDialog() }
             binding.layoutWeight.isClickable = true
             binding.layoutWeight.isFocusable = true
         } else {
+            // Target profile: hide settings/trophies, show friend action button
             binding.btnSettings.visibility = View.GONE
             binding.btnTrophyShelf.visibility = View.GONE
             binding.btnFriendAction.visibility = View.VISIBLE
@@ -142,6 +159,9 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /**
+     * Displays a dialog for the user to log their current weight and reminder preferences.
+     */
     private fun showWeighInDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_weigh_in, null)
         val etWeight = dialogView.findViewById<EditText>(R.id.etWeight)
@@ -151,6 +171,7 @@ class ProfileFragment : Fragment() {
         val freqOptions = arrayOf("Never", "Every Day", "Select Days")
         spinnerFreq.setAdapter(ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, freqOptions))
 
+        // Pre-fill existing data
         profileViewModel.myProfile.value?.let { p ->
             etWeight.setText(p.weightLbs.toString())
             spinnerFreq.setText(when(p.weighInFrequency) {
@@ -188,6 +209,9 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
+    /**
+     * Updates the user's profile with new weight and reminder settings.
+     */
     private fun saveWeighInData(weight: Double, freqText: String, view: View) {
         val freq = when(freqText) {
             "Every Day" -> "daily"
@@ -216,8 +240,12 @@ class ProfileFragment : Fragment() {
         Toast.makeText(requireContext(), "Weight updated!", Toast.LENGTH_SHORT).show()
     }
 
+    /**
+     * Triggers data loading in ViewModels.
+     */
     private fun loadData() {
         if (targetUserId != null) {
+            // Loading data for a specific user
             profileViewModel.observeProfile(targetUserId)
             profileViewModel.loadUserPosts(targetUserId!!)
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
@@ -226,12 +254,16 @@ class ProfileFragment : Fragment() {
             workoutViewModel.loadWorkoutsForUser(targetUserId!!)
             goalViewModel.loadGoalsForUser(targetUserId!!)
         } else {
+            // Loading current user's own data
             profileViewModel.observeProfile()
             profileViewModel.loadMyPosts()
             workoutViewModel.loadWorkoutLogsForUser(currentUserId)
         }
     }
 
+    /**
+     * Sets up observers for ViewModel LiveData to update UI dynamically.
+     */
     private fun observeViewModel() {
         profileViewModel.currentProfile.observe(viewLifecycleOwner) { profile ->
             profile?.let {
@@ -240,11 +272,13 @@ class ProfileFragment : Fragment() {
                 binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
                 updateProfilePicture(it.profilePictureUrl)
                 
+                // Height formatting
                 val feet = it.heightInches / 12
                 val inches = it.heightInches % 12
                 binding.tvHeightValue.text = if (it.isHeightPublic || targetUserId == null) "${feet}' ${inches}\"" else "Private"
                 binding.tvWeightValue.text = if (it.isWeightPublic || targetUserId == null) "${it.weightLbs.toInt()} lbs" else "Private"
                 
+                // Social links
                 setupSocialIcon(binding.btnInstagram, it.instagramUrl)
                 setupSocialIcon(binding.btnFacebook, it.facebookUrl)
                 setupSocialIcon(binding.btnTwitter, it.twitterUrl)
@@ -262,8 +296,10 @@ class ProfileFragment : Fragment() {
             }
         }
         
+        // Friendship status observer
         socialViewModel.friendshipWithTarget.observe(viewLifecycleOwner) { updateFriendButtonUI(it) }
         
+        // Active goals observer
         val activeGoalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
         activeGoalsSource.observe(viewLifecycleOwner) { goals ->
             val activeGoals = goals.filter { !it.isCompleted }.take(5)
@@ -272,16 +308,21 @@ class ProfileFragment : Fragment() {
             binding.rvMiniGoals.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
         }
 
+        // Trophies depend on workout logs
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
         profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
     }
 
+    /**
+     * Updates the "Friend" button UI based on the current friendship status with the target user.
+     */
     private fun updateFriendButtonUI(friendship: Friendship?) {
         if (targetUserId == null) return
         val button = binding.btnFriendAction
         button.visibility = View.VISIBLE
         when {
             friendship == null -> {
+                // Not friends
                 button.text = "Friend +"
                 button.setIconResource(R.drawable.ic_plus_simple)
                 button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.primary)
@@ -297,12 +338,14 @@ class ProfileFragment : Fragment() {
             }
             friendship.status == FriendshipStatus.PENDING -> {
                 if (friendship.requesterId == currentUserId) {
+                    // Outgoing request
                     button.text = "Requested"
                     button.setIconResource(R.drawable.ic_check_simple)
                     button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.text_secondary)
                     button.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary))
                     button.setOnClickListener { showUnfriendConfirmation(friendship, "Cancel friend request?") }
                 } else {
+                    // Incoming request
                     button.text = "Accept"
                     button.setIconResource(R.drawable.ic_check_simple)
                     button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.success)
@@ -314,6 +357,7 @@ class ProfileFragment : Fragment() {
                 }
             }
             friendship.status == FriendshipStatus.ACCEPTED -> {
+                // Already friends
                 button.text = "Friends"
                 button.setIconResource(R.drawable.ic_check_simple)
                 button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.primary)
@@ -326,6 +370,9 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /**
+     * Shows a confirmation dialog before removing a friend or cancelling a request.
+     */
     private fun showUnfriendConfirmation(friendship: Friendship, message: String) {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Manage Friendship")
@@ -338,6 +385,9 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
+    /**
+     * Loads the profile picture from a URL or uses a local resource placeholder.
+     */
     private fun updateProfilePicture(url: String) {
         binding.ivProfilePic.setImageDrawable(null)
 
@@ -361,18 +411,26 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    /**
+     * Updates the UI for the "Pinned Trophy" based on user progress and selection.
+     */
     private fun updateTrophyUI() {
         val profile = profileViewModel.myProfile.value ?: return
         val workoutCount = workoutViewModel.workoutLogs.value?.size ?: 0
         val restDayCount = profile.totalRestDays
         val pinnedTrophyId = profile.pinnedTrophyId
+        
+        // Determine which trophy to display
         val trophyToDisplay = if (pinnedTrophyId == "recovery") {
             Trophy("recovery", "Recovery", "Total rest days recorded", restDayCount, TrophyType.RECOVERY)
         } else {
             Trophy("gym_rat", "Gym Rat", "Total workouts completed", workoutCount, TrophyType.GYM_RAT)
         }
+        
         val rank = trophyToDisplay.rank
         binding.ivPinnedTrophy.visibility = View.VISIBLE
+        
+        // Resolve icon resource based on type and rank
         val iconRes = when (trophyToDisplay.type) {
             TrophyType.GYM_RAT -> when (rank) {
                 TrophyRank.BRONZE -> R.drawable.gym_rat_bronze
@@ -394,6 +452,9 @@ class ProfileFragment : Fragment() {
         binding.ivPinnedTrophy.imageTintList = null
         binding.ivPinnedTrophy.background = null
     }
+
+
+    //Shows social media icon if the URL is present and sets up its click listener.
 
     private fun setupSocialIcon(button: View, url: String) {
         if (url.isNotEmpty()) {
