@@ -38,6 +38,9 @@ import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.*
 
 class SettingsFragment : Fragment() {
@@ -51,7 +54,7 @@ class SettingsFragment : Fragment() {
 
     private var isInitialLoad = true
     private var isSavingSettings = false
-    private var usernameCheckJob: kotlinx.coroutines.Job? = null
+    private var usernameCheckJob: Job? = null
     private var originalHeight: Int = 0
     private var originalWeight: Double = 0.0
 
@@ -357,7 +360,7 @@ class SettingsFragment : Fragment() {
 
                 if (username.length >= 3 && !username.equals(originalUsername, ignoreCase = true)) {
                     usernameCheckJob = viewLifecycleOwner.lifecycleScope.launch {
-                        kotlinx.coroutines.delay(500)
+                        delay(500)
                         if (!profileViewModel.isUsernameAvailable(username)) {
                             binding.tilUsername.error = "Username is already taken"
                         }
