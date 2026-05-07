@@ -133,6 +133,19 @@ class ProfileViewModel(
     fun updateProfileFields(updates: Map<String, Any>) {
         _isLoading.value = true
         viewModelScope.launch {
+            val requestedUsername = updates["username"] as? String
+            val currentProfile = myProfile.value
+            if (
+                requestedUsername != null &&
+                currentProfile != null &&
+                !requestedUsername.equals(currentProfile.username, ignoreCase = true) &&
+                !repository.isUsernameAvailable(requestedUsername, currentProfile.userId)
+            ) {
+                _profileResult.value = Result.failure(Exception("Username is already taken"))
+                _isLoading.value = false
+                return@launch
+            }
+
             val result = repository.updateProfileFields(updates)
             
             // Post-update logic for weight

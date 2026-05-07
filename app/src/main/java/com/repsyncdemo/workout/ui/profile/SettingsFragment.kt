@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.transform.CircleCropTransformation
@@ -50,6 +51,7 @@ class SettingsFragment : Fragment() {
 
     private var isInitialLoad = true
     private var isSavingSettings = false
+    private var usernameCheckJob: kotlinx.coroutines.Job? = null
     private var originalHeight: Int = 0
     private var originalWeight: Double = 0.0
 
@@ -342,6 +344,27 @@ class SettingsFragment : Fragment() {
         }
 
         binding.etUsername.addTextChangedListener(watcher)
+        binding.etUsername.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (isInitialLoad) return
+
+                val username = s?.toString()?.trim().orEmpty()
+                val originalUsername = profileViewModel.myProfile.value?.username.orEmpty()
+                binding.tilUsername.error = null
+                usernameCheckJob?.cancel()
+
+                if (username.length >= 3 && !username.equals(originalUsername, ignoreCase = true)) {
+                    usernameCheckJob = viewLifecycleOwner.lifecycleScope.launch {
+                        kotlinx.coroutines.delay(500)
+                        if (!profileViewModel.isUsernameAvailable(username)) {
+                            binding.tilUsername.error = "Username is already taken"
+                        }
+                    }
+                }
+            }
+        })
         binding.etBio.addTextChangedListener(watcher)
         binding.etProfilePicUrl.addTextChangedListener(watcher)
         binding.etInstagramUrl.addTextChangedListener(watcher)
@@ -414,6 +437,16 @@ class SettingsFragment : Fragment() {
         val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
         val isFriendsPublic = binding.switchFriendsPublic.isChecked
 
+        binding.tilUsername.error = null
+        if (username.isEmpty()) {
+            binding.tilUsername.error = "Username is required"
+            return
+        }
+        if (username.length < 3) {
+            binding.tilUsername.error = "Username must be at least 3 characters"
+            return
+        }
+
         if (totalHeightInches > 107) { // 8ft 11in = 107 inches
             Toast.makeText(requireContext(), "Height cannot exceed 8ft 11in", Toast.LENGTH_SHORT).show()
             return
@@ -424,24 +457,32 @@ class SettingsFragment : Fragment() {
             return
         }
 
-        // Surgical update using fields instead of the whole object
-        val updates = mutableMapOf<String, Any>(
-            "username" to username,
-            "bio" to bio,
-            "profilePictureUrl" to picUrl,
-            "instagramUrl" to instagramUrl,
-            "facebookUrl" to facebookUrl,
-            "twitterUrl" to twitterUrl,
-            "heightInches" to totalHeightInches,
-            "weightLbs" to newWeight,
-            "isHeightPublic" to isHeightPublic,
-            "isWeightPublic" to isWeightPublic,
-            "isWorkoutsPublic" to isWorkoutsPublic,
-            "isFriendsListPublic" to isFriendsPublic
-        )
+        val originalUsername = profileViewModel.myProfile.value?.username.orEmpty()
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!username.equals(originalUsername, ignoreCase = true) && !profileViewModel.isUsernameAvailable(username)) {
+                binding.tilUsername.error = "Username is already taken"
+                return@launch
+            }
 
-        isSavingSettings = true
-        profileViewModel.updateProfileFields(updates)
+            // Surgical update using fields instead of the whole object
+            val updates = mutableMapOf<String, Any>(
+                "username" to username,
+                "bio" to bio,
+                "profilePictureUrl" to picUrl,
+                "instagramUrl" to instagramUrl,
+                "facebookUrl" to facebookUrl,
+                "twitterUrl" to twitterUrl,
+                "heightInches" to totalHeightInches,
+                "weightLbs" to newWeight,
+                "isHeightPublic" to isHeightPublic,
+                "isWeightPublic" to isWeightPublic,
+                "isWorkoutsPublic" to isWorkoutsPublic,
+                "isFriendsListPublic" to isFriendsPublic
+            )
+
+            isSavingSettings = true
+            profileViewModel.updateProfileFields(updates)
+        }
     }
 
     private fun isValidUrl(url: String, allowedDomains: List<String>): Boolean {

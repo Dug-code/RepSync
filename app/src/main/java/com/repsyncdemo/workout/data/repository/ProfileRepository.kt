@@ -191,14 +191,17 @@ class ProfileRepository {
         }
     }
 
-    suspend fun isUsernameAvailable(username: String): Boolean {
+    suspend fun isUsernameAvailable(username: String, excludedUserId: String? = null): Boolean {
         return try {
             val snapshot = profilesCollection
                 .whereEqualTo("usernameLowercase", username.lowercase().trim())
                 .limit(1)
                 .get()
                 .await()
-            snapshot.isEmpty
+            snapshot.documents.none { doc ->
+                val profile = doc.toObject(UserProfile::class.java)
+                doc.id != excludedUserId && profile?.userId != excludedUserId
+            }
         } catch (e: Exception) {
             false
         }
