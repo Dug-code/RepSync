@@ -49,6 +49,7 @@ class SettingsFragment : Fragment() {
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     private var isInitialLoad = true
+    private var isSavingSettings = false
     private var originalHeight: Int = 0
     private var originalWeight: Double = 0.0
 
@@ -182,6 +183,9 @@ class SettingsFragment : Fragment() {
         }
 
         profileViewModel.profileResult.observe(viewLifecycleOwner) { result ->
+            if (!isSavingSettings) return@observe
+
+            isSavingSettings = false
             result.onSuccess {
                 navigationLockViewModel.setLocked(false)
                 Toast.makeText(requireContext(), "Settings saved", Toast.LENGTH_SHORT).show()
@@ -435,9 +439,8 @@ class SettingsFragment : Fragment() {
             "isWorkoutsPublic" to isWorkoutsPublic,
             "isFriendsListPublic" to isFriendsPublic
         )
-        
-        profileViewModel.updateWeightAndHeight(newWeight, totalHeightInches)
-        // This is safe because updateWeightAndHeight uses updateProfileFields internally
+
+        isSavingSettings = true
         profileViewModel.updateProfileFields(updates)
     }
 
