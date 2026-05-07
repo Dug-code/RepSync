@@ -3,8 +3,10 @@ package com.repsyncdemo.workout.viewmodel
 import androidx.lifecycle.*
 import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.RestDay
+import com.repsyncdemo.workout.data.model.UserProfile
 import com.repsyncdemo.workout.data.model.WeightLog
 import com.repsyncdemo.workout.data.model.WorkoutLog
+import com.repsyncdemo.workout.data.repository.ProfileRepository
 import com.repsyncdemo.workout.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
@@ -30,6 +32,7 @@ data class ExerciseVolumeBreakdown(
 class AnalyticsViewModel : ViewModel() {
 
     private val repository = WorkoutRepository()
+    private val profileRepository = ProfileRepository()
 
     private val _selectedTimeRange = MutableLiveData(TimeRange.LAST_30)
     val selectedTimeRange: LiveData<TimeRange> = _selectedTimeRange
@@ -44,6 +47,10 @@ class AnalyticsViewModel : ViewModel() {
 
     val weightHistory: LiveData<List<WeightLog>> = repository.getWeightLogs()
         .catch { emit(emptyList()) }
+        .asLiveData()
+
+    val currentProfile: LiveData<UserProfile?> = profileRepository.observeProfile()
+        .catch { emit(null) }
         .asLiveData()
 
     val filteredWorkouts: LiveData<List<WorkoutLog>> = _selectedTimeRange.switchMap { range ->
@@ -79,18 +86,17 @@ class AnalyticsViewModel : ViewModel() {
     }
 
     val filteredWeightHistory: LiveData<List<WeightLog>> = _selectedTimeRange.switchMap { range ->
-        weightHistory.map { history ->
-            if (range.days == null) history.sortedBy { it.date }
-            else {
-                val cutOff = Calendar.getInstance().apply { 
-                    add(Calendar.DAY_OF_YEAR, -range.days) 
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }.timeInMillis
-                history.filter { it.date >= cutOff }.sortedBy { it.date }
+        MediatorLiveData<List<WeightLog>>().apply {
+            fun update() {
+                value = buildDailyWeightHistory(
+                    history = weightHistory.value.orEmpty(),
+                    profile = currentProfile.value,
+                    range = range
+                )
             }
+
+            addSource(weightHistory) { update() }
+            addSource(currentProfile) { update() }
         }
     }
 
@@ -235,6 +241,93 @@ class AnalyticsViewModel : ViewModel() {
                 } else 0.0
             }
         }
+    }
+
+    private fun buildDailyWeightHistory(
+        history: List<WeightLog>,
+        profile: UserProfile?,
+        range: TimeRange
+    ): List<WeightLog> {
+        val seededHistory = if (history.any { it.weightLbs > 0 }) {
+            history
+        } else {
+            val profileWeight = profile?.weightLbs ?: 0.0
+            if (profileWeight > 0) {
+                listOf(
+                    WeightLog(
+                        userId = profile?.userId.orEmpty(),
+                        weightLbs = profileWeight,
+                        date = profile?.lastWeighInDate?.takeIf { it > 0 }
+                            ?: profile?.updatedAt?.takeIf { it > 0 }
+                            ?: System.currentTimeMillis()
+                    )
+                )
+            } else {
+                emptyList()
+            }
+        }
+
+        val logsByDay = seededHistory
+            .filter { it.weightLbs > 0 }
+            .groupBy { startOfDay(it.date) }
+            .mapValues { (_, logs) -> logs.maxByOrNull { it.date }!! }
+
+        if (logsByDay.isEmpty()) return emptyList()
+
+        val sortedDays = logsByDay.keys.sorted()
+        val today = startOfDay(System.currentTimeMillis())
+        val firstLoggedDay = sortedDays.first()
+        val requestedStartDay = range.days?.let { days ->
+            Calendar.getInstance().apply {
+                add(Calendar.DAY_OF_YEAR, -days)
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+        }
+
+        val startDay = requestedStartDay?.takeIf { start ->
+            sortedDays.any { it <= start }
+        } ?: firstLoggedDay
+
+        var lastKnownWeight = sortedDays
+            .filter { it <= startDay }
+            .maxOrNull()
+            ?.let { logsByDay[it]?.weightLbs }
+
+        val points = mutableListOf<WeightLog>()
+        val cursor = Calendar.getInstance().apply { timeInMillis = startDay }
+
+        while (cursor.timeInMillis <= today) {
+            val day = cursor.timeInMillis
+            logsByDay[day]?.let { lastKnownWeight = it.weightLbs }
+
+            lastKnownWeight?.let { weight ->
+                points.add(
+                    WeightLog(
+                        id = logsByDay[day]?.id.orEmpty(),
+                        userId = logsByDay[day]?.userId.orEmpty(),
+                        weightLbs = weight,
+                        date = day
+                    )
+                )
+            }
+
+            cursor.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        return points
+    }
+
+    private fun startOfDay(timestamp: Long): Long {
+        return Calendar.getInstance().apply {
+            timeInMillis = timestamp
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
     }
 
     fun setTimeRange(range: TimeRange) { _selectedTimeRange.value = range }

@@ -122,9 +122,19 @@ class AnalyticsAdvancedFragment : Fragment() {
         }
         binding.tvEmptyWeightChart.visibility = View.GONE
 
-        val entries = history.map { Entry(it.date.toFloat(), it.weightLbs.toFloat()) }
+        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+        binding.lineChartWeight.xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                val index = value.toInt()
+                return history.getOrNull(index)?.let { dateFormat.format(Date(it.date)) }.orEmpty()
+            }
+        }
+        binding.lineChartWeight.xAxis.labelCount = history.size.coerceAtMost(6)
+
+        val entries = history.mapIndexed { index, log -> Entry(index.toFloat(), log.weightLbs.toFloat()) }
         val dataSet = LineDataSet(entries, "Body Weight (lbs)")
         styleDataSet(dataSet, android.graphics.Color.rgb(3, 169, 244))
+        dataSet.mode = LineDataSet.Mode.LINEAR
 
         binding.lineChartWeight.data = LineData(dataSet).apply {
             setValueTextColor(ContextCompat.getColor(requireContext(), R.color.text_primary))

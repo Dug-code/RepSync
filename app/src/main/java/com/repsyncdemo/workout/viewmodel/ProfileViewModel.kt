@@ -113,7 +113,11 @@ class ProfileViewModel(
                 _isLoading.value = false
                 return@launch
             }
-            _profileResult.value = repository.createProfile(profile)
+            val result = repository.createProfile(profile)
+            if (result.isSuccess && profile.weightLbs > 0) {
+                workoutRepository.addWeightLog(profile.weightLbs)
+            }
+            _profileResult.value = result
             _isLoading.value = false
         }
     }
