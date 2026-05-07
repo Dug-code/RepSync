@@ -223,6 +223,7 @@ class ProfileFragment : Fragment() {
             socialViewModel.loadFriendshipWithUser(targetUserId!!)
             socialViewModel.loadFriendsForUser(targetUserId!!)
             workoutViewModel.loadWorkoutLogsForUser(targetUserId!!)
+            workoutViewModel.loadWorkoutsForUser(targetUserId!!)
             goalViewModel.loadGoalsForUser(targetUserId!!)
         } else {
             profileViewModel.observeProfile()

@@ -9,121 +9,120 @@ data class Trophy(
     val currentProgress: Int,
     val type: TrophyType
 ) {
-    val rank: TrophyRank
-        get() = when (type) {
-            TrophyType.GYM_RAT -> when {
-                currentProgress >= 500 -> TrophyRank.DIAMOND
-                currentProgress >= 100 -> TrophyRank.GOLD
-                currentProgress >= 50 -> TrophyRank.SILVER
-                currentProgress >= 10 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.LIFT_KING -> when {
-                currentProgress >= 1000000 -> TrophyRank.DIAMOND
-                currentProgress >= 500000 -> TrophyRank.GOLD
-                currentProgress >= 100000 -> TrophyRank.SILVER
-                currentProgress >= 50000 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.RECOVERY -> when {
-                currentProgress >= 500 -> TrophyRank.DIAMOND
-                currentProgress >= 300 -> TrophyRank.GOLD
-                currentProgress >= 200 -> TrophyRank.SILVER
-                currentProgress >= 50 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.BENCH_PRESS -> when {
-                currentProgress >= 315 -> TrophyRank.DIAMOND
-                currentProgress >= 225 -> TrophyRank.GOLD
-                currentProgress >= 185 -> TrophyRank.SILVER
-                currentProgress >= 135 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.SQUAT -> when {
-                currentProgress >= 405 -> TrophyRank.DIAMOND
-                currentProgress >= 315 -> TrophyRank.GOLD
-                currentProgress >= 225 -> TrophyRank.SILVER
-                currentProgress >= 135 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.DEADLIFT -> when {
-                currentProgress >= 495 -> TrophyRank.DIAMOND
-                currentProgress >= 405 -> TrophyRank.GOLD
-                currentProgress >= 315 -> TrophyRank.SILVER
-                currentProgress >= 225 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.SHOULDER_PRESS -> when {
-                currentProgress >= 225 -> TrophyRank.DIAMOND
-                currentProgress >= 185 -> TrophyRank.GOLD
-                currentProgress >= 135 -> TrophyRank.SILVER
-                currentProgress >= 95 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.CARDIO_BUNNY -> when {
-                currentProgress >= 5000 -> TrophyRank.DIAMOND
-                currentProgress >= 2000 -> TrophyRank.GOLD
-                currentProgress >= 1000 -> TrophyRank.SILVER
-                currentProgress >= 500 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.DUMBBELL_MASTER -> when {
-                currentProgress >= 120 -> TrophyRank.DIAMOND
-                currentProgress >= 100 -> TrophyRank.GOLD
-                currentProgress >= 80 -> TrophyRank.SILVER
-                currentProgress >= 50 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.ABS_MASTER -> when {
-                currentProgress >= 1000 -> TrophyRank.DIAMOND
-                currentProgress >= 500 -> TrophyRank.GOLD
-                currentProgress >= 200 -> TrophyRank.SILVER
-                currentProgress >= 100 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.ALL_STAR -> when {
-                currentProgress >= 1200 -> TrophyRank.DIAMOND
-                currentProgress >= 1000 -> TrophyRank.GOLD
-                currentProgress >= 800 -> TrophyRank.SILVER
-                currentProgress >= 500 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.FULL_TIME -> when {
-                currentProgress >= 10000 -> TrophyRank.DIAMOND
-                currentProgress >= 5000 -> TrophyRank.GOLD
-                currentProgress >= 2500 -> TrophyRank.SILVER
-                currentProgress >= 1000 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.GYM_BRO -> when {
-                currentProgress >= 100 -> TrophyRank.DIAMOND
-                currentProgress >= 50 -> TrophyRank.GOLD
-                currentProgress >= 20 -> TrophyRank.SILVER
-                currentProgress >= 10 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.PUSHUP_MASTER -> when {
-                currentProgress >= 10000 -> TrophyRank.DIAMOND
-                currentProgress >= 5000 -> TrophyRank.GOLD
-                currentProgress >= 2000 -> TrophyRank.SILVER
-                currentProgress >= 500 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.PULLUP_MASTER -> when {
-                currentProgress >= 2000 -> TrophyRank.DIAMOND
-                currentProgress >= 1000 -> TrophyRank.GOLD
-                currentProgress >= 500 -> TrophyRank.SILVER
-                currentProgress >= 100 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
-            TrophyType.SITUP_MASTER -> when {
-                currentProgress >= 10000 -> TrophyRank.DIAMOND
-                currentProgress >= 5000 -> TrophyRank.GOLD
-                currentProgress >= 2000 -> TrophyRank.SILVER
-                currentProgress >= 500 -> TrophyRank.BRONZE
-                else -> TrophyRank.LOCKED
-            }
+    val rank: TrophyRank = when (type) {
+        TrophyType.GYM_RAT -> when {
+            currentProgress >= 500 -> TrophyRank.DIAMOND
+            currentProgress >= 100 -> TrophyRank.GOLD
+            currentProgress >= 50 -> TrophyRank.SILVER
+            currentProgress >= 10 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
         }
+        TrophyType.LIFT_KING -> when {
+            currentProgress >= 1000000 -> TrophyRank.DIAMOND
+            currentProgress >= 500000 -> TrophyRank.GOLD
+            currentProgress >= 100000 -> TrophyRank.SILVER
+            currentProgress >= 50000 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.RECOVERY -> when {
+            currentProgress >= 500 -> TrophyRank.DIAMOND
+            currentProgress >= 300 -> TrophyRank.GOLD
+            currentProgress >= 200 -> TrophyRank.SILVER
+            currentProgress >= 50 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.BENCH_PRESS -> when {
+            currentProgress >= 315 -> TrophyRank.DIAMOND
+            currentProgress >= 225 -> TrophyRank.GOLD
+            currentProgress >= 185 -> TrophyRank.SILVER
+            currentProgress >= 135 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.SQUAT -> when {
+            currentProgress >= 405 -> TrophyRank.DIAMOND
+            currentProgress >= 315 -> TrophyRank.GOLD
+            currentProgress >= 225 -> TrophyRank.SILVER
+            currentProgress >= 135 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.DEADLIFT -> when {
+            currentProgress >= 495 -> TrophyRank.DIAMOND
+            currentProgress >= 405 -> TrophyRank.GOLD
+            currentProgress >= 315 -> TrophyRank.SILVER
+            currentProgress >= 225 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.SHOULDER_PRESS -> when {
+            currentProgress >= 225 -> TrophyRank.DIAMOND
+            currentProgress >= 185 -> TrophyRank.GOLD
+            currentProgress >= 135 -> TrophyRank.SILVER
+            currentProgress >= 95 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.CARDIO_BUNNY -> when {
+            currentProgress >= 5000 -> TrophyRank.DIAMOND
+            currentProgress >= 2000 -> TrophyRank.GOLD
+            currentProgress >= 1000 -> TrophyRank.SILVER
+            currentProgress >= 500 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.DUMBBELL_MASTER -> when {
+            currentProgress >= 120 -> TrophyRank.DIAMOND
+            currentProgress >= 100 -> TrophyRank.GOLD
+            currentProgress >= 80 -> TrophyRank.SILVER
+            currentProgress >= 50 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.ABS_MASTER -> when {
+            currentProgress >= 1000 -> TrophyRank.DIAMOND
+            currentProgress >= 500 -> TrophyRank.GOLD
+            currentProgress >= 200 -> TrophyRank.SILVER
+            currentProgress >= 100 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.ALL_STAR -> when {
+            currentProgress >= 1200 -> TrophyRank.DIAMOND
+            currentProgress >= 1000 -> TrophyRank.GOLD
+            currentProgress >= 800 -> TrophyRank.SILVER
+            currentProgress >= 500 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.FULL_TIME -> when {
+            currentProgress >= 10000 -> TrophyRank.DIAMOND
+            currentProgress >= 5000 -> TrophyRank.GOLD
+            currentProgress >= 2500 -> TrophyRank.SILVER
+            currentProgress >= 1000 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.GYM_BRO -> when {
+            currentProgress >= 100 -> TrophyRank.DIAMOND
+            currentProgress >= 50 -> TrophyRank.GOLD
+            currentProgress >= 20 -> TrophyRank.SILVER
+            currentProgress >= 10 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.PUSHUP_MASTER -> when {
+            currentProgress >= 10000 -> TrophyRank.DIAMOND
+            currentProgress >= 5000 -> TrophyRank.GOLD
+            currentProgress >= 2000 -> TrophyRank.SILVER
+            currentProgress >= 500 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.PULLUP_MASTER -> when {
+            currentProgress >= 2000 -> TrophyRank.DIAMOND
+            currentProgress >= 1000 -> TrophyRank.GOLD
+            currentProgress >= 500 -> TrophyRank.SILVER
+            currentProgress >= 100 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+        TrophyType.SITUP_MASTER -> when {
+            currentProgress >= 10000 -> TrophyRank.DIAMOND
+            currentProgress >= 5000 -> TrophyRank.GOLD
+            currentProgress >= 2000 -> TrophyRank.SILVER
+            currentProgress >= 500 -> TrophyRank.BRONZE
+            else -> TrophyRank.LOCKED
+        }
+    }
 }
 
 enum class TrophyType {
