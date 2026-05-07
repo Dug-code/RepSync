@@ -66,9 +66,12 @@ class ProfileFriendsFragment : Fragment() {
                 Toast.makeText(requireContext(), "Friend removed", Toast.LENGTH_SHORT).show()
             },
             onUserClick = { userId ->
-                if (userId != targetUserId) {
-                    val bundle = Bundle().apply { putString("userId", userId) }
-                    findNavController().navigate(R.id.profileFragment, bundle)
+                when {
+                    userId == currentUserId -> findNavController().navigate(R.id.profileFragment)
+                    userId != targetUserId -> {
+                        val bundle = Bundle().apply { putString("userId", userId) }
+                        findNavController().navigate(R.id.profileFragment, bundle)
+                    }
                 }
             }
         )
@@ -77,8 +80,12 @@ class ProfileFriendsFragment : Fragment() {
             onAccept = { request -> socialViewModel.acceptRequest(request.id) },
             onDecline = { request -> socialViewModel.declineRequest(request.id) },
             onUserClick = { userId ->
-                val bundle = Bundle().apply { putString("userId", userId) }
-                findNavController().navigate(R.id.profileFragment, bundle)
+                if (userId == currentUserId) {
+                    findNavController().navigate(R.id.profileFragment)
+                } else {
+                    val bundle = Bundle().apply { putString("userId", userId) }
+                    findNavController().navigate(R.id.profileFragment, bundle)
+                }
             }
         )
 

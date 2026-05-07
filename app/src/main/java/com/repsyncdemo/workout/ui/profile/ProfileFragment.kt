@@ -63,7 +63,7 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         // Retrieve target userId from navigation arguments if viewing someone else
-        targetUserId = arguments?.getString("userId")
+        targetUserId = arguments?.getString("userId")?.takeUnless { it == currentUserId }
         
         setupListeners()
         observeViewModel()
