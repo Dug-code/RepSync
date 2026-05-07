@@ -32,6 +32,13 @@ class HomeRecentFragment : Fragment() {
                     putString("logId", log.id)
                 }
                 findNavController().navigate(R.id.workoutSummaryFragment, bundle)
+            },
+            onEditClick = { log ->
+                val bundle = Bundle().apply {
+                    putString("workoutId", log.workoutId)
+                    putString("logId", log.id)
+                }
+                findNavController().navigate(R.id.logWorkoutFragment, bundle)
             }
         )
 

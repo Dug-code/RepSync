@@ -115,7 +115,9 @@
         tools:layout="@layout/fragment_log_workout">
         <argument
             android:name="workoutId"
-            app:argType="string" />
+            app:argType="string"
+            android:defaultValue="@null"
+            app:nullable="true" />
         <argument
             android:name="logId"
             app:argType="string"
