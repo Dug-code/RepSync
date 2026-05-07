@@ -139,6 +139,7 @@ class ProfileFragment : Fragment() {
             binding.btnSettings.setOnClickListener { findNavController().navigate(R.id.action_profile_to_settings) }
             binding.btnTrophyShelf.setOnClickListener { findNavController().navigate(R.id.action_profile_to_trophyShelf) }
             binding.btnAdminDashboard.setOnClickListener { findNavController().navigate(R.id.action_profile_to_adminDashboard) }
+            binding.btnCreateGoalFromProfile.setOnClickListener { findNavController().navigate(R.id.goalsFragment) }
             
             // Allow clicking on weight layout to update it
             binding.layoutWeight.setOnClickListener { showWeighInDialog() }
@@ -303,9 +304,13 @@ class ProfileFragment : Fragment() {
         val activeGoalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
         activeGoalsSource.observe(viewLifecycleOwner) { goals ->
             val activeGoals = goals.filter { !it.isCompleted }.take(5)
+            val showActiveGoals = activeGoals.isNotEmpty()
+            val showEmptyGoals = !showActiveGoals && targetUserId == null
+
             miniGoalAdapter.submitList(activeGoals)
-            binding.tvGoalsHeader.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
-            binding.rvMiniGoals.visibility = if (activeGoals.isNotEmpty()) View.VISIBLE else View.GONE
+            binding.tvGoalsHeader.visibility = if (showActiveGoals) View.VISIBLE else View.GONE
+            binding.rvMiniGoals.visibility = if (showActiveGoals) View.VISIBLE else View.GONE
+            binding.layoutEmptyGoals.visibility = if (showEmptyGoals) View.VISIBLE else View.GONE
         }
 
         // Trophies depend on workout logs

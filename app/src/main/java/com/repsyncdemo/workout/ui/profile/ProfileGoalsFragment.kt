@@ -56,6 +56,10 @@ class ProfileGoalsFragment : Fragment() {
             adapter = goalAdapter
         }
 
+        binding.btnEmptyAction.setOnClickListener {
+            findNavController().navigate(R.id.goalsFragment)
+        }
+
         val goalsSource = if (targetUserId != null) goalViewModel.targetUserGoals else goalViewModel.goals
         goalsSource.observe(viewLifecycleOwner) { goals ->
             goalAdapter.submitList(goals)
@@ -66,10 +70,11 @@ class ProfileGoalsFragment : Fragment() {
                 binding.tvEmptyTitle.text = "No public goals."
                 binding.tvEmptySubtitle.text = "This user currently has no public goals."
             } else {
-                binding.tvEmptyTitle.text = "No goals set."
-                binding.tvEmptySubtitle.text = "Set your first goal to start tracking progress!"
+                binding.tvEmptyTitle.text = "Create a goal here"
+                binding.tvEmptySubtitle.text = "Set your first goal to start tracking progress."
             }
-            binding.btnEmptyAction.visibility = View.GONE
+            binding.btnEmptyAction.text = getString(R.string.create_goal)
+            binding.btnEmptyAction.visibility = if (targetUserId == null) View.VISIBLE else View.GONE
         }
     }
 
