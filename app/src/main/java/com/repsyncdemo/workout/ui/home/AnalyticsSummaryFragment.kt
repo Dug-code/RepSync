@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Displays high-level workout analytics, charts, streaks, totals, and volume breakdowns.
+ */
+
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -51,11 +55,13 @@ class AnalyticsSummaryFragment : Fragment() {
         Color.rgb(233, 30, 99)
     )
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAnalyticsSummaryBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupCharts()
@@ -63,6 +69,7 @@ class AnalyticsSummaryFragment : Fragment() {
         setupListeners()
     }
 
+    // Sets up this section.
     private fun setupCharts() {
         // Muscle Focus Pie Chart
         binding.pieChartMuscle.apply {
@@ -127,6 +134,7 @@ class AnalyticsSummaryFragment : Fragment() {
         }
     }
 
+    // Sets up this section.
     private fun setupObservers() {
         viewModel.totalVolume.observe(viewLifecycleOwner) { volume ->
             val formatted = NumberFormat.getNumberInstance(Locale.US).format(volume ?: 0.0)
@@ -175,6 +183,7 @@ class AnalyticsSummaryFragment : Fragment() {
         }
     }
 
+    // Updates data or UI state.
     private fun updatePieChart(distribution: Map<String, Int>) {
         if (distribution.isEmpty()) {
             binding.pieChartMuscle.clear()
@@ -207,6 +216,7 @@ class AnalyticsSummaryFragment : Fragment() {
         updateMuscleLegend(distribution)
     }
 
+    // Updates data or UI state.
     private fun updateMuscleLegend(distribution: Map<String, Int>) {
         val total = distribution.values.sum().coerceAtLeast(1)
         binding.layoutMuscleLegend.removeAllViews()
@@ -258,6 +268,7 @@ class AnalyticsSummaryFragment : Fragment() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showMuscleColorDialog(muscle: String, count: Int, color: Int) {
         val total = muscleDistribution.values.sum().coerceAtLeast(1)
         val percent = (count * 100) / total
@@ -285,6 +296,7 @@ class AnalyticsSummaryFragment : Fragment() {
         return (value * resources.displayMetrics.density).toInt()
     }
 
+    // Updates data or UI state.
     private fun updateBarChart(weeklyData: List<Pair<String, Int>>) {
         if (weeklyData.isEmpty()) {
             binding.barChartConsistency.clear()
@@ -314,6 +326,7 @@ class AnalyticsSummaryFragment : Fragment() {
         binding.barChartConsistency.invalidate()
     }
 
+    // Sets up this section.
     private fun setupListeners() {
         binding.toggleTimeRange.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
@@ -361,14 +374,17 @@ class AnalyticsSummaryFragment : Fragment() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showTopTenDialog(title: String, items: List<StatItem>, unit: String) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_volume_breakdown, null)
         val rv = dialogView.findViewById<RecyclerView>(R.id.rvVolumeBreakdown)
         
         val adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+            // Creates the item row.
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = object : RecyclerView.ViewHolder(
                 ItemStatRowBinding.inflate(LayoutInflater.from(parent.context), parent, false).root
             ) {}
+            // Shows the item row.
             override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                 val item = items[position]
                 val b = ItemStatRowBinding.bind(holder.itemView)
@@ -388,6 +404,7 @@ class AnalyticsSummaryFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showVolumeBreakdownDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_volume_breakdown, null)
         val rvBreakdown = dialogView.findViewById<RecyclerView>(R.id.rvVolumeBreakdown)
@@ -403,6 +420,7 @@ class AnalyticsSummaryFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showCalendarDialog(title: String, isWorkouts: Boolean) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_analytics_calendar, null)
         val calendarView = dialogView.findViewById<MaterialCalendarView>(R.id.calendarView)
@@ -440,6 +458,7 @@ class AnalyticsSummaryFragment : Fragment() {
             .show()
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

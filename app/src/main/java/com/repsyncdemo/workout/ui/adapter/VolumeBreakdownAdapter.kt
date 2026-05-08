@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds analytics volume breakdown rows by exercise.
+ */
+
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -12,6 +16,7 @@ import java.util.Locale
 
 class VolumeBreakdownAdapter : ListAdapter<ExerciseVolumeBreakdown, VolumeBreakdownAdapter.ViewHolder>(DiffCallback()) {
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemVolumeBreakdownBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -19,11 +24,13 @@ class VolumeBreakdownAdapter : ListAdapter<ExerciseVolumeBreakdown, VolumeBreakd
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
 
     class ViewHolder(private val binding: ItemVolumeBreakdownBinding) : RecyclerView.ViewHolder(binding.root) {
+        // Fills this row with data.
         fun bind(item: ExerciseVolumeBreakdown) {
             binding.tvExerciseName.text = item.name
             val formattedVolume = NumberFormat.getNumberInstance(Locale.US).format(item.totalVolume)

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Hosts the analytics tabs and routes users between summary and advanced analytics views.
+ */
+
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
@@ -13,6 +17,7 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
     private var _binding: FragmentAnalyticsBinding? = null
     private val binding get() = _binding!!
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentAnalyticsBinding.bind(view)
@@ -20,6 +25,7 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
         setupViewPager()
     }
 
+    // Sets up this section.
     private fun setupViewPager() {
         val adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2
@@ -40,6 +46,7 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
         }.attach()
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

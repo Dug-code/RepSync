@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.data.repository
 
+/**
+ * File overview: Owns Firestore reads and writes for goals and goal progress.
+ */
+
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,6 +23,7 @@ class GoalRepository {
     private val currentUserId: String?
         get() = auth.currentUser?.uid
 
+    // Reads data.
     fun getGoals(userId: String? = null): Flow<List<Goal>> = callbackFlow {
         val id = userId ?: currentUserId
         if (id == null) {
@@ -41,6 +46,7 @@ class GoalRepository {
         awaitClose { listener.remove() }
     }
 
+    // Writes data.
     suspend fun addGoal(goal: Goal): Result<String> {
         return try {
             val uid = currentUserId ?: throw IllegalStateException("User not logged in")
@@ -52,6 +58,7 @@ class GoalRepository {
         }
     }
 
+    // Writes data.
     suspend fun updateGoal(goal: Goal): Result<Unit> {
         return try {
             goalsCollection.document(goal.id).set(goal).await()
@@ -61,6 +68,7 @@ class GoalRepository {
         }
     }
 
+    // Writes data.
     suspend fun updateProgress(goalId: String, newValue: Double): Result<Unit> {
         return try {
             goalsCollection.document(goalId).update("currentValue", newValue).await()
@@ -70,6 +78,7 @@ class GoalRepository {
         }
     }
 
+    // Reads data.
     suspend fun completeGoal(goalId: String): Result<Unit> {
         return try {
             goalsCollection.document(goalId).update(
@@ -84,6 +93,7 @@ class GoalRepository {
         }
     }
 
+    // Writes data.
     suspend fun deleteGoal(goalId: String): Result<Unit> {
         return try {
             goalsCollection.document(goalId).delete().await()

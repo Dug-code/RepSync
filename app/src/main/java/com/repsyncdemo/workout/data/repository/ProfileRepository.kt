@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.data.repository
 
+/**
+ * File overview: Owns Firestore reads and writes for user profiles, profile search, usernames, and profile updates.
+ */
+
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -152,10 +156,12 @@ class ProfileRepository {
         }
     }
 
+    // Writes data.
     suspend fun updateLocation(latitude: Double, longitude: Double): Result<Unit> {
         return updateProfileFields(mapOf("location" to GeoPoint(latitude, longitude)))
     }
 
+    // Reads data.
     suspend fun hasProfile(): Boolean {
         val id = currentUserId ?: return false
         return try {
@@ -166,6 +172,7 @@ class ProfileRepository {
         }
     }
 
+    // Reads data.
     suspend fun searchUsers(query: String): Result<List<UserProfile>> {
         return try {
             val lowerQuery = query.lowercase().trim()
@@ -191,6 +198,7 @@ class ProfileRepository {
         }
     }
 
+    // Reads data.
     suspend fun isUsernameAvailable(username: String, excludedUserId: String? = null): Boolean {
         return try {
             val snapshot = profilesCollection

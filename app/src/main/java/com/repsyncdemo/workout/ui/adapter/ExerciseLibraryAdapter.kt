@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds exerciselibrary data into RecyclerView rows and forwards user actions to the owning screen.
+ */
+
 import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.View
@@ -25,6 +29,7 @@ class ExerciseLibraryAdapter(
     private val onClick: ((ExerciseDefinition) -> Unit)? = null
 ) : ListAdapter<ExerciseDefinition, ExerciseLibraryAdapter.ViewHolder>(ExerciseDefDiffCallback()) {
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseLibraryBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -32,6 +37,7 @@ class ExerciseLibraryAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         // Note: Selection state was simplified out for better UX in full-screen mode
@@ -42,6 +48,7 @@ class ExerciseLibraryAdapter(
         private val binding: ItemExerciseLibraryBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(exercise: ExerciseDefinition, isSelected: Boolean) {
             binding.tvExerciseName.text = exercise.name
             
@@ -95,6 +102,7 @@ class ExerciseLibraryAdapter(
             }
         }
 
+        // Shows a dialog or popup.
         private fun showDeleteConfirmation(exercise: ExerciseDefinition) {
             AlertDialog.Builder(itemView.context, R.style.ThemeOverlay_App_MaterialAlertDialog)
                 .setTitle("Delete Custom Exercise")

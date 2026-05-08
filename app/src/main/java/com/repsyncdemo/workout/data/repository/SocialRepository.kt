@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.data.repository
 
+/**
+ * File overview: Owns Firestore reads and writes for friendships, friend requests, and social relationship queries.
+ */
+
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -20,6 +24,7 @@ class SocialRepository {
     private val currentUserId: String?
         get() = auth.currentUser?.uid
 
+    // Reads data.
     fun getFriends(userId: String? = null): Flow<List<Friendship>> = callbackFlow {
         val targetId = userId ?: currentUserId
         if (targetId == null) {
@@ -65,6 +70,7 @@ class SocialRepository {
         awaitClose { listener.remove() }
     }
 
+    // Reads data.
     fun getPendingRequests(): Flow<List<Friendship>> = callbackFlow {
         val uid = currentUserId
         if (uid == null) {
@@ -88,6 +94,7 @@ class SocialRepository {
         awaitClose { listener.remove() }
     }
 
+    // Reads data.
     fun getFriendshipWithUser(otherUserId: String): Flow<Friendship?> = callbackFlow {
         val uid = currentUserId
         if (uid == null) {
@@ -109,6 +116,7 @@ class SocialRepository {
         awaitClose { listener.remove() }
     }
 
+    // Reads data.
     suspend fun sendFriendRequest(
         receiverId: String,
         receiverUsername: String,
@@ -130,6 +138,7 @@ class SocialRepository {
         }
     }
 
+    // Reads data.
     suspend fun acceptRequest(friendshipId: String): Result<Unit> {
         return try {
             friendshipsCollection.document(friendshipId)
@@ -141,6 +150,7 @@ class SocialRepository {
         }
     }
 
+    // Reads data.
     suspend fun declineRequest(friendshipId: String): Result<Unit> {
         return try {
             friendshipsCollection.document(friendshipId)
@@ -152,6 +162,7 @@ class SocialRepository {
         }
     }
 
+    // Writes data.
     suspend fun removeFriendship(friendshipId: String): Result<Unit> {
         return try {
             friendshipsCollection.document(friendshipId).delete().await()

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Displays advanced PR and body-weight trend charts.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -27,11 +31,13 @@ class AnalyticsAdvancedFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: AnalyticsViewModel by activityViewModels()
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAnalyticsAdvancedBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupChart(binding.lineChartPR, "Select an exercise to track your PR")
@@ -39,6 +45,7 @@ class AnalyticsAdvancedFragment : Fragment() {
         observeData()
     }
 
+    // Sets up this section.
     private fun setupChart(chart: LineChart, emptyText: String) {
         chart.description.isEnabled = false
         chart.setTouchEnabled(true)
@@ -74,6 +81,7 @@ class AnalyticsAdvancedFragment : Fragment() {
         }
     }
 
+    // Watches data and updates the UI.
     private fun observeData() {
         viewModel.availableExercises.observe(viewLifecycleOwner) { exercises ->
             val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, exercises)
@@ -94,6 +102,7 @@ class AnalyticsAdvancedFragment : Fragment() {
         }
     }
 
+    // Updates data or UI state.
     private fun updatePRChartData(history: List<Pair<Long, Double>>) {
         if (history.isEmpty()) {
             binding.lineChartPR.clear()
@@ -114,6 +123,7 @@ class AnalyticsAdvancedFragment : Fragment() {
         binding.lineChartPR.invalidate()
     }
 
+    // Updates data or UI state.
     private fun updateWeightChartData(history: List<WeightLog>) {
         if (history.isEmpty()) {
             binding.lineChartWeight.clear()
@@ -157,6 +167,7 @@ class AnalyticsAdvancedFragment : Fragment() {
         dataSet.fillAlpha = 50
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

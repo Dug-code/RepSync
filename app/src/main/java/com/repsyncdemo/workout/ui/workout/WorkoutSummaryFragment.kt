@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.workout
 
+/**
+ * File overview: Displays the completed workout log summary after a session is saved.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -20,6 +24,7 @@ class WorkoutSummaryFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: WorkoutViewModel by activityViewModels()
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -29,6 +34,7 @@ class WorkoutSummaryFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -74,6 +80,7 @@ class WorkoutSummaryFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         viewModel.clearSelection() // Clear data when leaving

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.goals
 
+/**
+ * File overview: Full goal-management screen for creating goals, editing progress, privacy changes, and feed sharing.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -38,6 +42,7 @@ class GoalsFragment : Fragment() {
 
     private lateinit var goalAdapter: GoalAdapter
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -47,6 +52,7 @@ class GoalsFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -83,6 +89,7 @@ class GoalsFragment : Fragment() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showRenameGoalDialog(goal: Goal) {
         val input = EditText(requireContext())
         input.setText(goal.title)
@@ -103,6 +110,7 @@ class GoalsFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showCreateGoalDialog() {
         val dialogView = LayoutInflater.from(requireContext())
             .inflate(R.layout.dialog_create_goal, null)
@@ -232,6 +240,7 @@ class GoalsFragment : Fragment() {
         imm?.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
+    // Shows a dialog or popup.
     private fun showUpdateProgressDialog(goal: Goal) {
         val input = EditText(requireContext())
         input.hint = "New value (${goal.unit})"
@@ -291,6 +300,7 @@ class GoalsFragment : Fragment() {
         feedViewModel.createPost(post)
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

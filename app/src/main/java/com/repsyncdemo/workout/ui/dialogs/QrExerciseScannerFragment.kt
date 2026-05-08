@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.dialogs
 
+/**
+ * File overview: Presents a focused dialog or picker flow and returns the selected data to the calling screen.
+ */
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -49,11 +53,13 @@ class QrExerciseScannerFragment : Fragment() {
         }
     }
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentQrExerciseScannerBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         scanner = BarcodeScanning.getClient()
@@ -179,6 +185,7 @@ class QrExerciseScannerFragment : Fragment() {
         findNavController().popBackStack()
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         scanner?.close()
         scanner = null

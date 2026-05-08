@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds editable exercise-log rows and sets inside the workout logger.
+ */
+
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
@@ -81,6 +85,7 @@ class ExerciseLogAdapter(
         addExercise(exercise.name, exercise.type)
     }
 
+    // Reads data.
     fun getExerciseLogs(): List<ExerciseLog> {
         return exercises.mapIndexed { index, info ->
             ExerciseLog(
@@ -100,6 +105,7 @@ class ExerciseLogAdapter(
         }
     }
 
+    // Reads data.
     fun getTotalCompletedSets(): Int {
         var total = 0
         setData.values.forEach { sets ->
@@ -108,6 +114,7 @@ class ExerciseLogAdapter(
         return total
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseLogBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -115,6 +122,7 @@ class ExerciseLogAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(exercises[position], position)
     }
@@ -127,6 +135,7 @@ class ExerciseLogAdapter(
 
         private val handler = Handler(Looper.getMainLooper())
 
+        // Fills this row with data.
         fun bind(info: ExerciseInfo, exerciseIndex: Int) {
             binding.tvExerciseName.text = info.name
             updateSets(exerciseIndex, info)
@@ -138,6 +147,7 @@ class ExerciseLogAdapter(
             }
         }
 
+        // Updates data or UI state.
         private fun updateSets(exerciseIndex: Int, info: ExerciseInfo) {
             binding.layoutSets.removeAllViews()
             val sets = setData[exerciseIndex] ?: return
@@ -180,6 +190,7 @@ class ExerciseLogAdapter(
             }
         }
 
+        // Sets up this section.
         private fun setupStrengthSet(setView: View, data: SetLogData) {
             val etReps = setView.findViewById<EditText>(R.id.etReps)
             val etWeight = setView.findViewById<EditText>(R.id.etWeight)
@@ -191,6 +202,7 @@ class ExerciseLogAdapter(
             etWeight.addTextChangedListener(createWatcher { data.weight = it })
         }
 
+        // Sets up this section.
         private fun setupCardioSet(setView: View, data: SetLogData, name: String) {
             val etDuration = setView.findViewById<EditText>(R.id.etDuration)
             val etDistance = setView.findViewById<EditText>(R.id.etDistance)

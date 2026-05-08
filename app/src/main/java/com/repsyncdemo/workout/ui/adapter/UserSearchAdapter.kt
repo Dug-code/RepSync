@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds user search results with friend-request actions.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -25,11 +29,13 @@ class UserSearchAdapter(
 
     private var friendships: List<Friendship> = emptyList()
 
+    // Updates data or UI state.
     fun updateFriendships(newList: List<Friendship>) {
         friendships = newList
         notifyDataSetChanged()
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemUserSearchBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -37,6 +43,7 @@ class UserSearchAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -45,6 +52,7 @@ class UserSearchAdapter(
         private val binding: ItemUserSearchBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(user: UserProfile) {
             binding.tvUsername.text = user.username
             binding.ivAdminBadge.visibility = if (user.isAdmin) View.VISIBLE else View.GONE

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds completed workout log cards for history and recent-session lists.
+ */
+
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -19,6 +23,7 @@ class HistoryAdapter(
 
     private val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemHistoryBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -26,6 +31,7 @@ class HistoryAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -34,6 +40,7 @@ class HistoryAdapter(
         private val binding: ItemHistoryBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(log: WorkoutLog) {
             val date = Date(log.completedAt)
             binding.tvDateMonth.text = monthFormat.format(date).uppercase()

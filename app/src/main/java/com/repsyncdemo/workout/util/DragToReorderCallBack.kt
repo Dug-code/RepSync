@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.util
 
+/**
+ * File overview: Provides reusable utility behavior used across app screens.
+ */
+
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 

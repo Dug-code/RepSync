@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.dialogs
 
+/**
+ * File overview: Presents a focused dialog or picker flow and returns the selected data to the calling screen.
+ */
+
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -41,12 +45,14 @@ class ReactionDialogFragment : DialogFragment() {
         }
     }
 
+    // Sets up this screen.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NO_FRAME, 0)
         isCancelable = true
     }
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -104,6 +110,7 @@ class ReactionDialogFragment : DialogFragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

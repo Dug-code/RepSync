@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.data
 
+/**
+ * File overview: Defines the built-in exercise catalog and helper lookups used by templates, logs, and analytics.
+ */
+
 import com.repsyncdemo.workout.data.model.ExerciseDefinition
 import com.repsyncdemo.workout.data.model.ExerciseType
 
@@ -106,6 +110,7 @@ object ExerciseDatabase {
         })
     }
 
+    // Reads data.
     fun getExerciseByName(name: String): ExerciseDefinition? {
         return allExercises.find { it.name.equals(name, ignoreCase = true) }
     }

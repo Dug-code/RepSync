@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds editable exercise rows inside the routine builder, including strength/cardio fields and library matching.
+ */
+
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -24,6 +28,7 @@ class ExerciseInputAdapter(
         setHasStableIds(true)
     }
 
+    // Updates data or UI state.
     fun updateLibrary(exercises: List<ExerciseDefinition>) {
         this.allLibraryExercises = exercises
     }
@@ -48,13 +53,13 @@ class ExerciseInputAdapter(
     )
 
     fun addExercise() {
-        items.add(ExerciseInputItem())
-        notifyItemInserted(items.size - 1)
+        items.add(0, ExerciseInputItem())
+        notifyItemInserted(0)
         onDataChanged()
     }
 
     fun addExercise(name: String, type: ExerciseType, primary: String? = null, secondary: String? = null, isCustom: Boolean = false) {
-        items.add(ExerciseInputItem(
+        items.add(0, ExerciseInputItem(
             name = name, 
             type = type, 
             isCustom = isCustom,
@@ -62,7 +67,7 @@ class ExerciseInputAdapter(
             secondaryMuscle = if (secondary == "None") null else secondary,
             isBodyweight = type == ExerciseType.CALISTHENICS
         ))
-        notifyItemInserted(items.size - 1)
+        notifyItemInserted(0)
         onDataChanged()
     }
 
@@ -72,7 +77,7 @@ class ExerciseInputAdapter(
             
         val type = exerciseDef?.type ?: ExerciseType.STRENGTH
         val isBW = type == ExerciseType.CALISTHENICS
-        items.add(ExerciseInputItem(
+        items.add(0, ExerciseInputItem(
             name = name, 
             isBodyweight = isBW, 
             type = type,
@@ -80,7 +85,7 @@ class ExerciseInputAdapter(
             primaryMuscle = exerciseDef?.primaryBodyPart,
             secondaryMuscle = exerciseDef?.secondaryBodyParts
         ))
-        notifyItemInserted(items.size - 1)
+        notifyItemInserted(0)
         onDataChanged()
     }
 
@@ -105,6 +110,7 @@ class ExerciseInputAdapter(
         notifyDataSetChanged()
     }
 
+    // Reads data.
     fun getExercises(): List<Exercise> {
         return items.map { item ->
             Exercise(
@@ -123,6 +129,7 @@ class ExerciseInputAdapter(
 
     override fun getItemId(position: Int): Long = items[position].stableId
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseInputBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -130,6 +137,7 @@ class ExerciseInputAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(items[position])
     }
@@ -156,6 +164,7 @@ class ExerciseInputAdapter(
         private var distWatcher: TextWatcher? = null
         private var floorsWatcher: TextWatcher? = null
 
+        // Fills this row with data.
         fun bind(item: ExerciseInputItem) {
             val context = binding.root.context
             
@@ -262,11 +271,13 @@ class ExerciseInputAdapter(
             }
         }
 
+        // Updates data or UI state.
         private fun updateExpandedState(item: ExerciseInputItem) {
             binding.layoutCollapsibleContent.visibility = if (item.isExpanded) View.VISIBLE else View.GONE
             binding.ivExpandIcon.rotation = if (item.isExpanded) 180f else 0f
         }
 
+        // Updates data or UI state.
         private fun updateMuscleGroupDisplay(item: ExerciseInputItem) {
             val primary = item.primaryMuscle
             val secondary = item.secondaryMuscle
@@ -281,6 +292,7 @@ class ExerciseInputAdapter(
             binding.tvCustomLabel.visibility = if (item.isCustom) View.VISIBLE else View.GONE
         }
 
+        // Updates data or UI state.
         private fun updateUiForType(item: ExerciseInputItem) {
             if (item.type == ExerciseType.CARDIO) {
                 binding.layoutStrengthInputs.visibility = View.GONE

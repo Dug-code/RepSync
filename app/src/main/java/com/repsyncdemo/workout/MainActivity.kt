@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout
 
+/**
+ * File overview: Hosts the main navigation shell, bottom navigation, reminders, notifications, and app-wide navigation locking.
+ */
+
 import android.content.Context
 import android.graphics.Rect
 import android.os.Bundle
@@ -41,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var navController: NavController
     private var weighInReminderDialog: androidx.appcompat.app.AlertDialog? = null
 
+    // Sets up this screen.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -129,6 +134,7 @@ class MainActivity : AppCompatActivity() {
         return super.dispatchTouchEvent(event)
     }
 
+    // Shows a dialog or popup.
     private fun showNotificationPopup(notification: com.repsyncdemo.workout.data.model.Notification) {
         MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle(notification.title)
@@ -171,6 +177,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showWeighInReminder() {
         if (weighInReminderDialog?.isShowing == true) return
 
@@ -187,6 +194,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showWeighInDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_weigh_in, null)
         val etWeight = dialogView.findViewById<EditText>(R.id.etWeight)
@@ -231,6 +239,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // Saves changes.
     private fun saveWeighInData(weight: Double, freqText: String, view: View) {
         val freq = when(freqText) {
             "Every Day" -> "daily"
@@ -260,6 +269,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, "Weight updated!", Toast.LENGTH_SHORT).show()
     }
 
+    // Sets up this section.
     private fun setupBottomNavSlide() {
         val gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
@@ -306,6 +316,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showLockWarning(onDiscard: () -> Unit) {
         MaterialAlertDialogBuilder(this, R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Unsaved Changes")

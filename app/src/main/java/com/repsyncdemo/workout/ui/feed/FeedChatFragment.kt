@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.feed
 
+/**
+ * File overview: Displays a feed-related tab and connects feed items to navigation and profile data.
+ */
+
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -28,11 +32,13 @@ class FeedChatFragment : Fragment() {
     private lateinit var feedAdapter: FeedAdapter
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFeedChatBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -93,6 +99,7 @@ class FeedChatFragment : Fragment() {
         imm.hideSoftInputFromWindow(binding.etChatMessage.windowToken, 0)
     }
 
+    // Shows a dialog or popup.
     private fun showEditChatDialog(postId: String, currentText: String) {
         val input = EditText(requireContext())
         input.setText(currentText)
@@ -116,6 +123,7 @@ class FeedChatFragment : Fragment() {
         feedViewModel.loadChatFeed()
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

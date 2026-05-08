@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds feed posts, chat posts, moderation options, reactions, and profile navigation into feed list rows.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -54,6 +58,7 @@ class FeedAdapter(
         notifyDataSetChanged()
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFeedPostBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -61,6 +66,7 @@ class FeedAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -192,6 +198,7 @@ class FeedAdapter(
                 .show()
         }
 
+        // Loads data.
         private fun loadProfilePicture(value: String) {
             val profilePicture = value.trim()
 

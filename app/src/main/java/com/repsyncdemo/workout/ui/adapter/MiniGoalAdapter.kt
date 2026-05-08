@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds compact goal cards for the profile header.
+ */
+
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -13,6 +17,7 @@ import kotlin.math.abs
 
 class MiniGoalAdapter : ListAdapter<Goal, MiniGoalAdapter.ViewHolder>(GoalDiffCallback()) {
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemMiniGoalBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -20,6 +25,7 @@ class MiniGoalAdapter : ListAdapter<Goal, MiniGoalAdapter.ViewHolder>(GoalDiffCa
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -28,6 +34,7 @@ class MiniGoalAdapter : ListAdapter<Goal, MiniGoalAdapter.ViewHolder>(GoalDiffCa
         private val binding: ItemMiniGoalBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(goal: Goal) {
             binding.tvMiniGoalTitle.text = goal.title
             

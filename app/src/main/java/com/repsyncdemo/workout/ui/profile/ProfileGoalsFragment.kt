@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Displays and manages a profile-related screen for user identity, social, goals, trophies, or notifications.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,11 +29,13 @@ class ProfileGoalsFragment : Fragment() {
     private lateinit var goalAdapter: GoalAdapter
     private var targetUserId: String? = null
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = LayoutTabListBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
@@ -78,6 +84,7 @@ class ProfileGoalsFragment : Fragment() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showRenameGoalDialog(goal: Goal) {
         val input = EditText(requireContext())
         input.setText(goal.title)
@@ -98,6 +105,7 @@ class ProfileGoalsFragment : Fragment() {
             .show()
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

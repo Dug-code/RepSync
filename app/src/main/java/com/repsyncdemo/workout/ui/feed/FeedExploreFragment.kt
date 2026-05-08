@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.feed
 
+/**
+ * File overview: Displays a feed-related tab and connects feed items to navigation and profile data.
+ */
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -27,11 +31,13 @@ class FeedExploreFragment : Fragment() {
     private lateinit var feedAdapter: FeedAdapter
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFeedExploreBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -118,6 +124,7 @@ class FeedExploreFragment : Fragment() {
         updateFilters()
     }
 
+    // Updates data or UI state.
     private fun updateFilters() {
         if (_binding == null) return
         val isGlobal = binding.switchGlobal.isChecked
@@ -128,6 +135,7 @@ class FeedExploreFragment : Fragment() {
         feedViewModel.applyExploreFilters(radius = radius)
     }
 
+    // Updates data or UI state.
     private fun updateEmptyState(isEmpty: Boolean) {
         if (feedViewModel.isLocationAvailable.value == false && !binding.switchGlobal.isChecked) {
             binding.layoutEmpty.visibility = View.GONE
@@ -137,6 +145,7 @@ class FeedExploreFragment : Fragment() {
         binding.rvFeed.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

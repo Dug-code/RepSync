@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Shows recent completed workout logs inside the Home tab.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -19,11 +23,13 @@ class HomeRecentFragment : Fragment() {
     private val workoutViewModel: WorkoutViewModel by activityViewModels()
     private lateinit var historyAdapter: HistoryAdapter
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = LayoutTabListBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         historyAdapter = HistoryAdapter(
@@ -61,6 +67,7 @@ class HomeRecentFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

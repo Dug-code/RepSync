@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Displays and manages a profile-related screen for user identity, social, goals, trophies, or notifications.
+ */
+
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -31,11 +35,13 @@ class ProfileFriendsFragment : Fragment() {
     private var targetUserId: String? = null
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileFriendsTabBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
@@ -46,6 +52,7 @@ class ProfileFriendsFragment : Fragment() {
         observeData()
     }
 
+    // Sets up this section.
     private fun setupRecyclerViews() {
         binding.rvFriends.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -57,6 +64,7 @@ class ProfileFriendsFragment : Fragment() {
         }
     }
 
+    // Sets up this section.
     private fun setupAdapters() {
         friendsAdapter = FriendAdapter(
             isMyProfile = targetUserId == null,
@@ -106,6 +114,7 @@ class ProfileFriendsFragment : Fragment() {
         )
     }
 
+    // Sets up this section.
     private fun setupSearch() {
         if (targetUserId != null) {
             binding.layoutSearch.visibility = View.GONE
@@ -127,6 +136,7 @@ class ProfileFriendsFragment : Fragment() {
         })
     }
 
+    // Watches data and updates the UI.
     private fun observeData() {
         socialViewModel.userProfiles.observe(viewLifecycleOwner) { profiles ->
             friendsAdapter.updateProfiles(profiles)
@@ -161,10 +171,12 @@ class ProfileFriendsFragment : Fragment() {
         }
     }
 
+    // Updates data or UI state.
     private fun updateEmptyState(isEmpty: Boolean) {
         binding.tvEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

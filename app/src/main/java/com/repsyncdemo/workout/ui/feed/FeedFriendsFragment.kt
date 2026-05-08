@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.feed
 
+/**
+ * File overview: Displays a feed-related tab and connects feed items to navigation and profile data.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -24,11 +28,13 @@ class FeedFriendsFragment : Fragment() {
     private lateinit var feedAdapter: FeedAdapter
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFeedFriendsBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -77,6 +83,7 @@ class FeedFriendsFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds admin dashboard user rows.
+ */
+
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -20,6 +24,7 @@ class UserAdapter(
     private val onToggleModerator: (UserProfile) -> Unit
 ) : ListAdapter<UserProfile, UserAdapter.ViewHolder>(UserDiffCallback()) {
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemUserAdminBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -27,6 +32,7 @@ class UserAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }

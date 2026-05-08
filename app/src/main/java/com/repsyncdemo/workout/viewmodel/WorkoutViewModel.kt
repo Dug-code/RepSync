@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Coordinates workout templates, workout logs, exercise library state, rest days, and save/update operations for workout screens.
+ */
+
 import android.util.Log
 import androidx.lifecycle.*
 import com.google.firebase.auth.FirebaseAuth
@@ -49,6 +53,13 @@ class WorkoutViewModel : ViewModel() {
     val restDays: LiveData<List<RestDay>> = repository.getRestDays()
         .catch { e ->
             Log.e("WorkoutViewModel", "Error in restDays flow", e)
+            emit(emptyList())
+        }
+        .asLiveData()
+
+    val weightLogs: LiveData<List<WeightLog>> = repository.getWeightLogs()
+        .catch { e ->
+            Log.e("WorkoutViewModel", "Error in weight logs flow", e)
             emit(emptyList())
         }
         .asLiveData()
@@ -222,6 +233,7 @@ class WorkoutViewModel : ViewModel() {
         _filterList.value = list
     }
 
+    // Updates data or UI state.
     fun updateFilter(category: String, filter: String) {
         when (category) {
             "Body Part" -> _filterBodyPart.value = filter
@@ -265,6 +277,7 @@ class WorkoutViewModel : ViewModel() {
         selectedExerciseEvent.value = exerciseName
     }
 
+    // Calculates values.
     private fun calculateStreak(logs: List<WorkoutLog>): Int {
         if (logs.isEmpty()) return 0
         
@@ -319,6 +332,7 @@ class WorkoutViewModel : ViewModel() {
         return streak
     }
 
+    // Loads data.
     fun loadWorkoutsForUser(userId: String) {
         viewModelScope.launch {
             repository.getWorkouts(userId).catch { e ->
@@ -330,6 +344,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadWorkoutLogsForUser(userId: String) {
         viewModelScope.launch {
             repository.getWorkoutLogs(userId).catch { e ->
@@ -369,6 +384,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadWorkout(workoutId: String) {
         _isLoading.value = true
         isWorkoutDataLoaded = false // Reset load flag
@@ -380,6 +396,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Reads data.
     suspend fun getWorkoutTemplate(workoutId: String): Result<Workout> {
         return repository.getWorkout(workoutId)
     }
@@ -388,6 +405,7 @@ class WorkoutViewModel : ViewModel() {
         isWorkoutDataLoaded = true
     }
 
+    // Loads data.
     fun loadWorkoutLog(logId: String) {
         _isLoading.value = true
         isLogDataLoaded = false // Reset load flag
@@ -412,6 +430,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Updates data or UI state.
     fun updateWorkout(workout: Workout) {
         _isLoading.value = true
         viewModelScope.launch {
@@ -423,6 +442,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Updates data or UI state.
     fun updateWorkoutOrder(workouts: List<Workout>) {
         viewModelScope.launch {
             repository.updateWorkoutOrder(workouts)

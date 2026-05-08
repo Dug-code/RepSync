@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Displays calendar-based workout and rest-day history with daily filtering.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -29,6 +33,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
     private var allLogs: List<WorkoutLog> = emptyList()
     private var selectedDate: CalendarDay = CalendarDay.today()
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -38,6 +43,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -86,6 +92,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
         filterLogsForSelectedDate()
     }
 
+    // Updates data or UI state.
     private fun updateCalendarDecorators() {
         binding.calendarView.removeDecorators()
         
@@ -121,6 +128,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
         }
     }
 
+    // Filters or sorts the list.
     private fun filterLogsForSelectedDate() {
         val filteredWorkouts = allLogs.filter { log ->
             val logCal = Calendar.getInstance()
@@ -167,6 +175,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

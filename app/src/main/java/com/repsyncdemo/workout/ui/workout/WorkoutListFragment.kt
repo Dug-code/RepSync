@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.workout
 
+/**
+ * File overview: Displays saved workout templates with search, sorting, drag-to-reorder, and create-template navigation.
+ */
+
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -28,9 +32,11 @@ class WorkoutListFragment : Fragment() {
     private lateinit var workoutAdapter: WorkoutAdapter
     private var allWorkouts: MutableList<Workout> = mutableListOf()
     private var currentSort = SortType.MANUAL
+    private var pendingScrollWorkoutId: String? = null
 
     enum class SortType { MANUAL, DATE, NAME }
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -40,6 +46,7 @@ class WorkoutListFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -61,6 +68,7 @@ class WorkoutListFragment : Fragment() {
         setupObservers()
     }
 
+    // Sets up this section.
     private fun setupListeners() {
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_workoutList_to_createWorkout)
@@ -88,7 +96,19 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
+    // Sets up this section.
     private fun setupObservers() {
+        findNavController().currentBackStackEntry
+            ?.savedStateHandle
+            ?.getLiveData<String>("scrollToWorkoutId")
+            ?.observe(viewLifecycleOwner) { workoutId ->
+                pendingScrollWorkoutId = workoutId
+                findNavController().currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.remove<String>("scrollToWorkoutId")
+                applyFiltersAndSort()
+            }
+
         viewModel.workouts.observe(viewLifecycleOwner) { workouts ->
             // Only update if we aren't actively reordering to avoid interrupting the user
             allWorkouts = workouts.toMutableList()
@@ -96,6 +116,7 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
+    // Sets up this section.
     private fun setupDragAndDrop() {
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
             ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0
@@ -130,6 +151,7 @@ class WorkoutListFragment : Fragment() {
         itemTouchHelper.attachToRecyclerView(binding.rvWorkouts)
     }
 
+    // Filters or sorts the list.
     private fun applyFiltersAndSort() {
         val query = binding.etSearch.text.toString().trim()
         
@@ -148,13 +170,26 @@ class WorkoutListFragment : Fragment() {
             SortType.MANUAL -> filteredList // Already in order from Firestore/Drag
         }
         
-        workoutAdapter.submitList(filteredList)
+        val scrollWorkoutId = pendingScrollWorkoutId
+        workoutAdapter.submitList(filteredList) {
+            scrollWorkoutId?.let { workoutId ->
+                val position = filteredList.indexOfFirst { it.id == workoutId }
+                if (position != -1) {
+                    binding.rvWorkouts.post {
+                        (binding.rvWorkouts.layoutManager as? LinearLayoutManager)
+                            ?.scrollToPositionWithOffset(position, 0)
+                    }
+                    pendingScrollWorkoutId = null
+                }
+            }
+        }
         
         val isEmpty = filteredList.isEmpty()
         binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
         binding.rvWorkouts.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

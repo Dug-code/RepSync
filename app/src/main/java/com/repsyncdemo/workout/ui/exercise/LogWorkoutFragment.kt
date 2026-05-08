@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.exercise
 
+/**
+ * File overview: Lets users log or edit a workout session, including timer controls, exercise sets, notes, date, and duration.
+ */
+
 import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.os.Bundle
@@ -65,6 +69,7 @@ class LogWorkoutFragment : Fragment() {
         }
     }
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -74,6 +79,7 @@ class LogWorkoutFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -132,6 +138,7 @@ class LogWorkoutFragment : Fragment() {
         setupListeners()
     }
 
+    // Sets up this section.
     private fun setupObservers() {
         viewModel.selectedLog.observe(viewLifecycleOwner) { log ->
             log?.let {
@@ -189,6 +196,7 @@ class LogWorkoutFragment : Fragment() {
         }
     }
 
+    // Loads data.
     private fun loadWorkoutTemplate(workoutId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             val result = viewModel.getWorkoutTemplate(workoutId)
@@ -242,6 +250,7 @@ class LogWorkoutFragment : Fragment() {
         updateLockState()
     }
 
+    // Sets up this section.
     private fun setupListeners() {
         binding.tvSelectedDate.setOnClickListener { showDatePicker() }
 
@@ -307,6 +316,7 @@ class LogWorkoutFragment : Fragment() {
         timerHandler.removeCallbacks(timerRunnable)
     }
 
+    // Updates data or UI state.
     private fun updateTimerDisplay() {
         val hours = secondsElapsed / 3600
         val minutes = (secondsElapsed % 3600) / 60
@@ -314,6 +324,7 @@ class LogWorkoutFragment : Fragment() {
         binding.tvTimer.text = String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, secs)
     }
 
+    // Shows a dialog or popup.
     private fun showManualDurationDialog() {
         val input = EditText(requireContext())
         input.inputType = android.text.InputType.TYPE_CLASS_NUMBER
@@ -395,6 +406,7 @@ class LogWorkoutFragment : Fragment() {
         isWorkoutModified = false
     }
 
+    // Updates data or UI state.
     private fun updateLockState() {
         navigationLockViewModel.setLocked(hasUnsavedChanges())
     }
@@ -409,6 +421,7 @@ class LogWorkoutFragment : Fragment() {
                (exerciseLogAdapter?.itemCount ?: 0) > 0
     }
 
+    // Shows a dialog or popup.
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
         AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Discard Session?")
@@ -418,6 +431,7 @@ class LogWorkoutFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showDeleteConfirmation() {
         AlertDialog.Builder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Delete Log")
@@ -433,10 +447,12 @@ class LogWorkoutFragment : Fragment() {
             .show()
     }
 
+    // Updates data or UI state.
     private fun updateDateTimeDisplays() {
         binding.tvSelectedDate.text = dateFormat.format(endCalendar.time)
     }
 
+    // Shows a dialog or popup.
     private fun showDatePicker() {
         val datePickerDialog = DatePickerDialog(
             requireContext(),
@@ -460,6 +476,7 @@ class LogWorkoutFragment : Fragment() {
         datePickerDialog.show()
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         stopTimer()
         binding.rvExerciseLogs.adapter = null

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.data.model
 
+/**
+ * File overview: Defines the Notification data model used by repositories, view models, and UI binding.
+ */
+
 import com.google.firebase.firestore.DocumentId
 
 /**

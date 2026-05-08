@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.data.repository
 
+/**
+ * File overview: Owns Firestore reads and writes for notification records.
+ */
+
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query

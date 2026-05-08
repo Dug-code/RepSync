@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Loads user notifications and marks notifications as read.
+ */
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope

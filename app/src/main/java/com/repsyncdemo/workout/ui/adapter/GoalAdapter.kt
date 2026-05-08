@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds full goal cards with progress display, privacy state, update actions, and options menu.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -21,6 +25,7 @@ class GoalAdapter(
     private val onDelete: (Goal) -> Unit
 ) : ListAdapter<Goal, GoalAdapter.ViewHolder>(GoalDiffCallback()) {
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemGoalBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -28,6 +33,7 @@ class GoalAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -36,6 +42,7 @@ class GoalAdapter(
         private val binding: ItemGoalBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(goal: Goal) {
             binding.tvGoalTitle.text = goal.title
 
@@ -118,6 +125,7 @@ class GoalAdapter(
             }
         }
 
+        // Shows a dialog or popup.
         private fun showOptionsPopup(view: View, goal: Goal) {
             val popup = PopupMenu(view.context, view)
             popup.menu.add("Log Progress")

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Supports the home or analytics experience with screen-specific UI and data binding.
+ */
+
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.drawable.Drawable

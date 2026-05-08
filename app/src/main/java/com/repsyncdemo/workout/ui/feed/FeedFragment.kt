@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.feed
 
+/**
+ * File overview: Hosts feed tabs for friends, chat, and explore content.
+ */
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -49,6 +53,7 @@ class FeedFragment : Fragment() {
         }
     }
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -58,6 +63,7 @@ class FeedFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupViewPager()
@@ -69,6 +75,7 @@ class FeedFragment : Fragment() {
         feedViewModel.loadChatFeed()
     }
 
+    // Sets up this section.
     private fun setupNotificationButton() {
         binding.btnNotifications.setOnClickListener {
             findNavController().navigate(R.id.action_feed_to_notifications)
@@ -78,10 +85,8 @@ class FeedFragment : Fragment() {
             if (notifications.isNotEmpty()) {
                 binding.tvNotificationBadge.text = notifications.size.toString()
                 binding.tvNotificationBadge.visibility = View.VISIBLE
-                binding.tvNoNotifications.visibility = View.GONE
             } else {
                 binding.tvNotificationBadge.visibility = View.GONE
-                binding.tvNoNotifications.visibility = View.VISIBLE
             }
         }
     }
@@ -160,11 +165,13 @@ class FeedFragment : Fragment() {
         return isRecent && isAccurateEnough
     }
 
+    // Filters or sorts the list.
     private fun applyLocation(latitude: Double, longitude: Double) {
         feedViewModel.setUserLocation(latitude, longitude)
         profileViewModel.updateLocation(latitude, longitude)
     }
 
+    // Sets up this section.
     private fun setupViewPager() {
         val adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 3
@@ -203,6 +210,7 @@ class FeedFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

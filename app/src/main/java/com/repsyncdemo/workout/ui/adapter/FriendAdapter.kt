@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds friend rows and profile navigation for a viewed user's friends list.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,11 +27,13 @@ class FriendAdapter(
 
     private var profileMap = mapOf<String, UserProfile>()
 
+    // Updates data or UI state.
     fun updateProfiles(profiles: Map<String, UserProfile>) {
         this.profileMap = profiles
         notifyDataSetChanged()
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFriendBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -35,6 +41,7 @@ class FriendAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -43,6 +50,7 @@ class FriendAdapter(
         private val binding: ItemFriendBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(friendship: Friendship) {
             // The "friend" is whichever ID is NOT the owner of the profile we are viewing
             val friendId = if (friendship.requesterId == profileOwnerId) friendship.receiverId else friendship.requesterId

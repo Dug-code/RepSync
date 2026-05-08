@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Lets users edit profile details, privacy settings, socials, account actions, and validates username availability.
+ */
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -57,7 +61,10 @@ class SettingsFragment : Fragment() {
     private var usernameCheckJob: Job? = null
     private var originalHeight: Int = 0
     private var originalWeight: Double = 0.0
+    private val usernamePattern = Regex("^[A-Za-z0-9._]+$")
+    private val usernameRuleMessage = "Use letters, numbers, periods, and underscores only"
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -67,6 +74,7 @@ class SettingsFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -197,6 +205,10 @@ class SettingsFragment : Fragment() {
                 findNavController().popBackStack()
             }
             result.onFailure {
+                if (it.message?.startsWith("Username") == true) {
+                    binding.tilUsername.error = it.message
+                    return@observe
+                }
                 Toast.makeText(requireContext(), "Save failed: ${it.message}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -209,6 +221,7 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // Updates data or UI state.
     private fun updateProfilePicturePreview(url: String) {
         if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
             binding.ivProfilePic.load(url) {
@@ -228,6 +241,7 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showProfilePictureDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_profile_picture_picker, null)
         
@@ -271,6 +285,7 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
+    // Shows a dialog or popup.
     private fun showClearHistoryConfirmation() {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Clear All Data?")
@@ -283,6 +298,7 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showDeleteAccountFlow() {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Delete Account?")
@@ -294,6 +310,7 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showDeleteVerificationDialog() {
         val input = EditText(requireContext())
         input.hint = "Type DELETE here"
@@ -337,6 +354,7 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
+    // Sets up this section.
     private fun setupChangeListeners() {
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -359,6 +377,11 @@ class SettingsFragment : Fragment() {
                 usernameCheckJob?.cancel()
 
                 if (username.length >= 3 && !username.equals(originalUsername, ignoreCase = true)) {
+                    if (!isValidUsername(username)) {
+                        binding.tilUsername.error = usernameRuleMessage
+                        return
+                    }
+
                     usernameCheckJob = viewLifecycleOwner.lifecycleScope.launch {
                         delay(500)
                         if (!profileViewModel.isUsernameAvailable(username)) {
@@ -383,6 +406,7 @@ class SettingsFragment : Fragment() {
         binding.switchFriendsPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
     }
 
+    // Updates data or UI state.
     private fun updateLockState() {
         navigationLockViewModel.setLocked(hasUnsavedChanges())
     }
@@ -411,6 +435,7 @@ class SettingsFragment : Fragment() {
                binding.switchFriendsPublic.isChecked != original.isFriendsListPublic
     }
 
+    // Shows a dialog or popup.
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Unsaved Changes")
@@ -420,6 +445,7 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    // Saves changes.
     private fun saveChanges() {
         val username = binding.etUsername.text.toString().trim()
         val bio = binding.etBio.text.toString().trim()
@@ -447,6 +473,10 @@ class SettingsFragment : Fragment() {
         }
         if (username.length < 3) {
             binding.tilUsername.error = "Username must be at least 3 characters"
+            return
+        }
+        if (!isValidUsername(username)) {
+            binding.tilUsername.error = usernameRuleMessage
             return
         }
 
@@ -488,6 +518,10 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private fun isValidUsername(username: String): Boolean {
+        return usernamePattern.matches(username)
+    }
+
     private fun isValidUrl(url: String, allowedDomains: List<String>): Boolean {
         if (url.isEmpty()) return true
         return allowedDomains.any { domain ->
@@ -495,6 +529,7 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.auth
 
+/**
+ * File overview: Handles the register authentication screen and routes users after auth state changes.
+ */
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -15,6 +19,7 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var binding: ActivityRegisterBinding
     private val viewModel: AuthViewModel by viewModels()
 
+    // Sets up this screen.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityRegisterBinding.inflate(layoutInflater)
@@ -24,6 +29,7 @@ class RegisterActivity : AppCompatActivity() {
         observeViewModel()
     }
 
+    // Sets up this section.
     private fun setupListeners() {
         binding.btnRegister.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
@@ -55,6 +61,7 @@ class RegisterActivity : AppCompatActivity() {
         }
     }
 
+    // Watches data and updates the UI.
     private fun observeViewModel() {
         viewModel.isLoading.observe(this) { isLoading ->
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE

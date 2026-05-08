@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.friends
 
+/**
+ * File overview: Displays the standalone friends screen with friend lists, requests, search, and friend actions.
+ */
+
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -34,6 +38,7 @@ class FriendsFragment : Fragment() {
     
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -43,6 +48,7 @@ class FriendsFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -159,6 +165,7 @@ class FriendsFragment : Fragment() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showTab(friends: Boolean = false, requests: Boolean = false, search: Boolean = false) {
         binding.rvFriends.visibility = if (friends) View.VISIBLE else View.GONE
         binding.rvRequests.visibility = if (requests) View.VISIBLE else View.GONE
@@ -167,6 +174,7 @@ class FriendsFragment : Fragment() {
         binding.tvEmpty.visibility = View.GONE
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

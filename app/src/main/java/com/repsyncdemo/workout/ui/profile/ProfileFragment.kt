@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Displays the current or target user profile, social actions, mini goals, trophies, and profile tabs.
+ */
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -55,11 +59,13 @@ class ProfileFragment : Fragment() {
 
     private var tabMediator: TabLayoutMediator? = null
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         // Retrieve target userId from navigation arguments if viewing someone else
@@ -313,8 +319,12 @@ class ProfileFragment : Fragment() {
             binding.layoutEmptyGoals.visibility = if (showEmptyGoals) View.VISIBLE else View.GONE
         }
 
-        // Trophies depend on workout logs
+        // Trophies depend on workout and profile stats.
         workoutViewModel.workoutLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
+        workoutViewModel.workouts.observe(viewLifecycleOwner) { updateTrophyUI() }
+        workoutViewModel.weightLogs.observe(viewLifecycleOwner) { updateTrophyUI() }
+        goalViewModel.goals.observe(viewLifecycleOwner) { updateTrophyUI() }
+        socialViewModel.friends.observe(viewLifecycleOwner) { updateTrophyUI() }
         profileViewModel.myProfile.observe(viewLifecycleOwner) { updateTrophyUI() }
     }
 
@@ -421,41 +431,78 @@ class ProfileFragment : Fragment() {
      */
     private fun updateTrophyUI() {
         val profile = profileViewModel.myProfile.value ?: return
-        val workoutCount = workoutViewModel.workoutLogs.value?.size ?: 0
-        val restDayCount = profile.totalRestDays
-        val pinnedTrophyId = profile.pinnedTrophyId
-        
-        // Determine which trophy to display
-        val trophyToDisplay = if (pinnedTrophyId == "recovery") {
-            Trophy("recovery", "Recovery", "Total rest days recorded", restDayCount, TrophyType.RECOVERY)
-        } else {
-            Trophy("gym_rat", "Gym Rat", "Total workouts completed", workoutCount, TrophyType.GYM_RAT)
-        }
-        
+        val pinnedTrophyId = profile.pinnedTrophyId.toCurrentTrophyId()
+        val trophies = buildProfileTrophies(profile)
+        val trophyToDisplay = trophies
+            .firstOrNull { it.id == pinnedTrophyId }
+            ?: trophies.first()
+
         val rank = trophyToDisplay.rank
         binding.ivPinnedTrophy.visibility = View.VISIBLE
-        
-        // Resolve icon resource based on type and rank
-        val iconRes = when (trophyToDisplay.type) {
-            TrophyType.GYM_RAT -> when (rank) {
-                TrophyRank.BRONZE -> R.drawable.gym_rat_bronze
-                TrophyRank.SILVER -> R.drawable.gym_rat_silver
-                TrophyRank.GOLD -> R.drawable.gym_rat_gold
-                TrophyRank.DIAMOND -> R.drawable.gym_rat_diamond
-                else -> R.drawable.gym_rat_locked
-            }
-            TrophyType.RECOVERY -> when (rank) {
-                TrophyRank.BRONZE -> R.drawable.zzz_icon_bronze
-                TrophyRank.SILVER -> R.drawable.zzz_icon_silver
-                TrophyRank.GOLD -> R.drawable.zzz_icon_gold
-                TrophyRank.DIAMOND -> R.drawable.zzz_icon_diamond
-                else -> R.drawable.zzz_icon_locked
-            }
-            else -> R.drawable.ic_trophy
-        }
-        binding.ivPinnedTrophy.setImageResource(iconRes)
+        binding.ivPinnedTrophy.setImageResource(trophyToDisplay.iconRes(rank))
         binding.ivPinnedTrophy.imageTintList = null
         binding.ivPinnedTrophy.background = null
+    }
+
+    private fun String?.toCurrentTrophyId(): String? = when (this) {
+        "full_time" -> "tick_tock"
+        "cardio_bunny" -> "cardio_champ"
+        "bench_press", "squat", "deadlift", "shoulder_press", "dumbbell_master" -> "heavy_hitter"
+        "pushup_master", "pullup_master", "situp_master" -> "rep_machine"
+        "abs_master" -> "set_collector"
+        "all_star" -> "lift_king"
+        else -> this
+    }
+
+    private fun buildProfileTrophies(profile: UserProfile): List<Trophy> {
+        val logs = workoutViewModel.workoutLogs.value ?: emptyList()
+        val routines = workoutViewModel.workouts.value ?: emptyList()
+        val weightLogs = workoutViewModel.weightLogs.value ?: emptyList()
+        val goals = goalViewModel.goals.value ?: emptyList()
+        val friendsCount = socialViewModel.friends.value?.size ?: 0
+        val weighInCount = maxOf(weightLogs.size, if (profile.lastWeighInDate > 0L) 1 else 0)
+
+        var totalVolume = 0.0
+        var totalTimeMinutes = 0
+        var totalReps = 0
+        var totalSets = 0
+        var cardioMinutes = 0
+        var heaviestSet = 0.0
+
+        logs.forEach { log ->
+            totalTimeMinutes += log.durationMinutes
+            log.exercises.forEach { ex ->
+                ex.sets.forEach { set ->
+                    if (set.completed) totalSets++
+                    if (set.completed && (ex.type == ExerciseType.STRENGTH || ex.type == ExerciseType.CALISTHENICS)) {
+                        val weight = set.weight ?: 0.0
+                        val reps = set.reps ?: 0
+                        totalVolume += weight * reps
+                        totalReps += reps
+                        heaviestSet = maxOf(heaviestSet, weight)
+                    }
+                    if (set.completed && ex.type == ExerciseType.CARDIO) {
+                        cardioMinutes += (set.durationSeconds ?: 0) / 60
+                    }
+                }
+            }
+        }
+
+        val goalsCreatedOrCompleted = goals.count { it.isCompleted } + goals.size
+        return listOf(
+            Trophy("gym_rat", "Gym Rat", "Total workouts completed", logs.size, TrophyType.GYM_RAT),
+            Trophy("recovery", "Recovery", "Total rest days recorded", profile.totalRestDays, TrophyType.RECOVERY),
+            Trophy("lift_king", "Lift King", "Total volume lifted (lbs)", totalVolume.toInt(), TrophyType.LIFT_KING),
+            Trophy("tick_tock", "Tick Tock", "Total minutes in the gym", totalTimeMinutes, TrophyType.TICK_TOCK),
+            Trophy("scale_check", "Scale Check", "Total weigh-ins logged", weighInCount, TrophyType.SCALE_CHECK),
+            Trophy("rep_machine", "Rep Machine", "Total completed reps", totalReps, TrophyType.REP_MACHINE),
+            Trophy("set_collector", "Set Collector", "Total completed sets", totalSets, TrophyType.SET_COLLECTOR),
+            Trophy("cardio_champ", "Cardio Champ", "Total cardio minutes", cardioMinutes, TrophyType.CARDIO_CHAMP),
+            Trophy("routine_builder", "Routine Builder", "Saved routines created", routines.size, TrophyType.ROUTINE_BUILDER),
+            Trophy("goal_getter", "Goal Getter", "Goals created and completed", goalsCreatedOrCompleted, TrophyType.GOAL_GETTER),
+            Trophy("heavy_hitter", "Heavy Hitter", "Heaviest set logged (lbs)", heaviestSet.toInt(), TrophyType.HEAVY_HITTER),
+            Trophy("gym_bro", "Gym Bro", "Total friends made", friendsCount, TrophyType.GYM_BRO)
+        )
     }
 
 
@@ -481,6 +528,7 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         tabMediator?.detach()

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Manages friend lists, friend requests, friendship status, and related profile data.
+ */
+
 import android.util.Log
 import androidx.lifecycle.*
 import com.repsyncdemo.workout.data.model.Friendship
@@ -54,6 +58,7 @@ class SocialViewModel : ViewModel() {
         _targetUserFriends.observeForever { updateProfileObservation() }
     }
 
+    // Updates data or UI state.
     private fun updateProfileObservation() {
         val allFriendships = (friends.value ?: emptyList()) + 
                            (pendingRequests.value ?: emptyList()) + 
@@ -70,6 +75,7 @@ class SocialViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadFriendsForUser(userId: String) {
         viewModelScope.launch {
             repository.getFriends(userId)
@@ -83,6 +89,7 @@ class SocialViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadFriendshipWithUser(otherUserId: String) {
         viewModelScope.launch {
             repository.getFriendshipWithUser(otherUserId).collect {

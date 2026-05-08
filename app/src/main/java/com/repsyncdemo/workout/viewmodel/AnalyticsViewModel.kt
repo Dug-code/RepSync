@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Builds analytics-ready workout, rest-day, PR, volume, and weight-tracking data for the analytics screens.
+ */
+
 import androidx.lifecycle.*
 import com.repsyncdemo.workout.data.ExerciseDatabase
 import com.repsyncdemo.workout.data.model.RestDay
@@ -87,6 +91,7 @@ class AnalyticsViewModel : ViewModel() {
 
     val filteredWeightHistory: LiveData<List<WeightLog>> = _selectedTimeRange.switchMap { range ->
         MediatorLiveData<List<WeightLog>>().apply {
+            // Updates data or UI state.
             fun update() {
                 value = buildDailyWeightHistory(
                     history = weightHistory.value.orEmpty(),
@@ -233,6 +238,7 @@ class AnalyticsViewModel : ViewModel() {
         }
     }
 
+    // Calculates values.
     private fun calculateLogVolume(log: WorkoutLog): Double {
         return log.exercises.sumOf { exercise ->
             exercise.sets.sumOf { set ->

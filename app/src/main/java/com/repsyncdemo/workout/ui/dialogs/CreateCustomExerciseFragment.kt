@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.dialogs
 
+/**
+ * File overview: Presents a focused dialog or picker flow and returns the selected data to the calling screen.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -22,17 +26,20 @@ class CreateCustomExerciseFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: WorkoutViewModel by activityViewModels()
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentCreateCustomExerciseBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupDropdowns()
         setupListeners()
     }
 
+    // Sets up this section.
     private fun setupDropdowns() {
         // Exercise Types
         val types = ExerciseType.values().map { it.name.lowercase().replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString() } }
@@ -48,6 +55,7 @@ class CreateCustomExerciseFragment : Fragment() {
         binding.spinnerSecondaryMuscle.setText("None", false)
     }
 
+    // Sets up this section.
     private fun setupListeners() {
         binding.btnCreate.setOnClickListener {
             val name = binding.etCustomName.text.toString().trim()
@@ -67,6 +75,7 @@ class CreateCustomExerciseFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

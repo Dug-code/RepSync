@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Home dashboard that combines the activity header, quick actions, home tabs, rest-day logging, and start-workout flow.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -31,6 +35,7 @@ class HomeFragment : Fragment() {
     private var logoClickCount = 0
     private var lastClickTime: Long = 0
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -40,6 +45,7 @@ class HomeFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -49,6 +55,7 @@ class HomeFragment : Fragment() {
         setupEasterEgg()
     }
 
+    // Sets up this section.
     private fun setupViewPager() {
         val adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2
@@ -63,6 +70,11 @@ class HomeFragment : Fragment() {
         }.attach()
     }
 
+    fun showTemplatesTab() {
+        binding.viewPager.setCurrentItem(1, true)
+    }
+
+    // Sets up this section.
     private fun setupListeners() {
         binding.layoutGoals.setOnClickListener {
             findNavController().navigate(R.id.goalsFragment)
@@ -81,6 +93,7 @@ class HomeFragment : Fragment() {
         }
     }
 
+    // Sets up this section.
     private fun setupEasterEgg() {
         binding.ivLogo.setOnClickListener {
             val currentTime = System.currentTimeMillis()
@@ -111,6 +124,7 @@ class HomeFragment : Fragment() {
         binding.konfettiView.start(party)
     }
 
+    // Shows a dialog or popup.
     private fun showRestDayConfirmation() {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Log Rest Day")
@@ -123,6 +137,7 @@ class HomeFragment : Fragment() {
             .show()
     }
 
+    // Watches data and updates the UI.
     private fun observeData() {
         profileViewModel.myProfile.observe(viewLifecycleOwner) {
             updateCongratsMessage()
@@ -133,12 +148,13 @@ class HomeFragment : Fragment() {
         }
     }
 
+    // Updates data or UI state.
     private fun updateCongratsMessage() {
         val profile = profileViewModel.myProfile.value
         val logs = workoutViewModel.workoutLogs.value
         
         val username = profile?.username ?: ""
-        val greeting = if (username.isNotEmpty()) "Congrats $username!" else "Congrats!"
+        val greeting = if (username.isNotEmpty()) "Nice work, $username" else "Nice work"
         
         if (logs != null) {
             val thirtyDaysAgo = Calendar.getInstance().apply { 
@@ -146,22 +162,25 @@ class HomeFragment : Fragment() {
             }.timeInMillis
             
             val count = logs.count { it.completedAt >= thirtyDaysAgo }
-            val timeText = if (count == 1) "time" else "times"
-            binding.tvCongrats.text = "$greeting You worked out $count $timeText in the last 30 days"
+            val workoutText = if (count == 1) "workout" else "workouts"
+            binding.tvCongrats.text = greeting
+            binding.tvWorkoutCount.text = "$count $workoutText in the last 30 days"
             
             // Update motivational message
             binding.tvMotivationalMessage.text = when {
-                count == 0 -> "Time to lock in!"
-                count in 1..4 -> "Keep up the momentum!"
-                count in 5..9 -> "Consistency is key!"
-                else -> "Keep crushing it!"
+                count == 0 -> "Time to lock in."
+                count in 1..4 -> "Keep up the momentum."
+                count in 5..9 -> "Consistency is key."
+                else -> "Keep crushing it."
             }
         } else {
-            binding.tvCongrats.text = if (username.isNotEmpty()) "Congrats $username! Checking your progress..." else "Loading your progress..."
-            binding.tvMotivationalMessage.text = "Keep up the momentum!"
+            binding.tvCongrats.text = if (username.isNotEmpty()) "Nice work, $username" else "Nice work"
+            binding.tvWorkoutCount.text = "Checking your 30-day activity..."
+            binding.tvMotivationalMessage.text = "Keep up the momentum."
         }
     }
 
+    // Shows a dialog or popup.
     private fun showStartWorkoutDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_start_workout, null)
         val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
@@ -181,6 +200,7 @@ class HomeFragment : Fragment() {
         dialog.show()
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

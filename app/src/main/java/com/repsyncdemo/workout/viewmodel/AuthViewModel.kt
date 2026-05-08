@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Handles login and registration requests through the authentication repository.
+ */
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel

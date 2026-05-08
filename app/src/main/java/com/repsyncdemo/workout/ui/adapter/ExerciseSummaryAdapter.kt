@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds exercisesummary data into RecyclerView rows and forwards user actions to the owning screen.
+ */
+
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.TextView
@@ -12,6 +16,7 @@ import com.repsyncdemo.workout.databinding.ItemExerciseSummaryBinding
 class ExerciseSummaryAdapter(private val logs: List<ExerciseLog>) :
     RecyclerView.Adapter<ExerciseSummaryAdapter.ViewHolder>() {
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseSummaryBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -19,6 +24,7 @@ class ExerciseSummaryAdapter(private val logs: List<ExerciseLog>) :
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(logs[position])
     }
@@ -28,6 +34,7 @@ class ExerciseSummaryAdapter(private val logs: List<ExerciseLog>) :
     class ViewHolder(private val binding: ItemExerciseSummaryBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(log: ExerciseLog) {
             binding.tvExerciseName.text = log.exerciseName
             binding.layoutSets.removeAllViews()

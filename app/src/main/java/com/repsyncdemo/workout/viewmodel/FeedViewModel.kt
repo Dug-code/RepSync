@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Coordinates feed posts, chat posts, reactions, moderation actions, and profile lookups for feed screens.
+ */
+
 import android.util.Log
 import androidx.lifecycle.*
 import com.google.firebase.auth.FirebaseAuth
@@ -94,6 +98,7 @@ class FeedViewModel : ViewModel() {
         loadChatFeed()
     }
 
+    // Loads data.
     fun loadExploreFeed() {
         exploreJob?.cancel()
         _isLoading.value = true
@@ -122,6 +127,7 @@ class FeedViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadFriendsFeed() {
         friendsJob?.cancel()
         val locationForFeed = getFreshUserLocation()
@@ -150,6 +156,7 @@ class FeedViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadChatFeed() {
         chatJob?.cancel()
         val locationForFeed = getFreshUserLocation()
@@ -175,6 +182,7 @@ class FeedViewModel : ViewModel() {
         }
     }
 
+    // Watches data and updates the UI.
     private fun observeUserProfiles() {
         val allPosts = (_rawExplorePosts.value ?: emptyList()) + 
                        (_rawFriendsPosts.value ?: emptyList()) + 
@@ -207,6 +215,7 @@ class FeedViewModel : ViewModel() {
         }
     }
 
+    // Updates data or UI state.
     fun updateChatMessage(postId: String, newText: String) {
         viewModelScope.launch {
             repository.updatePost(postId, newText)
