@@ -1,11 +1,21 @@
 package com.repsyncdemo.workout.ui.home
 
+import android.content.Context
 import android.graphics.Color
+import android.graphics.Color.argb
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.annotation.ColorInt
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.view.marginBottom
+import androidx.core.view.marginStart
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,14 +35,27 @@ import com.repsyncdemo.workout.ui.adapter.VolumeBreakdownAdapter
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import com.repsyncdemo.workout.viewmodel.StatItem
 import com.repsyncdemo.workout.viewmodel.TimeRange
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.effet.FlickerEffect
+import com.takusemba.spotlight.shape.RoundedRectangle
 import java.text.NumberFormat
 import java.util.*
+import kotlin.collections.ArrayList
 
 class AnalyticsSummaryFragment : Fragment() {
 
     private var _binding: FragmentAnalyticsSummaryBinding? = null
     private val binding get() = _binding!!
     private val viewModel: AnalyticsViewModel by activityViewModels()
+
+    private var spotlight: Spotlight? = null
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_ADV_ANALYTICS_TUTORIAL_COMPLETED = "adv_analytics_tutorial_completed"
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAnalyticsSummaryBinding.inflate(inflater, container, false)
@@ -323,6 +346,175 @@ class AnalyticsSummaryFragment : Fragment() {
             .setView(dialogView)
             .setPositiveButton("Close", null)
             .show()
+    }
+
+    /** ---------------- Tutorial Code Begins ----------------- **/
+    internal fun checkTutorial() {
+        val prefs = requireContext().getSharedPreferences(AnalyticsSummaryFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+
+        //set to false for testing
+        val isCompleted = false //prefs.getBoolean(KEY_ADV_ANALYTICS_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post {
+                showTutorial()
+            }
+        }
+    }
+
+    private fun showTutorial() {
+        val targets = ArrayList<com.takusemba.spotlight.Target>()
+
+        //dateRange target
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.toggleTimeRange)
+                .setShape(RoundedRectangle(binding.toggleTimeRange.height.toFloat(), binding.toggleTimeRange.width.toFloat(), 64f))
+                .setOverlay(createOverlay("Date Range", "Choose the date range you want to view"))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardTotalVolume)
+                .setShape(RoundedRectangle(binding.cardTotalVolume.height.toFloat(), binding.cardTotalVolume.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Total Volume", "check out the total amount of lbs you've logged"))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardMuscleFocus)
+                .setShape(RoundedRectangle(binding.cardMuscleFocus.height.toFloat(), binding.cardMuscleFocus.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Muscle Focus", "see what muscle groups your workout focus"))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardWeeklyMomentum)
+                .setShape(RoundedRectangle(binding.cardWeeklyMomentum.height.toFloat(), binding.cardWeeklyMomentum.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Weekly Momentum", "see what muscle groups your workout focus"))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardTotalTime)
+                .setShape(RoundedRectangle(binding.cardTotalTime.height.toFloat(), binding.cardTotalTime.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Total Time", "see total time logged doing your workouts"))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardAvgTime)
+                .setShape(RoundedRectangle(binding.cardAvgTime.height.toFloat(), binding.cardAvgTime.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Average Workout", "see your average workout time"))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardFavWorkout)
+                .setShape(RoundedRectangle(binding.cardFavWorkout.height.toFloat(), binding.cardFavWorkout.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Favorite Workout", "see your favorite workout "))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardFavMuscle)
+                .setShape(RoundedRectangle(binding.cardFavMuscle.height.toFloat(), binding.cardFavMuscle.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Favorite Muscle", "see your favorite muscle group to workout "))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardWorkouts)
+                .setShape(RoundedRectangle(binding.cardWorkouts.height.toFloat(), binding.cardWorkouts.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Workouts", "see your total number of workouts and workout history"))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardRestDays)
+                .setShape(RoundedRectangle(binding.cardRestDays.height.toFloat(), binding.cardRestDays.width.toFloat(), 16f))
+                .setOverlay(finishCreateOverlay("Rest Days", "see your total number of rest days and rest day history"))
+                .build()
+        )
+
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setContainer(binding.root as android.view.ViewGroup)
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(0L)
+            .setAnimation(DecelerateInterpolator(1f))
+            //.setBackgroundColor(0x00000000)
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() {}
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun createOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        val containerInfo = overlay.findViewById<LinearLayout>(R.id.containerInfo)
+        val params = containerInfo.layoutParams as ViewGroup.MarginLayoutParams
+
+        params.bottomMargin = (-50 * resources.displayMetrics.density).toInt()
+        containerInfo.layoutParams = params
+
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
+            spotlight?.next()
+        }
+
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            //Marks Whole Analytics tutorial complete
+            (parentFragment as? AnalyticsFragment)?.finishSpotlight()
+            markTutorialCompleted()
+        }
+
+        return overlay
+    }
+
+
+    /** Handles the last overlay in the tutorial to finish the tutorial on AnalyticsFragment**/
+    private fun finishCreateOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+        overlay.findViewById<TextView>(R.id.btnNext).text = "Finish"
+
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
+            spotlight?.finish()
+
+            (parentFragment as? AnalyticsFragment)?.nextSpotlight()
+        }
+
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            (parentFragment as? AnalyticsFragment)?.finishSpotlight()
+            markTutorialCompleted()
+        }
+
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(AnalyticsSummaryFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_ADV_ANALYTICS_TUTORIAL_COMPLETED, true) }
     }
 
     override fun onDestroyView() {
