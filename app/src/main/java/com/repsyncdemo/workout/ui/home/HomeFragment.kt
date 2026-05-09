@@ -65,8 +65,11 @@ class HomeFragment : Fragment() {
         observeData()
         setupEasterEgg()
 
+        //Tutorial
         checkTutorial()
     }
+
+    /** ------------- Tutorial Code Begins ---------------- **/
 
     private fun checkTutorial() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -192,6 +195,8 @@ class HomeFragment : Fragment() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit { putBoolean(KEY_HOME_TUTORIAL_COMPLETED, true) }
     }
+
+    /** ------------- Tutorial Code Ends ---------------- **/
 
     private fun setupViewPager() {
         val adapter = object : FragmentStateAdapter(this) {

@@ -7,13 +7,17 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -27,10 +31,22 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.R
-import com.repsyncdemo.workout.data.model.*
+import com.repsyncdemo.workout.data.model.Friendship
+import com.repsyncdemo.workout.data.model.FriendshipStatus
+import com.repsyncdemo.workout.data.model.Trophy
+import com.repsyncdemo.workout.data.model.TrophyRank
+import com.repsyncdemo.workout.data.model.TrophyType
 import com.repsyncdemo.workout.databinding.FragmentProfileBinding
-import com.repsyncdemo.workout.ui.adapter.*
-import com.repsyncdemo.workout.viewmodel.*
+import com.repsyncdemo.workout.ui.adapter.MiniGoalAdapter
+import com.repsyncdemo.workout.viewmodel.GoalViewModel
+import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import com.repsyncdemo.workout.viewmodel.SocialViewModel
+import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.shape.Circle
+import com.takusemba.spotlight.shape.RoundedRectangle
 
 class ProfileFragment : Fragment() {
 
@@ -47,6 +63,13 @@ class ProfileFragment : Fragment() {
     private var targetUserId: String? = null
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
+    private var spotlight: Spotlight? = null
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_PROFILE_TUTORIAL_COMPLETED = "profile_tutorial_completed"
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentProfileBinding.inflate(inflater, container, false)
         return binding.root
@@ -59,6 +82,7 @@ class ProfileFragment : Fragment() {
         setupListeners()
         observeViewModel()
         loadData()
+        checkTutorial()
     }
 
     private fun setupViewPager() {
@@ -391,6 +415,125 @@ class ProfileFragment : Fragment() {
             imm.hideSoftInputFromWindow(it.windowToken, 0)
         }
     }
+
+    /** ------------- Tutorial Code Begins ---------------- **/
+
+    private fun checkTutorial() {
+        val prefs = requireContext().getSharedPreferences(ProfileFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+
+        //set to false for testing
+        val isCompleted = false //prefs.getBoolean(KEY_PROFILE_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post {
+                showTutorial()
+            }
+        }
+    }
+
+    private fun showTutorial() {
+        val targets = ArrayList<com.takusemba.spotlight.Target>()
+
+
+        // Trophies
+        targets.add(
+            com.takusemba.spotlight.Target.Builder()
+                .setAnchor(binding.btnTrophyShelf)
+                .setShape(Circle(binding.btnTrophyShelf.height.toFloat() / 2 + 20f))
+                .setOverlay(createOverlay("Trophy Shelf", "Checkout the trophies you unlocked and more"))
+                .build()
+        )
+
+        // Settings
+        targets.add(
+            com.takusemba.spotlight.Target.Builder()
+                .setAnchor(binding.btnSettings)
+                .setShape(Circle(binding.btnSettings.height.toFloat() / 2 + 20f))
+                .setOverlay(createOverlay("Settings", "See all of your settings here"))
+                .build()
+        )
+
+        // Height and Weight
+        targets.add(
+            com.takusemba.spotlight.Target.Builder()
+                .setAnchor(binding.llHeightWeight)
+                .setShape(RoundedRectangle(binding.llHeightWeight.height.toFloat(), binding.llHeightWeight.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Height & Weight", "See your height and weight in real time."))
+                .build()
+        )
+
+
+        // Post
+        val postTab = binding.profileTabs.getTabAt(0)?.view
+        postTab?.let {
+            targets.add(createTarget(it, "Post Tab", "See all your post."))
+        }
+
+        // friends
+        val friendsTab = binding.profileTabs.getTabAt(1)?.view
+        friendsTab?.let {
+            targets.add(createTarget(it, "Friends Tab", "See your friends."))
+        }
+
+        // workouts
+        val workoutsTab = binding.profileTabs.getTabAt(2)?.view
+        workoutsTab?.let {
+            targets.add(createTarget(it, "Workouts Tab", "See your workouts."))
+        }
+
+        // goals
+        val goalsTab = binding.profileTabs.getTabAt(3)?.view
+        goalsTab?.let {
+            targets.add(createTarget(it, "Goals Tab", "See your Goals."))
+        }
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(400L)
+            .setAnimation(DecelerateInterpolator(2f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() {}
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun createTarget(view: View, title: String, description: String): Target {
+        return Target.Builder()
+            .setAnchor(view)
+            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 8f))
+            .setOverlay(createOverlay(title, description))
+            .build()
+    }
+
+    private fun createOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
+            spotlight?.next()
+        }
+
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            markTutorialCompleted()
+        }
+
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(ProfileFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_PROFILE_TUTORIAL_COMPLETED, true) }
+    }
+
+    /** ------------- Tutorial Code Ends ---------------- **/
+
 
     override fun onDestroyView() {
         super.onDestroyView()

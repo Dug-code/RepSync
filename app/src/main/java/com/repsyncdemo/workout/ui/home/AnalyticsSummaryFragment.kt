@@ -54,7 +54,7 @@ class AnalyticsSummaryFragment : Fragment() {
 
     companion object {
         private const val PREFS_NAME = "repsync_prefs"
-        private const val KEY_ADV_ANALYTICS_TUTORIAL_COMPLETED = "adv_analytics_tutorial_completed"
+        private const val KEY_ANALYTICS_TUTORIAL_COMPLETED = "analytics_tutorial_completed"
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -353,7 +353,7 @@ class AnalyticsSummaryFragment : Fragment() {
         val prefs = requireContext().getSharedPreferences(AnalyticsSummaryFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
 
         //set to false for testing
-        val isCompleted = false //prefs.getBoolean(KEY_ADV_ANALYTICS_TUTORIAL_COMPLETED, false)
+        val isCompleted = false //prefs.getBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
             binding.root.post {
                 showTutorial()
@@ -514,7 +514,7 @@ class AnalyticsSummaryFragment : Fragment() {
 
     private fun markTutorialCompleted() {
         val prefs = requireContext().getSharedPreferences(AnalyticsSummaryFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit { putBoolean(KEY_ADV_ANALYTICS_TUTORIAL_COMPLETED, true) }
+        prefs.edit { putBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, true) }
     }
 
     override fun onDestroyView() {
