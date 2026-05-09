@@ -112,6 +112,7 @@ class GoalsFragment : Fragment() {
         }
     }
 
+    /** ---------------- Tutorial Code Begins ----------------- **/
     private fun checkTutorial() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -176,169 +177,12 @@ class GoalsFragment : Fragment() {
         prefs.edit { putBoolean(KEY_GOAL_TUTORIAL_COMPLETED, true) }
     }
 
-    private fun showRenameGoalDialog(goal: Goal) {
-        val input = EditText(requireContext())
-        input.setText(goal.title)
-        input.setSelection(goal.title.length)
-        input.setPadding(64, 32, 64, 32)
-
-        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
-            .setTitle("Rename Goal")
-            .setView(input)
-            .setPositiveButton("Update") { _, _ ->
-                val newTitle = input.text.toString().trim()
-                if (newTitle.isNotEmpty()) {
-                    viewModel.updateGoal(goal.copy(title = newTitle))
-                    Toast.makeText(requireContext(), "Goal renamed", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun showCreateGoalDialog() {
-        val dialogView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.dialog_create_goal, null)
-
-        val etTitle = dialogView.findViewById<EditText>(R.id.etGoalTitle)
-        val rgGoalType = dialogView.findViewById<RadioGroup>(R.id.rgGoalType)
-        val rbPR = dialogView.findViewById<RadioButton>(R.id.rbPR)
-        val ivPreview = dialogView.findViewById<ImageView>(R.id.ivGoalPreviewIcon)
-        val tilExerciseName = dialogView.findViewById<View>(R.id.tilExerciseName)
-        val etExerciseName = dialogView.findViewById<AutoCompleteTextView>(R.id.etExerciseName)
-        val llPRUnits = dialogView.findViewById<LinearLayout>(R.id.llPRUnits)
-        val cbUnitLbs = dialogView.findViewById<CheckBox>(R.id.cbUnitLbs)
-        val cbUnitReps = dialogView.findViewById<CheckBox>(R.id.cbUnitReps)
-        val etCurrentValue = dialogView.findViewById<EditText>(R.id.etCurrentValue)
-        val etTargetValue = dialogView.findViewById<EditText>(R.id.etTargetValue)
-        val tilUnit = dialogView.findViewById<View>(R.id.tilUnit)
-        val etUnit = dialogView.findViewById<EditText>(R.id.etUnit)
-        val switchPublic = dialogView.findViewById<SwitchMaterial>(R.id.switchPublicGoal)
-
-        // Setup exercise autocomplete
-        viewLifecycleOwner.lifecycleScope.launch {
-            workoutViewModel.allUniqueExerciseNames.collectLatest { names ->
-                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
-                etExerciseName.setAdapter(adapter)
-            }
-        }
-
-        rgGoalType.setOnCheckedChangeListener { _, checkedId ->
-            hideKeyboard(dialogView)
-            etTitle.clearFocus()
-            etExerciseName.clearFocus()
-            activity?.currentFocus?.clearFocus()
-            
-            tilExerciseName.visibility = if (checkedId == R.id.rbPR) View.VISIBLE else View.GONE
-            llPRUnits.visibility = if (checkedId == R.id.rbPR) View.VISIBLE else View.GONE
-            
-            val previewIcon = when (checkedId) {
-                R.id.rbPR -> R.drawable.ic_medal
-                R.id.rbWeightLoss, R.id.rbWeightGain -> R.drawable.ic_scale
-                else -> R.drawable.ic_checkered_flag
-            }
-            ivPreview.setImageResource(previewIcon)
-
-            when (checkedId) {
-                R.id.rbPR -> {
-                    tilUnit.visibility = View.GONE
-                }
-                R.id.rbWeightLoss, R.id.rbWeightGain -> {
-                    tilUnit.visibility = View.VISIBLE
-                    etUnit.setText("lbs")
-                    etUnit.isEnabled = false
-                }
-                R.id.rbOther -> {
-                    tilUnit.visibility = View.VISIBLE
-                    etUnit.setText("sets")
-                    etUnit.isEnabled = true
-                }
-            }
-        }
-
-        cbUnitLbs.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) cbUnitReps.isChecked = false
-        }
-        cbUnitReps.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) cbUnitLbs.isChecked = false
-        }
-
-
-        // Set default values for create goal dialog
-        rbPR.isChecked = true
-        ivPreview.setImageResource(R.drawable.ic_medal)
-        tilUnit.visibility = View.GONE
-
-        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
-            .setTitle("Create Goal")
-            .setView(dialogView)
-            .setPositiveButton("Create", null)
-            .setNegativeButton("Cancel", null)
-            .create()
-
-        dialog.show()
-
-        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-            val title = etTitle.text.toString().trim()
-            if (title.isEmpty()) {
-                Toast.makeText(requireContext(), "Title is required", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            val goalType = when (rgGoalType.checkedRadioButtonId) {
-                R.id.rbPR -> GoalType.PR
-                R.id.rbWeightLoss -> GoalType.WEIGHT_LOSS
-                R.id.rbWeightGain -> GoalType.WEIGHT_GAIN
-                else -> GoalType.PR
-            }
-
-            val unit = when (rgGoalType.checkedRadioButtonId) {
-                R.id.rbPR -> if (cbUnitLbs.isChecked) "lbs" else "reps"
-                R.id.rbWeightLoss, R.id.rbWeightGain -> "lbs"
-                else -> etUnit.text.toString().trim().ifEmpty { "sets" }
-            }
-
-            val initialVal = etCurrentValue.text.toString().toDoubleOrNull() ?: 0.0
-            
-            if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
-                if (initialVal > 1400) {
-                    Toast.makeText(requireContext(), "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                profileViewModel.updateWeight(initialVal)
-            }
-
-            val goal = Goal(
-                title = title,
-                type = goalType,
-                exerciseName = if (goalType == GoalType.PR) etExerciseName.text.toString().trim() else "",
-                startingValue = initialVal,
-                currentValue = initialVal,
-                targetValue = etTargetValue.text.toString().toDoubleOrNull() ?: 0.0,
-                unit = unit,
-                isPublic = switchPublic.isChecked
-            )
-
-            viewModel.addGoal(goal)
-            
-            if (switchPublic.isChecked) {
-                shareGoalToFeed(goal, FeedPostType.GOAL_CREATED)
-            }
-
-            markTutorialCompleted()
-            dialog.dismiss()
-        }
-
-        checkTutorial(dialogView, dialog)
-
-    }
-
     //overloaded method for checking tutorial
     private fun checkTutorial(dialogView: View, dialog: androidx.appcompat.app.AlertDialog) {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         //set to false for testing
-        val isCompleted = prefs.getBoolean(KEY_GOAL_TUTORIAL_COMPLETED, false)
+        val isCompleted = false //prefs.getBoolean(KEY_GOAL_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
             showDialogTutorial(dialogView, dialog)
         }
@@ -479,6 +323,165 @@ class GoalsFragment : Fragment() {
             overlayLayout.visibility = View.GONE
         }
         moveToStep(0)
+    }
+
+    /** ---------------- Tutorial Code Ends ----------------- **/
+
+    private fun showRenameGoalDialog(goal: Goal) {
+        val input = EditText(requireContext())
+        input.setText(goal.title)
+        input.setSelection(goal.title.length)
+        input.setPadding(64, 32, 64, 32)
+
+        MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Rename Goal")
+            .setView(input)
+            .setPositiveButton("Update") { _, _ ->
+                val newTitle = input.text.toString().trim()
+                if (newTitle.isNotEmpty()) {
+                    viewModel.updateGoal(goal.copy(title = newTitle))
+                    Toast.makeText(requireContext(), "Goal renamed", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showCreateGoalDialog() {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_create_goal, null)
+
+        val etTitle = dialogView.findViewById<EditText>(R.id.etGoalTitle)
+        val rgGoalType = dialogView.findViewById<RadioGroup>(R.id.rgGoalType)
+        val rbPR = dialogView.findViewById<RadioButton>(R.id.rbPR)
+        val ivPreview = dialogView.findViewById<ImageView>(R.id.ivGoalPreviewIcon)
+        val tilExerciseName = dialogView.findViewById<View>(R.id.tilExerciseName)
+        val etExerciseName = dialogView.findViewById<AutoCompleteTextView>(R.id.etExerciseName)
+        val llPRUnits = dialogView.findViewById<LinearLayout>(R.id.llPRUnits)
+        val cbUnitLbs = dialogView.findViewById<CheckBox>(R.id.cbUnitLbs)
+        val cbUnitReps = dialogView.findViewById<CheckBox>(R.id.cbUnitReps)
+        val etCurrentValue = dialogView.findViewById<EditText>(R.id.etCurrentValue)
+        val etTargetValue = dialogView.findViewById<EditText>(R.id.etTargetValue)
+        val tilUnit = dialogView.findViewById<View>(R.id.tilUnit)
+        val etUnit = dialogView.findViewById<EditText>(R.id.etUnit)
+        val switchPublic = dialogView.findViewById<SwitchMaterial>(R.id.switchPublicGoal)
+
+        // Setup exercise autocomplete
+        viewLifecycleOwner.lifecycleScope.launch {
+            workoutViewModel.allUniqueExerciseNames.collectLatest { names ->
+                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
+                etExerciseName.setAdapter(adapter)
+            }
+        }
+
+        rgGoalType.setOnCheckedChangeListener { _, checkedId ->
+            hideKeyboard(dialogView)
+            etTitle.clearFocus()
+            etExerciseName.clearFocus()
+            activity?.currentFocus?.clearFocus()
+
+            tilExerciseName.visibility = if (checkedId == R.id.rbPR) View.VISIBLE else View.GONE
+            llPRUnits.visibility = if (checkedId == R.id.rbPR) View.VISIBLE else View.GONE
+
+            val previewIcon = when (checkedId) {
+                R.id.rbPR -> R.drawable.ic_medal
+                R.id.rbWeightLoss, R.id.rbWeightGain -> R.drawable.ic_scale
+                else -> R.drawable.ic_checkered_flag
+            }
+            ivPreview.setImageResource(previewIcon)
+
+            when (checkedId) {
+                R.id.rbPR -> {
+                    tilUnit.visibility = View.GONE
+                }
+                R.id.rbWeightLoss, R.id.rbWeightGain -> {
+                    tilUnit.visibility = View.VISIBLE
+                    etUnit.setText("lbs")
+                    etUnit.isEnabled = false
+                }
+                R.id.rbOther -> {
+                    tilUnit.visibility = View.VISIBLE
+                    etUnit.setText("sets")
+                    etUnit.isEnabled = true
+                }
+            }
+        }
+
+        cbUnitLbs.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) cbUnitReps.isChecked = false
+        }
+        cbUnitReps.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) cbUnitLbs.isChecked = false
+        }
+
+
+        // Set default values for create goal dialog
+        rbPR.isChecked = true
+        ivPreview.setImageResource(R.drawable.ic_medal)
+        tilUnit.visibility = View.GONE
+
+        val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
+            .setTitle("Create Goal")
+            .setView(dialogView)
+            .setPositiveButton("Create", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.show()
+
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            val title = etTitle.text.toString().trim()
+            if (title.isEmpty()) {
+                Toast.makeText(requireContext(), "Title is required", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val goalType = when (rgGoalType.checkedRadioButtonId) {
+                R.id.rbPR -> GoalType.PR
+                R.id.rbWeightLoss -> GoalType.WEIGHT_LOSS
+                R.id.rbWeightGain -> GoalType.WEIGHT_GAIN
+                else -> GoalType.PR
+            }
+
+            val unit = when (rgGoalType.checkedRadioButtonId) {
+                R.id.rbPR -> if (cbUnitLbs.isChecked) "lbs" else "reps"
+                R.id.rbWeightLoss, R.id.rbWeightGain -> "lbs"
+                else -> etUnit.text.toString().trim().ifEmpty { "sets" }
+            }
+
+            val initialVal = etCurrentValue.text.toString().toDoubleOrNull() ?: 0.0
+
+            if (goalType == GoalType.WEIGHT_LOSS || goalType == GoalType.WEIGHT_GAIN) {
+                if (initialVal > 1400) {
+                    Toast.makeText(requireContext(), "Weight cannot exceed 1400 lbs", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                profileViewModel.updateWeight(initialVal)
+            }
+
+            val goal = Goal(
+                title = title,
+                type = goalType,
+                exerciseName = if (goalType == GoalType.PR) etExerciseName.text.toString().trim() else "",
+                startingValue = initialVal,
+                currentValue = initialVal,
+                targetValue = etTargetValue.text.toString().toDoubleOrNull() ?: 0.0,
+                unit = unit,
+                isPublic = switchPublic.isChecked
+            )
+
+            viewModel.addGoal(goal)
+
+            if (switchPublic.isChecked) {
+                shareGoalToFeed(goal, FeedPostType.GOAL_CREATED)
+            }
+
+            markTutorialCompleted()
+            dialog.dismiss()
+        }
+
+        checkTutorial(dialogView, dialog)
+
     }
 
     private fun hideKeyboard(view: View) {

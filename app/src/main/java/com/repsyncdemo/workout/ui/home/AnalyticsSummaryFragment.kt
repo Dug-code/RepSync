@@ -2,7 +2,6 @@ package com.repsyncdemo.workout.ui.home
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Color.argb
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,17 +10,19 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.annotation.ColorInt
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.view.marginBottom
-import androidx.core.view.marginStart
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.data.*
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.utils.ColorTemplate
@@ -38,11 +39,10 @@ import com.repsyncdemo.workout.viewmodel.TimeRange
 import com.takusemba.spotlight.OnSpotlightListener
 import com.takusemba.spotlight.Spotlight
 import com.takusemba.spotlight.Target
-import com.takusemba.spotlight.effet.FlickerEffect
 import com.takusemba.spotlight.shape.RoundedRectangle
 import java.text.NumberFormat
-import java.util.*
-import kotlin.collections.ArrayList
+import java.util.Calendar
+import java.util.Locale
 
 class AnalyticsSummaryFragment : Fragment() {
 
@@ -350,10 +350,10 @@ class AnalyticsSummaryFragment : Fragment() {
 
     /** ---------------- Tutorial Code Begins ----------------- **/
     internal fun checkTutorial() {
-        val prefs = requireContext().getSharedPreferences(AnalyticsSummaryFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         //set to false for testing
-        val isCompleted = false //prefs.getBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, false)
+        val isCompleted = prefs.getBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
             binding.root.post {
                 showTutorial()
@@ -452,7 +452,6 @@ class AnalyticsSummaryFragment : Fragment() {
             .setBackgroundColorRes(R.color.spotlight_background)
             .setDuration(0L)
             .setAnimation(DecelerateInterpolator(1f))
-            //.setBackgroundColor(0x00000000)
             .setOnSpotlightListener(object : OnSpotlightListener {
                 override fun onStarted() {}
                 override fun onEnded() {
@@ -466,6 +465,7 @@ class AnalyticsSummaryFragment : Fragment() {
 
     private fun createOverlay(title: String, description: String): View {
         val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+
         val containerInfo = overlay.findViewById<LinearLayout>(R.id.containerInfo)
         val params = containerInfo.layoutParams as ViewGroup.MarginLayoutParams
 
@@ -488,7 +488,6 @@ class AnalyticsSummaryFragment : Fragment() {
 
         return overlay
     }
-
 
     /** Handles the last overlay in the tutorial to finish the tutorial on AnalyticsFragment**/
     private fun finishCreateOverlay(title: String, description: String): View {
@@ -513,9 +512,13 @@ class AnalyticsSummaryFragment : Fragment() {
     }
 
     private fun markTutorialCompleted() {
-        val prefs = requireContext().getSharedPreferences(AnalyticsSummaryFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit { putBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, true) }
     }
+
+    /** ---------------- Tutorial Code Ends ----------------- **/
+
+
 
     override fun onDestroyView() {
         super.onDestroyView()

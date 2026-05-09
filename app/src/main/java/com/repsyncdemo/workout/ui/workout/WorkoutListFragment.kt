@@ -180,10 +180,10 @@ class WorkoutListFragment : Fragment() {
     /** ------------- Tutorial Code Begins ---------------- **/
 
     private fun checkTutorial() {
-        val prefs = requireContext().getSharedPreferences(WorkoutListFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         //set to false for testing
-        val isCompleted = false //prefs.getBoolean(KEY_WORKOUT_TUTORIAL_COMPLETED, false)
+        val isCompleted = prefs.getBoolean(KEY_WORKOUT_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
             binding.root.post {
                 showTutorial()
@@ -281,7 +281,7 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun markTutorialCompleted() {
-        val prefs = requireContext().getSharedPreferences(WorkoutListFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit { putBoolean(KEY_WORKOUT_TUTORIAL_COMPLETED, true) }
     }
 

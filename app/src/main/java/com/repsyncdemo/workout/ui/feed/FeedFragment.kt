@@ -84,6 +84,7 @@ class FeedFragment : Fragment() {
         feedViewModel.loadChatFeed()
     }
 
+    /** ---------------- Tutorial Code Begins ----------------- **/
     private fun checkTutorial() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -152,6 +153,7 @@ class FeedFragment : Fragment() {
             .setOverlay(createOverlay(title, description))
             .build()
     }
+
     private fun createOverlay(title: String, description: String): View {
         val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
         overlay.findViewById<TextView>(R.id.tvTitle).text = title
@@ -169,27 +171,12 @@ class FeedFragment : Fragment() {
         return overlay
     }
 
-    private fun postCreateOverlay(title: String, description: String): View {
-        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
-        overlay.findViewById<LinearLayout>(R.id.containerInfo).visibility = View.GONE
-        overlay.findViewById<TextView>(R.id.tvTitle).text = title
-        overlay.findViewById<TextView>(R.id.tvDescription).text = description
-
-        overlay.findViewById<Button>(R.id.btnNext).visibility = View.GONE
-
-        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
-            spotlight?.next()
-//            spotlight?.finish()
-//            markTutorialCompleted()
-        }
-
-        return overlay
-    }
-
     private fun markTutorialCompleted() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit { putBoolean(KEY_FEED_TUTORIAL_COMPLETED, true) }
     }
+    /** ---------------- Tutorial Code Ends ----------------- **/
+
 
     private fun setupNotificationButton() {
         binding.btnNotifications.setOnClickListener {

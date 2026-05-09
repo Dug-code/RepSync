@@ -62,10 +62,10 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
     /** ---------------- Tutorial Code Begins ----------------- **/
 
     private fun checkTutorial() {
-        val prefs = requireContext().getSharedPreferences(AnalyticsFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
         //set to false for testing
-        val isCompleted = false //prefs.getBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, false)
+        val isCompleted = prefs.getBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
             binding.root.post {
                 showTutorial()
@@ -79,7 +79,7 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
         // Spotlight Summary Tab
         val exploreView = binding.tabLayout.getTabAt(0)?.view
         exploreView?.let {
-            targets.add(testCreateTarget(it, "Summary Analytics", "Check out a quick summary of your progress."))
+            targets.add(summaryCreateTarget(it, "Summary Analytics", "Check out a quick summary of your progress."))
         }
 
         //Summary Analytics
@@ -121,11 +121,11 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
             .build()
     }
 
-    private fun testCreateTarget(view: View, title: String, description: String): com.takusemba.spotlight.Target {
+    private fun summaryCreateTarget(view: View, title: String, description: String): com.takusemba.spotlight.Target {
         return Target.Builder()
             .setAnchor(view)
             .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 8f))
-            .setOverlay(testCreateOverlay(title, description))
+            .setOverlay(summaryCreateOverlay(title, description))
             .build()
     }
     private fun createOverlay(title: String, description: String): View {
@@ -145,7 +145,7 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
         return overlay
     }
 
-    private fun testCreateOverlay(title: String, description: String): View {
+    private fun summaryCreateOverlay(title: String, description: String): View {
         val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
         overlay.findViewById<TextView>(R.id.tvTitle).text = title
         overlay.findViewById<TextView>(R.id.tvDescription).text = description
@@ -170,15 +170,6 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
         val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
         overlay.findViewById<LinearLayout>(R.id.containerInfo).visibility = View.GONE
 
-//        overlay.setOnClickListener {
-//            spotlight?.next()
-//        }
-
-//        // Trigger the child summary fragment's localized tutorial
-//        childFragmentManager.fragments
-//            .filterIsInstance<AnalyticsSummaryFragment>()
-//            .firstOrNull()?.checkTutorial()
-
         return overlay
     }
 
@@ -191,7 +182,7 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
     }
 
     private fun markTutorialCompleted() {
-        val prefs = requireContext().getSharedPreferences(AnalyticsFragment.Companion.PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit { putBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, true) }
     }
 
