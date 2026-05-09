@@ -198,6 +198,10 @@ class HomeFragment : Fragment() {
 
     /** ------------- Tutorial Code Ends ---------------- **/
 
+    fun showTemplatesTab() {
+        binding.viewPager.currentItem = 1
+    }
+
     private fun setupViewPager() {
         val adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount(): Int = 2
