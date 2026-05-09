@@ -108,6 +108,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilUsername"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -277,7 +278,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Make Saved Workouts Public"
+                    android:text="Make Routine Templates Public"
                     android:textColor="?attr/colorOnSurface"
                     app:thumbTint="@color/switch_thumb_selector"
                     app:trackTint="@color/switch_track_selector" />
@@ -443,7 +444,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="Clear Workout History"
+                    android:text="Clear Completed Sessions"
                     android:gravity="start"
                     android:textAllCaps="false"
                     android:textColor="?attr/colorOnSurface" />

@@ -1,9 +1,17 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Manages friend lists, friend requests, friendship status, and related profile data.
+ */
+
 import android.util.Log
 import androidx.lifecycle.*
+import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.data.model.Friendship
+import com.repsyncdemo.workout.data.model.Notification
+import com.repsyncdemo.workout.data.model.NotificationType
 import com.repsyncdemo.workout.data.model.UserProfile
+import com.repsyncdemo.workout.data.repository.NotificationRepository
 import com.repsyncdemo.workout.data.repository.ProfileRepository
 import com.repsyncdemo.workout.data.repository.SocialRepository
 import kotlinx.coroutines.Job
@@ -14,6 +22,7 @@ class SocialViewModel : ViewModel() {
 
     private val repository = SocialRepository()
     private val profileRepository = ProfileRepository()
+    private val notificationRepository = NotificationRepository()
 
     val friends: LiveData<List<Friendship>> = repository.getFriends()
         .catch { e ->
@@ -48,13 +57,18 @@ class SocialViewModel : ViewModel() {
     private var profileObservationJob: Job? = null
 
     init {
-        // Observe profiles for the current user's friends/requests
-        friends.observeForever { updateProfileObservation(it, pendingRequests.value ?: emptyList()) }
-        pendingRequests.observeForever { updateProfileObservation(friends.value ?: emptyList(), it) }
+        friends.observeForever { updateProfileObservation() }
+        pendingRequests.observeForever { updateProfileObservation() }
+        _targetUserFriends.observeForever { updateProfileObservation() }
     }
 
-    private fun updateProfileObservation(friends: List<Friendship>, requests: List<Friendship>) {
-        val userIds = (friends + requests).flatMap { listOf(it.requesterId, it.receiverId) }.distinct()
+    // Updates data or UI state.
+    private fun updateProfileObservation() {
+        val allFriendships = (friends.value ?: emptyList()) + 
+                           (pendingRequests.value ?: emptyList()) + 
+                           (_targetUserFriends.value ?: emptyList())
+        
+        val userIds = allFriendships.flatMap { listOf(it.requesterId, it.receiverId) }.distinct()
         if (userIds.isEmpty()) return
 
         profileObservationJob?.cancel()
@@ -65,6 +79,7 @@ class SocialViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadFriendsForUser(userId: String) {
         viewModelScope.launch {
             repository.getFriends(userId)
@@ -78,6 +93,7 @@ class SocialViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadFriendshipWithUser(otherUserId: String) {
         viewModelScope.launch {
             repository.getFriendshipWithUser(otherUserId).collect {
@@ -88,13 +104,46 @@ class SocialViewModel : ViewModel() {
 
     fun sendFriendRequest(receiverId: String, receiverUsername: String, senderUsername: String) {
         viewModelScope.launch {
-            repository.sendFriendRequest(receiverId, receiverUsername, senderUsername)
+            Log.d("SocialViewModel", "Sending friend request to $receiverId")
+            val result = repository.sendFriendRequest(receiverId, receiverUsername, senderUsername)
+            if (result.isSuccess) {
+                Log.d("SocialViewModel", "Friend request DB entry created. Sending notification...")
+                val notification = Notification(
+                    userId = receiverId,
+                    title = "Friend Request",
+                    message = "$senderUsername sent you a friend request!",
+                    type = NotificationType.FRIEND_REQUEST,
+                    relatedId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                )
+                val notifyResult = notificationRepository.sendNotification(notification)
+                if (notifyResult.isFailure) {
+                    Log.e("SocialViewModel", "Failed to create notification document")
+                }
+            } else {
+                Log.e("SocialViewModel", "Failed to create friendship entry")
+            }
         }
     }
 
     fun acceptRequest(friendshipId: String) {
         viewModelScope.launch {
-            repository.acceptRequest(friendshipId)
+            val result = repository.acceptRequest(friendshipId)
+            if (result.isSuccess) {
+                val friendship = myFriendships.value?.find { it.id == friendshipId }
+                if (friendship != null) {
+                    val otherUserId = if (friendship.requesterId == FirebaseAuth.getInstance().currentUser?.uid) 
+                                        friendship.receiverId else friendship.requesterId
+                    val myUsername = profileRepository.getProfile().getOrNull()?.username ?: "A user"
+                    
+                    val notification = Notification(
+                        userId = otherUserId,
+                        title = "Friend Request Accepted",
+                        message = "$myUsername accepted your friend request!",
+                        type = NotificationType.FRIEND_REQUEST
+                    )
+                    notificationRepository.sendNotification(notification)
+                }
+            }
         }
     }
 
@@ -108,5 +157,12 @@ class SocialViewModel : ViewModel() {
         viewModelScope.launch {
             repository.removeFriendship(friendshipId)
         }
+    }
+
+    override fun onCleared() {
+        friends.removeObserver { updateProfileObservation() }
+        pendingRequests.removeObserver { updateProfileObservation() }
+        _targetUserFriends.removeObserver { updateProfileObservation() }
+        super.onCleared()
     }
 }

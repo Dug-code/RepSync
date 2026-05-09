@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Displays and manages a profile-related screen for user identity, social, goals, trophies, or notifications.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,11 +29,13 @@ class ProfileWorkoutsFragment : Fragment() {
     private lateinit var workoutAdapter: WorkoutAdapter
     private var targetUserId: String? = null
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = LayoutTabListBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
@@ -38,11 +44,11 @@ class ProfileWorkoutsFragment : Fragment() {
         workoutAdapter = WorkoutAdapter { workout ->
             if (targetUserId != null) {
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Copy Workout")
-                    .setMessage("Do you want to copy this workout routine to your collection?")
+                    .setTitle("Copy Routine Template")
+                    .setMessage("Do you want to copy this routine template to your collection?")
                     .setPositiveButton("Copy") { _, _ ->
                         workoutViewModel.copyWorkout(workout)
-                        Toast.makeText(requireContext(), "Workout copied!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "Template copied!", Toast.LENGTH_SHORT).show()
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
@@ -63,8 +69,8 @@ class ProfileWorkoutsFragment : Fragment() {
         if (targetUserId != null && !isWorkoutsPublic) {
             workoutAdapter.submitList(emptyList())
             binding.layoutEmpty.visibility = View.VISIBLE
-            binding.tvEmptyTitle.text = "Private Workouts"
-            binding.tvEmptySubtitle.text = "This user's workouts are private."
+            binding.tvEmptyTitle.text = "Private Routine Templates"
+            binding.tvEmptySubtitle.text = "This user's routine templates are private."
             binding.btnEmptyAction.visibility = View.GONE
         } else {
             val workoutsSource = if (targetUserId != null) workoutViewModel.targetUserWorkouts else workoutViewModel.workouts
@@ -77,7 +83,7 @@ class ProfileWorkoutsFragment : Fragment() {
                 binding.layoutEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
                 
                 if (targetUserId != null) {
-                    binding.tvEmptyTitle.text = "No shared workouts."
+                    binding.tvEmptyTitle.text = "No shared templates."
                     binding.tvEmptySubtitle.text = "This user hasn't made any routines public yet."
                 } else {
                     binding.tvEmptyTitle.text = "Nothing shared yet."
@@ -88,6 +94,7 @@ class ProfileWorkoutsFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

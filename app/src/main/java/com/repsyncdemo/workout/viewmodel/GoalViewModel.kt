@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Loads and mutates user goals, including progress updates, privacy changes, and target-user goal views.
+ */
+
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -31,6 +35,7 @@ class GoalViewModel : ViewModel() {
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    // Loads data.
     fun loadGoalsForUser(userId: String) {
         viewModelScope.launch {
             repository.getGoals(userId)
@@ -52,12 +57,14 @@ class GoalViewModel : ViewModel() {
         }
     }
 
+    // Updates data or UI state.
     fun updateGoal(goal: Goal) {
         viewModelScope.launch {
             repository.updateGoal(goal)
         }
     }
 
+    // Updates data or UI state.
     fun updateProgress(goalId: String, newValue: Double) {
         viewModelScope.launch {
             repository.updateProgress(goalId, newValue)

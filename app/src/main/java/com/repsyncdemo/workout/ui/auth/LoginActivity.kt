@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.auth
 
+/**
+ * File overview: Handles the login authentication screen and routes users after auth state changes.
+ */
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -43,6 +47,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    // Sets up this screen.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -68,6 +73,7 @@ class LoginActivity : AppCompatActivity() {
         observeViewModel()
     }
 
+    // Sets up this section.
     private fun setupListeners() {
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
@@ -107,6 +113,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    // Watches data and updates the UI.
     private fun observeViewModel() {
         viewModel.isLoading.observe(this) { isLoading ->
             binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE

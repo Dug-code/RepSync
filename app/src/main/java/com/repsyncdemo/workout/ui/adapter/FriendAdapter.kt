@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds friend rows and profile navigation for a viewed user's friends list.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,18 +20,20 @@ import com.repsyncdemo.workout.databinding.ItemFriendBinding
 
 class FriendAdapter(
     private val isMyProfile: Boolean,
+    private val profileOwnerId: String, // Added to correctly identify the "friend"
     private val onRemove: (Friendship) -> Unit,
     private val onUserClick: (String) -> Unit
 ) : ListAdapter<Friendship, FriendAdapter.ViewHolder>(FriendDiffCallback()) {
 
-    private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     private var profileMap = mapOf<String, UserProfile>()
 
+    // Updates data or UI state.
     fun updateProfiles(profiles: Map<String, UserProfile>) {
         this.profileMap = profiles
         notifyDataSetChanged()
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFriendBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -35,6 +41,7 @@ class FriendAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -43,18 +50,18 @@ class FriendAdapter(
         private val binding: ItemFriendBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(friendship: Friendship) {
-            val otherUserId = if (friendship.requesterId == currentUserId) friendship.receiverId else friendship.requesterId
-            val profile = profileMap[otherUserId]
+            // The "friend" is whichever ID is NOT the owner of the profile we are viewing
+            val friendId = if (friendship.requesterId == profileOwnerId) friendship.receiverId else friendship.requesterId
+            val profile = profileMap[friendId]
 
-            // Display latest data from profile if available, fallback to friendship data
-            val username = profile?.username ?: if (friendship.requesterId == currentUserId) friendship.receiverUsername else friendship.requesterUsername
+            val username = profile?.username ?: if (friendship.requesterId == profileOwnerId) friendship.receiverUsername else friendship.requesterUsername
             val profilePic = profile?.profilePictureUrl ?: "red"
 
             binding.tvUsername.text = "@$username"
             binding.ivAdminBadge.visibility = if (profile?.isAdmin == true) View.VISIBLE else View.GONE
             
-            // Load latest profile picture
             if (profilePic.startsWith("http")) {
                 binding.ivProfilePic.load(profilePic) {
                     crossfade(true)
@@ -79,7 +86,7 @@ class FriendAdapter(
                 binding.btnAction.visibility = View.GONE
             }
 
-            binding.root.setOnClickListener { onUserClick(otherUserId) }
+            binding.root.setOnClickListener { onUserClick(friendId) }
         }
     }
 

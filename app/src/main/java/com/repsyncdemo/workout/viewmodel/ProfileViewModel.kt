@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Manages the signed-in user profile, profile edits, weight synchronization, trophies, and profile-related posts.
+ */
+
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -26,6 +30,11 @@ class ProfileViewModel(
     private val goalRepository: GoalRepository = GoalRepository(),
     private val workoutRepository: WorkoutRepository = WorkoutRepository()
 ) : ViewModel() {
+
+    companion object {
+        private val USERNAME_PATTERN = Regex("^[A-Za-z0-9._]+$")
+        private const val USERNAME_RULE_MESSAGE = "Username can only use letters, numbers, periods, and underscores"
+    }
 
     private val _profileResult = SingleLiveEvent<Result<Unit>>()
     val profileResult: LiveData<Result<Unit>> = _profileResult
@@ -73,10 +82,12 @@ class ProfileViewModel(
         }
     }
 
+    // Loads data.
     fun loadProfile(userId: String? = null) {
         observeProfile(userId)
     }
 
+    // Loads data.
     fun loadMyPosts() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         viewModelScope.launch {
@@ -91,6 +102,7 @@ class ProfileViewModel(
         }
     }
 
+    // Loads data.
     fun loadUserPosts(userId: String) {
         viewModelScope.launch {
             feedRepository.getUserPosts(userId, includeChat = false)
@@ -107,17 +119,28 @@ class ProfileViewModel(
     fun createProfile(profile: UserProfile) {
         _isLoading.value = true
         viewModelScope.launch {
+            if (!isValidUsername(profile.username)) {
+                _profileResult.value = Result.failure(Exception(USERNAME_RULE_MESSAGE))
+                _isLoading.value = false
+                return@launch
+            }
+
             // Check availability one last time before creating
             if (!repository.isUsernameAvailable(profile.username)) {
                 _profileResult.value = Result.failure(Exception("Username is already taken"))
                 _isLoading.value = false
                 return@launch
             }
-            _profileResult.value = repository.createProfile(profile)
+            val result = repository.createProfile(profile)
+            if (result.isSuccess && profile.weightLbs > 0) {
+                workoutRepository.addWeightLog(profile.weightLbs)
+            }
+            _profileResult.value = result
             _isLoading.value = false
         }
     }
 
+    // Reads data.
     suspend fun isUsernameAvailable(username: String): Boolean {
         return repository.isUsernameAvailable(username)
     }
@@ -129,6 +152,25 @@ class ProfileViewModel(
     fun updateProfileFields(updates: Map<String, Any>) {
         _isLoading.value = true
         viewModelScope.launch {
+            val requestedUsername = updates["username"] as? String
+            val currentProfile = myProfile.value
+            if (requestedUsername != null && !isValidUsername(requestedUsername)) {
+                _profileResult.value = Result.failure(Exception(USERNAME_RULE_MESSAGE))
+                _isLoading.value = false
+                return@launch
+            }
+
+            if (
+                requestedUsername != null &&
+                currentProfile != null &&
+                !requestedUsername.equals(currentProfile.username, ignoreCase = true) &&
+                !repository.isUsernameAvailable(requestedUsername, currentProfile.userId)
+            ) {
+                _profileResult.value = Result.failure(Exception("Username is already taken"))
+                _isLoading.value = false
+                return@launch
+            }
+
             val result = repository.updateProfileFields(updates)
             
             // Post-update logic for weight
@@ -167,6 +209,7 @@ class ProfileViewModel(
         updateProfileFields(mapOf("pinnedTrophyId" to trophyId))
     }
 
+    // Updates data or UI state.
     fun updateWeightAndHeight(weight: Double, heightInches: Int) {
         updateProfileFields(mapOf(
             "weightLbs" to weight,
@@ -174,6 +217,7 @@ class ProfileViewModel(
         ))
     }
 
+    // Updates data or UI state.
     fun updateWeight(newWeight: Double) {
         updateProfileFields(mapOf("weightLbs" to newWeight))
     }
@@ -193,11 +237,16 @@ class ProfileViewModel(
         }
     }
 
+    private fun isValidUsername(username: String): Boolean {
+        return USERNAME_PATTERN.matches(username)
+    }
+
     fun incrementRestDays() {
         val profile = myProfile.value ?: return
         updateProfileFields(mapOf("totalRestDays" to profile.totalRestDays + 1))
     }
 
+    // Updates data or UI state.
     fun updateLocation(latitude: Double, longitude: Double) {
         viewModelScope.launch {
             repository.updateLocation(latitude, longitude)

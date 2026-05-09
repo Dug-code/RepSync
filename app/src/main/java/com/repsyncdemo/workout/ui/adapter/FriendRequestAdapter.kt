@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds pending friend requests with accept, decline, and profile navigation actions.
+ */
+
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -20,11 +24,13 @@ class FriendRequestAdapter(
 
     private var profileMap = mapOf<String, UserProfile>()
 
+    // Updates data or UI state.
     fun updateProfiles(profiles: Map<String, UserProfile>) {
         this.profileMap = profiles
         notifyDataSetChanged()
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFriendRequestBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -32,6 +38,7 @@ class FriendRequestAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -40,6 +47,7 @@ class FriendRequestAdapter(
         private val binding: ItemFriendRequestBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(request: Friendship) {
             val requesterId = request.requesterId
             val profile = profileMap[requesterId]

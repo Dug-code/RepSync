@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.dialogs
 
+/**
+ * File overview: Presents a focused dialog or picker flow and returns the selected data to the calling screen.
+ */
+
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -27,18 +31,20 @@ class ShowExercisePickerDialog : Fragment() {
 
     private lateinit var pickerAdapter: ExerciseLibraryAdapter
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentExerciseLibraryBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        pickerAdapter = ExerciseLibraryAdapter { exerciseDef ->
+        pickerAdapter = ExerciseLibraryAdapter(onClick = { exerciseDef ->
             viewModel.selectExercise(exerciseDef.name)
             findNavController().popBackStack()
-        }
+        })
 
         binding.rvExercises.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -83,6 +89,7 @@ class ShowExercisePickerDialog : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

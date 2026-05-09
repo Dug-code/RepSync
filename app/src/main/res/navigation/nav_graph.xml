@@ -17,6 +17,12 @@
         <action
             android:id="@+id/action_home_to_createWorkout"
             app:destination="@id/createWorkoutFragment" />
+        <action
+            android:id="@+id/action_home_to_workoutSummary"
+            app:destination="@id/workoutSummaryFragment" />
+        <action
+            android:id="@+id/action_home_to_logWorkout"
+            app:destination="@id/logWorkoutFragment" />
     </fragment>
 
     <fragment
@@ -90,14 +96,16 @@
     <fragment
         android:id="@+id/workoutDetailFragment"
         android:name="com.repsyncdemo.workout.ui.workout.WorkoutDetailFragment"
-        android:label="Workout"
+        android:label="Routine Template"
         tools:layout="@layout/fragment_workout_detail">
         <argument
             android:name="workoutId"
             app:argType="string" />
         <action
             android:id="@+id/action_workoutDetail_to_logWorkout"
-            app:destination="@id/logWorkoutFragment" />
+            app:destination="@id/logWorkoutFragment"
+            app:popUpTo="@id/workoutDetailFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -107,12 +115,19 @@
         tools:layout="@layout/fragment_log_workout">
         <argument
             android:name="workoutId"
-            app:argType="string" />
+            app:argType="string"
+            android:defaultValue="@null"
+            app:nullable="true" />
         <argument
             android:name="logId"
             app:argType="string"
             android:defaultValue="@null"
             app:nullable="true" />
+        <action
+            android:id="@+id/action_logWorkout_to_workoutSummary"
+            app:destination="@id/workoutSummaryFragment"
+            app:popUpTo="@id/logWorkoutFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -131,7 +146,27 @@
         android:id="@+id/historyFragment"
         android:name="com.repsyncdemo.workout.ui.home.HistoryFragment"
         android:label="@string/nav_history"
-        tools:layout="@layout/fragment_history" />
+        tools:layout="@layout/fragment_history">
+        <action
+            android:id="@+id/action_history_to_workoutSummary"
+            app:destination="@id/workoutSummaryFragment" />
+        <action
+            android:id="@+id/action_history_to_logWorkout"
+            app:destination="@id/logWorkoutFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/workoutSummaryFragment"
+        android:name="com.repsyncdemo.workout.ui.workout.WorkoutSummaryFragment"
+        android:label="Workout Summary"
+        tools:layout="@layout/fragment_workout_summary">
+        <argument
+            android:name="logId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_workoutSummary_to_logWorkout"
+            app:destination="@id/logWorkoutFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/exerciseLibraryFragment"
@@ -144,6 +179,12 @@
             android:id="@+id/action_exerciseLibrary_to_createCustomExerciseFragment"
             app:destination="@id/createCustomExerciseFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/qrExerciseScannerFragment"
+        android:name="com.repsyncdemo.workout.ui.dialogs.QrExerciseScannerFragment"
+        android:label="Scan Exercise"
+        tools:layout="@layout/fragment_qr_exercise_scanner" />
 
     <dialog
         android:id="@+id/exercisePickerFilterDialog"

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.workout
 
+/**
+ * File overview: Shows a saved template, its exercises, privacy controls, and actions to edit, delete, or start a session.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -31,6 +35,7 @@ class WorkoutDetailFragment : Fragment() {
     private lateinit var exerciseAdapter: ExerciseAdapter
     private var currentWorkout: Workout? = null
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -40,6 +45,7 @@ class WorkoutDetailFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -83,7 +89,7 @@ class WorkoutDetailFragment : Fragment() {
                 .setMessage(R.string.confirm_delete)
                 .setPositiveButton(R.string.yes) { _, _ ->
                     viewModel.deleteWorkout(workoutId)
-                    Toast.makeText(requireContext(), "Workout deleted", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Routine template deleted", Toast.LENGTH_SHORT).show()
                     findNavController().popBackStack()
                 }
                 .setNegativeButton(R.string.no, null)
@@ -91,11 +97,13 @@ class WorkoutDetailFragment : Fragment() {
         }
     }
 
+    // Updates data or UI state.
     private fun updatePrivacyIcon(isPublic: Boolean) {
         val iconRes = if (isPublic) R.drawable.ic_public else R.drawable.ic_private
         binding.ivPrivacyIcon.setImageResource(iconRes)
     }
 
+    // Shows a dialog or popup.
     private fun showPrivacyPopupMenu(view: View) {
         val popup = PopupMenu(requireContext(), view)
         popup.menuInflater.inflate(R.menu.menu_workout_privacy, popup.menu)
@@ -116,6 +124,7 @@ class WorkoutDetailFragment : Fragment() {
         popup.show()
     }
 
+    // Updates data or UI state.
     private fun updateWorkoutPrivacy(isPublic: Boolean) {
         currentWorkout?.let {
             val updated = it.copy(isPublic = isPublic)
@@ -125,6 +134,7 @@ class WorkoutDetailFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

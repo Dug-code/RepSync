@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds feed posts, chat posts, moderation options, reactions, and profile navigation into feed list rows.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -42,9 +46,7 @@ class FeedAdapter(
      * Updates the local profile cache with new data from the ViewModel.
      */
     fun updateProfiles(profiles: Map<String, UserProfile>) {
-        val merged = userProfiles.toMutableMap()
-        merged.putAll(profiles)
-        this.userProfiles = merged
+        this.userProfiles = profiles
         notifyDataSetChanged()
     }
 
@@ -56,6 +58,7 @@ class FeedAdapter(
         notifyDataSetChanged()
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFeedPostBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -63,6 +66,7 @@ class FeedAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -194,19 +198,21 @@ class FeedAdapter(
                 .show()
         }
 
-        private fun loadProfilePicture(url: String) {
-            // Clear the image to prevent old profile pictures from showing during recycle
-            binding.ivUserProfile.setImageDrawable(null)
+        // Loads data.
+        private fun loadProfilePicture(value: String) {
+            val profilePicture = value.trim()
 
-            if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
-                binding.ivUserProfile.load(url) {
+            if (profilePicture.startsWith("http://", ignoreCase = true) ||
+                profilePicture.startsWith("https://", ignoreCase = true)
+            ) {
+                binding.ivUserProfile.load(profilePicture) {
                     crossfade(true)
                     placeholder(R.drawable.ic_profile_red)
                     error(R.drawable.ic_profile_red)
                     transformations(CircleCropTransformation())
                 }
             } else {
-                val resId = when(url) {
+                val resId = when(profilePicture.lowercase(Locale.US)) {
                     "red" -> R.drawable.ic_profile_red
                     "blue" -> R.drawable.ic_profile_blue
                     "green" -> R.drawable.ic_profile_green
@@ -215,7 +221,9 @@ class FeedAdapter(
                     "grey" -> R.drawable.ic_profile_grey
                     else -> R.drawable.ic_profile_red
                 }
-                binding.ivUserProfile.setImageResource(resId)
+                binding.ivUserProfile.load(resId) {
+                    transformations(CircleCropTransformation())
+                }
             }
         }
     }

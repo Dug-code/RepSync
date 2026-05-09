@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui
 
+/**
+ * File overview: Contains core app logic for MainFragment.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -23,11 +27,13 @@ class MainFragment : Fragment() {
     private val binding get() = _binding!!
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentMainBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupViewPager()
@@ -38,6 +44,7 @@ class MainFragment : Fragment() {
         }
     }
 
+    // Sets up this section.
     private fun setupViewPager() {
         val fragments = listOf(
             HomeFragment(),
@@ -83,6 +90,7 @@ class MainFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds saved workout template cards, including privacy status, type indicators, and reorder handles.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,6 +27,7 @@ class WorkoutAdapter(
         }
     }
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemWorkoutBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -30,6 +35,7 @@ class WorkoutAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -38,10 +44,11 @@ class WorkoutAdapter(
         private val binding: ItemWorkoutBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(workout: Workout) {
             binding.tvName.text = workout.name
             val count = workout.exercises.size
-            binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
+            binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"} copied into each session"
             
             // Set privacy icon based on workout status
             if (workout.isPublic) {

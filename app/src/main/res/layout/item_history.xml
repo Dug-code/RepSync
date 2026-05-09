@@ -106,7 +106,7 @@
             app:tint="?attr/colorTextSecondary"
             android:alpha="0.6"
             android:scaleType="centerInside"
-            android:contentDescription="Edit Workout" />
+            android:contentDescription="Edit Session Log" />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.workout
 
+/**
+ * File overview: Lets users create or edit reusable workout templates, choose exercises, reorder them, and save privacy settings.
+ */
+
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -51,6 +55,7 @@ class CreateWorkoutFragment : Fragment() {
     private var existingWorkoutId: String? = null
     private var isPublic: Boolean = false
 
+    // Sets up this screen.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (exerciseInputAdapter == null) {
@@ -61,6 +66,7 @@ class CreateWorkoutFragment : Fragment() {
         }
     }
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -70,6 +76,7 @@ class CreateWorkoutFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -117,7 +124,7 @@ class CreateWorkoutFragment : Fragment() {
             if (!workoutViewModel.isWorkoutDataLoaded) {
                 workoutViewModel.loadWorkout(existingWorkoutId!!)
             }
-            binding.btnSave.text = "Update Workout"
+            binding.btnSave.text = "Update Template"
         } else {
             if (exerciseInputAdapter?.itemCount == 0) {
                 exerciseInputAdapter?.addExercise()
@@ -143,19 +150,31 @@ class CreateWorkoutFragment : Fragment() {
         binding.btnPrivacyMenu.setOnClickListener { showPrivacyPopupMenu(it) }
         binding.btnAddExercise.setOnClickListener { findNavController().navigate(R.id.createCustomExerciseFragment) }
         binding.btnPickExercise.setOnClickListener { findNavController().navigate(R.id.exerciseLibraryFragment) }
+        binding.btnScanExercise.setOnClickListener { findNavController().navigate(R.id.qrExerciseScannerFragment) }
         binding.btnAddBlankExercise.setOnClickListener {
             exerciseInputAdapter?.addExercise()
+            scrollToNewestExercise()
             updateLockState()
             updateTopIcons()
         }
         binding.btnSave.setOnClickListener { saveWorkout() }
 
         // Observer for library selection
+        findNavController().currentBackStackEntry
+            ?.savedStateHandle
+            ?.getLiveData<String>("selectedExerciseName")
+            ?.observe(viewLifecycleOwner) { exerciseName ->
+                if (!exerciseName.isNullOrEmpty()) {
+                    addExerciseFromLibrary(exerciseName)
+                    findNavController().currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.remove<String>("selectedExerciseName")
+                }
+            }
+
         workoutViewModel.selectedExerciseEvent.observe(viewLifecycleOwner) { exerciseName ->
             if (!exerciseName.isNullOrEmpty()) {
-                exerciseInputAdapter?.addExerciseFromLibrary(exerciseName)
-                updateLockState()
-                updateTopIcons()
+                addExerciseFromLibrary(exerciseName)
             }
         }
 
@@ -168,9 +187,10 @@ class CreateWorkoutFragment : Fragment() {
         }
         
         workoutViewModel.operationResult.observe(viewLifecycleOwner) { result ->
-            result.onSuccess {
+            result.onSuccess { workoutId ->
                 navigationLockViewModel.setLocked(false)
-                Toast.makeText(requireContext(), "Workout saved!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Template saved!", Toast.LENGTH_SHORT).show()
+                requestWorkoutCardSnap(workoutId)
                 resetState()
                 findNavController().popBackStack()
             }
@@ -180,12 +200,49 @@ class CreateWorkoutFragment : Fragment() {
         }
     }
 
+    private fun addExerciseFromLibrary(exerciseName: String) {
+        exerciseInputAdapter?.addExerciseFromLibrary(exerciseName)
+        scrollToNewestExercise()
+        updateLockState()
+        updateTopIcons()
+    }
+
+    private fun scrollToNewestExercise() {
+        if ((exerciseInputAdapter?.itemCount ?: 0) > 0) {
+            binding.rvExercises.post {
+                (binding.rvExercises.layoutManager as? LinearLayoutManager)
+                    ?.scrollToPositionWithOffset(0, 0)
+            }
+        }
+    }
+
+    private fun requestWorkoutCardSnap(workoutId: String?) {
+        if (workoutId.isNullOrEmpty()) return
+
+        findNavController().previousBackStackEntry
+            ?.savedStateHandle
+            ?.set("scrollToWorkoutId", workoutId)
+
+        runCatching {
+            findNavController().getBackStackEntry(R.id.workoutListFragment)
+                .savedStateHandle
+                .set("scrollToWorkoutId", workoutId)
+        }
+
+        runCatching {
+            findNavController().getBackStackEntry(R.id.homeFragment)
+                .savedStateHandle
+                .set("scrollToWorkoutId", workoutId)
+        }
+    }
+
     private fun resetState() {
         exerciseInputAdapter?.clearItems()
         workoutViewModel.clearSelection()
         existingWorkoutId = null
     }
 
+    // Shows a dialog or popup.
     private fun showPrivacyPopupMenu(view: View) {
         val popup = PopupMenu(requireContext(), view)
         popup.menuInflater.inflate(R.menu.menu_workout_privacy, popup.menu)
@@ -199,10 +256,12 @@ class CreateWorkoutFragment : Fragment() {
         popup.show()
     }
 
+    // Updates data or UI state.
     private fun updatePrivacyIcon() {
         binding.ivPrivacyIcon.setImageResource(if (isPublic) R.drawable.ic_public else R.drawable.ic_private)
     }
 
+    // Updates data or UI state.
     private fun updateTopIcons() {
         val exercises = exerciseInputAdapter?.getExercises() ?: emptyList()
         val types = exercises.map { it.type }.distinct()
@@ -222,6 +281,7 @@ class CreateWorkoutFragment : Fragment() {
         }
     }
 
+    // Sets up this section.
     private fun setupChangeListeners() {
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -232,6 +292,7 @@ class CreateWorkoutFragment : Fragment() {
         binding.etDescription.addTextChangedListener(watcher)
     }
 
+    // Updates data or UI state.
     private fun updateLockState() {
         navigationLockViewModel.setLocked(hasUnsavedChanges())
     }
@@ -245,6 +306,7 @@ class CreateWorkoutFragment : Fragment() {
                (exerciseCount == 1 && exerciseInputAdapter?.getExercises()?.get(0)?.name?.isNotEmpty() == true)
     }
 
+    // Shows a dialog or popup.
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Discard Changes?")
@@ -254,23 +316,26 @@ class CreateWorkoutFragment : Fragment() {
             .show()
     }
 
+    // Saves changes.
     private fun saveWorkout() {
         val name = binding.etName.text.toString().trim()
         val description = binding.etDescription.text.toString().trim()
-        if (name.isEmpty()) { binding.etName.error = "Name is required"; return }
+        if (name.isEmpty()) { binding.etName.error = "Template name is required"; return }
         val exercises = exerciseInputAdapter?.getExercises()?.filter { it.name.isNotEmpty() } ?: emptyList()
-        if (exercises.isEmpty()) { Toast.makeText(requireContext(), "Add at least one exercise", Toast.LENGTH_SHORT).show(); return }
+        if (exercises.isEmpty()) { Toast.makeText(requireContext(), "Add at least one template exercise", Toast.LENGTH_SHORT).show(); return }
 
         val workout = Workout(id = existingWorkoutId ?: "", name = name, description = description, exercises = exercises, isPublic = isPublic)
         if (existingWorkoutId == null) workoutViewModel.addWorkout(workout)
         else {
             workoutViewModel.updateWorkout(workout)
             navigationLockViewModel.setLocked(false)
+            requestWorkoutCardSnap(existingWorkoutId)
             resetState()
             findNavController().popBackStack()
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

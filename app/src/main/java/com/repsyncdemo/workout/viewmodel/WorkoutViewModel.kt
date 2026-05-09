@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.viewmodel
 
+/**
+ * File overview: Coordinates workout templates, workout logs, exercise library state, rest days, and save/update operations for workout screens.
+ */
+
 import android.util.Log
 import androidx.lifecycle.*
 import com.google.firebase.auth.FirebaseAuth
@@ -10,6 +14,16 @@ import com.repsyncdemo.workout.util.SingleLiveEvent
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
+
+data class ExerciseLibraryFilterState(
+    val searchQuery: String = "",
+    val bodyPart: String? = null,
+    val type: ExerciseType? = null,
+    val onlyCustom: Boolean = false
+) {
+    val hasActiveFilters: Boolean
+        get() = searchQuery.isNotEmpty() || bodyPart != null || type != null || onlyCustom
+}
 
 class WorkoutViewModel : ViewModel() {
 
@@ -39,6 +53,13 @@ class WorkoutViewModel : ViewModel() {
     val restDays: LiveData<List<RestDay>> = repository.getRestDays()
         .catch { e ->
             Log.e("WorkoutViewModel", "Error in restDays flow", e)
+            emit(emptyList())
+        }
+        .asLiveData()
+
+    val weightLogs: LiveData<List<WeightLog>> = repository.getWeightLogs()
+        .catch { e ->
+            Log.e("WorkoutViewModel", "Error in weight logs flow", e)
             emit(emptyList())
         }
         .asLiveData()
@@ -78,6 +99,15 @@ class WorkoutViewModel : ViewModel() {
     private val _filterType = MutableStateFlow<ExerciseType?>(null)
     private val _filterOnlyCustom = MutableStateFlow(false)
 
+    val exerciseLibraryFilterState: StateFlow<ExerciseLibraryFilterState> = combine(
+        _searchQuery,
+        _filterBodyPart,
+        _filterType,
+        _filterOnlyCustom
+    ) { query, bodyPart, type, onlyCustom ->
+        ExerciseLibraryFilterState(query, bodyPart, type, onlyCustom)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, ExerciseLibraryFilterState())
+
     // Combined library flow: Static Database + Firestore Custom Exercises
     private val _customExercises = repository.getCustomExercises()
         .onStart { emit(emptyList()) }
@@ -116,9 +146,7 @@ class WorkoutViewModel : ViewModel() {
             list = list.filter { 
                 it.primaryBodyPart.equals(bodyPart, ignoreCase = true) || 
                 it.secondaryBodyParts.contains(bodyPart, ignoreCase = true) 
-            }.sortedWith(compareByDescending<ExerciseDefinition> { 
-                it.primaryBodyPart.equals(bodyPart, ignoreCase = true) 
-            }.thenBy { it.name.lowercase() })
+            }
         }
         
         if (query.isNotEmpty()) {
@@ -129,8 +157,45 @@ class WorkoutViewModel : ViewModel() {
             }
         }
         
-        list
+        sortLibraryExercises(list, query, bodyPart)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private fun sortLibraryExercises(
+        exercises: List<ExerciseDefinition>,
+        query: String,
+        bodyPart: String?
+    ): List<ExerciseDefinition> {
+        val normalizedQuery = query.lowercase()
+        return exercises.sortedWith(
+            compareBy<ExerciseDefinition> {
+                searchRank(it, normalizedQuery)
+            }.thenByDescending {
+                bodyPart != null && it.primaryBodyPart.equals(bodyPart, ignoreCase = true)
+            }.thenBy {
+                it.name.lowercase()
+            }.thenBy {
+                it.type.name
+            }
+        )
+    }
+
+    private fun searchRank(exercise: ExerciseDefinition, query: String): Int {
+        if (query.isEmpty()) return 0
+
+        val name = exercise.name.lowercase()
+        val primary = exercise.primaryBodyPart.lowercase()
+        val secondary = exercise.secondaryBodyParts.lowercase()
+
+        return when {
+            name == query -> 0
+            name.startsWith(query) -> 1
+            name.split(" ", "-", "(", ")").any { it.startsWith(query) } -> 2
+            name.contains(query) -> 3
+            primary.contains(query) -> 4
+            secondary.contains(query) -> 5
+            else -> 6
+        }
+    }
 
     // Comprehensive list of all exercises the user has interacted with
     val allUniqueExerciseNames: StateFlow<List<String>> = combine(
@@ -168,6 +233,7 @@ class WorkoutViewModel : ViewModel() {
         _filterList.value = list
     }
 
+    // Updates data or UI state.
     fun updateFilter(category: String, filter: String) {
         when (category) {
             "Body Part" -> _filterBodyPart.value = filter
@@ -180,6 +246,14 @@ class WorkoutViewModel : ViewModel() {
                 }
             }
         }
+    }
+
+    fun clearBodyPartFilter() {
+        _filterBodyPart.value = null
+    }
+
+    fun clearExerciseTypeFilter() {
+        _filterType.value = null
     }
 
     fun toggleCustomFilter(active: Boolean) {
@@ -203,6 +277,7 @@ class WorkoutViewModel : ViewModel() {
         selectedExerciseEvent.value = exerciseName
     }
 
+    // Calculates values.
     private fun calculateStreak(logs: List<WorkoutLog>): Int {
         if (logs.isEmpty()) return 0
         
@@ -257,6 +332,7 @@ class WorkoutViewModel : ViewModel() {
         return streak
     }
 
+    // Loads data.
     fun loadWorkoutsForUser(userId: String) {
         viewModelScope.launch {
             repository.getWorkouts(userId).catch { e ->
@@ -268,6 +344,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadWorkoutLogsForUser(userId: String) {
         viewModelScope.launch {
             repository.getWorkoutLogs(userId).catch { e ->
@@ -307,6 +384,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Loads data.
     fun loadWorkout(workoutId: String) {
         _isLoading.value = true
         isWorkoutDataLoaded = false // Reset load flag
@@ -318,10 +396,16 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Reads data.
+    suspend fun getWorkoutTemplate(workoutId: String): Result<Workout> {
+        return repository.getWorkout(workoutId)
+    }
+
     fun notifyWorkoutLoaded() {
         isWorkoutDataLoaded = true
     }
 
+    // Loads data.
     fun loadWorkoutLog(logId: String) {
         _isLoading.value = true
         isLogDataLoaded = false // Reset load flag
@@ -346,6 +430,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Updates data or UI state.
     fun updateWorkout(workout: Workout) {
         _isLoading.value = true
         viewModelScope.launch {
@@ -357,6 +442,7 @@ class WorkoutViewModel : ViewModel() {
         }
     }
 
+    // Updates data or UI state.
     fun updateWorkoutOrder(workouts: List<Workout>) {
         viewModelScope.launch {
             repository.updateWorkoutOrder(workouts)

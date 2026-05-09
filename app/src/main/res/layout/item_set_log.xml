@@ -7,6 +7,12 @@
     android:gravity="center_vertical"
     android:paddingVertical="4dp">
 
+    <CheckBox
+        android:id="@+id/cbCompleted"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp" />
+
     <TextView
         android:id="@+id/tvSetLabel"
         android:layout_width="0dp"
@@ -89,11 +95,6 @@
             android:textSize="14sp"
             android:visibility="gone" />
     </LinearLayout>
-
-    <CheckBox
-        android:id="@+id/cbCompleted"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
 
     <ImageButton
         android:id="@+id/btnRemoveSet"

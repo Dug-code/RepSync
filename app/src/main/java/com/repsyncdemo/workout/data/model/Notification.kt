@@ -1,6 +1,11 @@
 package com.repsyncdemo.workout.data.model
 
+/**
+ * File overview: Defines the Notification data model used by repositories, view models, and UI binding.
+ */
+
 import com.google.firebase.firestore.DocumentId
+import com.google.firebase.firestore.PropertyName
 
 /**
  * Data class representing a system or user-specific notification.
@@ -9,16 +14,22 @@ import com.google.firebase.firestore.DocumentId
 data class Notification(
     @DocumentId
     val id: String = "",
-    // The ID of the user who should receive this notification
-    val userId: String = "",
+    
+    @get:PropertyName("userId")
+    @set:PropertyName("userId")
+    var userId: String = "",
+    
     val title: String = "",
     val message: String = "",
     val type: NotificationType = NotificationType.SYSTEM,
-    // Optional ID related to the notification (e.g., the ID of the deleted post)
+    
     val relatedId: String = "",
+    
     val createdAt: Long = System.currentTimeMillis(),
-    // Tracks if the user has seen or dismissed the notification
-    val isRead: Boolean = false
+    
+    @get:PropertyName("isRead")
+    @set:PropertyName("isRead")
+    var isRead: Boolean = false
 )
 
 /**

@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Displays and manages a profile-related screen for user identity, social, goals, trophies, or notifications.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,25 +21,40 @@ class NotificationsFragment : Fragment() {
     private val binding get() = _binding!!
     private val notificationViewModel: NotificationViewModel by activityViewModels()
 
+    // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentNotificationsBinding.inflate(inflater, container, false)
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val adapter = NotificationAdapter()
+        // Initialize adapter with delete logic
+        val adapter = NotificationAdapter { notification ->
+            notificationViewModel.deleteNotification(notification.id)
+        }
+        
         binding.rvNotifications.layoutManager = LinearLayoutManager(requireContext())
         binding.rvNotifications.adapter = adapter
+
+        // Handle Clear All button
+        binding.btnClearAll.setOnClickListener {
+            notificationViewModel.clearAllNotifications()
+        }
 
         // Observe ALL notifications so they stay visible even after being read
         notificationViewModel.allNotifications.observe(viewLifecycleOwner) { notifications ->
             adapter.submitList(notifications)
-            binding.tvEmpty.visibility = if (notifications.isEmpty()) View.VISIBLE else View.GONE
+            
+            val isEmpty = notifications.isEmpty()
+            binding.tvEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            binding.btnClearAll.visibility = if (isEmpty) View.GONE else View.VISIBLE
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

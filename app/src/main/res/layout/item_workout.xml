@@ -108,6 +108,16 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/tvTemplateLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Routine Template"
+                android:textAllCaps="true"
+                android:textColor="@color/primary"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
                 android:id="@+id/tvExerciseCount"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

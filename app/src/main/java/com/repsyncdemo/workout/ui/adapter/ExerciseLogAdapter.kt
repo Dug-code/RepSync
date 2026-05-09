@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds editable exercise-log rows and sets inside the workout logger.
+ */
+
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
@@ -13,6 +17,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.repsyncdemo.workout.R
 import com.repsyncdemo.workout.data.model.Exercise
+import com.repsyncdemo.workout.data.model.ExerciseDefinition
 import com.repsyncdemo.workout.data.model.ExerciseLog
 import com.repsyncdemo.workout.data.model.ExerciseType
 import com.repsyncdemo.workout.data.model.SetLog
@@ -76,6 +81,11 @@ class ExerciseLogAdapter(
         onDataChanged()
     }
 
+    fun addExercise(exercise: ExerciseDefinition) {
+        addExercise(exercise.name, exercise.type)
+    }
+
+    // Reads data.
     fun getExerciseLogs(): List<ExerciseLog> {
         return exercises.mapIndexed { index, info ->
             ExerciseLog(
@@ -95,6 +105,16 @@ class ExerciseLogAdapter(
         }
     }
 
+    // Reads data.
+    fun getTotalCompletedSets(): Int {
+        var total = 0
+        setData.values.forEach { sets ->
+            total += sets.count { it.completed }
+        }
+        return total
+    }
+
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseLogBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -102,6 +122,7 @@ class ExerciseLogAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(exercises[position], position)
     }
@@ -114,6 +135,7 @@ class ExerciseLogAdapter(
 
         private val handler = Handler(Looper.getMainLooper())
 
+        // Fills this row with data.
         fun bind(info: ExerciseInfo, exerciseIndex: Int) {
             binding.tvExerciseName.text = info.name
             updateSets(exerciseIndex, info)
@@ -125,6 +147,7 @@ class ExerciseLogAdapter(
             }
         }
 
+        // Updates data or UI state.
         private fun updateSets(exerciseIndex: Int, info: ExerciseInfo) {
             binding.layoutSets.removeAllViews()
             val sets = setData[exerciseIndex] ?: return
@@ -167,6 +190,7 @@ class ExerciseLogAdapter(
             }
         }
 
+        // Sets up this section.
         private fun setupStrengthSet(setView: View, data: SetLogData) {
             val etReps = setView.findViewById<EditText>(R.id.etReps)
             val etWeight = setView.findViewById<EditText>(R.id.etWeight)
@@ -178,6 +202,7 @@ class ExerciseLogAdapter(
             etWeight.addTextChangedListener(createWatcher { data.weight = it })
         }
 
+        // Sets up this section.
         private fun setupCardioSet(setView: View, data: SetLogData, name: String) {
             val etDuration = setView.findViewById<EditText>(R.id.etDuration)
             val etDistance = setView.findViewById<EditText>(R.id.etDistance)
@@ -194,6 +219,7 @@ class ExerciseLogAdapter(
             etDistance.setText(data.distance)
             etFloors.setText(data.floors)
 
+            etDuration.addTextChangedListener(createWatcher { data.duration = parseDurationInput(it) })
             etDistance.addTextChangedListener(createWatcher { data.distance = it })
             etFloors.addTextChangedListener(createWatcher { data.floors = it })
 
@@ -234,6 +260,17 @@ class ExerciseLogAdapter(
             val mins = seconds / 60
             val secs = seconds % 60
             return String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+        }
+
+        private fun parseDurationInput(value: String): Int {
+            val parts = value.split(":")
+            return if (parts.size == 2) {
+                val minutes = parts[0].toIntOrNull() ?: 0
+                val seconds = parts[1].toIntOrNull() ?: 0
+                (minutes * 60) + seconds.coerceIn(0, 59)
+            } else {
+                (value.toIntOrNull() ?: 0) * 60
+            }
         }
     }
 }

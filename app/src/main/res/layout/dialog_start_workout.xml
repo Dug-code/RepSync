@@ -19,17 +19,26 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Ready to Train?"
+        android:text="Start a Session"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="?attr/colorOnSurface"
-        android:layout_marginBottom="24dp" />
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:gravity="center"
+        android:text="Use a template as a starting point, or create a new routine template."
+        android:textColor="?attr/colorTextSecondary"
+        android:textSize="13sp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSavedWorkout"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:text="Start Saved Workout"
+        android:text="Use Routine Template"
         android:textAllCaps="false"
         android:textSize="16sp"
         android:textStyle="bold"
@@ -46,7 +55,7 @@
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="64dp"
-        android:text="Create New Workout"
+        android:text="Create Routine Template"
         android:textAllCaps="false"
         android:textSize="16sp"
         android:textStyle="bold"

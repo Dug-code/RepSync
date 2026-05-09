@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.home
 
+/**
+ * File overview: Displays calendar-based workout and rest-day history with daily filtering.
+ */
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -29,6 +33,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
     private var allLogs: List<WorkoutLog> = emptyList()
     private var selectedDate: CalendarDay = CalendarDay.today()
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -38,16 +43,25 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        historyAdapter = HistoryAdapter { log ->
-            val bundle = Bundle().apply { 
-                putString("workoutId", log.workoutId)
-                putString("logId", log.id)
+        historyAdapter = HistoryAdapter(
+            onItemClick = { log ->
+                val bundle = Bundle().apply { 
+                    putString("logId", log.id)
+                }
+                findNavController().navigate(R.id.action_history_to_workoutSummary, bundle)
+            },
+            onEditClick = { log ->
+                val bundle = Bundle().apply { 
+                    putString("workoutId", log.workoutId)
+                    putString("logId", log.id)
+                }
+                findNavController().navigate(R.id.action_history_to_logWorkout, bundle)
             }
-            findNavController().navigate(R.id.logWorkoutFragment, bundle)
-        }
+        )
 
         binding.rvHistory.apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -65,7 +79,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
 
         viewModel.restDays.observe(viewLifecycleOwner) {
             updateCalendarDecorators()
-            filterLogsForSelectedDate() // Re-filter to show rest day message if needed
+            filterLogsForSelectedDate() 
         }
     }
 
@@ -78,10 +92,10 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
         filterLogsForSelectedDate()
     }
 
+    // Updates data or UI state.
     private fun updateCalendarDecorators() {
         binding.calendarView.removeDecorators()
         
-        // 1. Draw Workout Icons (Red)
         val workoutDays = allLogs.map { log ->
             val cal = Calendar.getInstance()
             cal.timeInMillis = log.completedAt
@@ -97,7 +111,6 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
             }
         }
 
-        // 2. Draw Rest Day Icons (ZZZ) - Filter out days that already have workouts
         val restDays = viewModel.restDays.value ?: emptyList()
         val restDayDates = restDays.map {
             val cal = Calendar.getInstance()
@@ -115,6 +128,7 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
         }
     }
 
+    // Filters or sorts the list.
     private fun filterLogsForSelectedDate() {
         val filteredWorkouts = allLogs.filter { log ->
             val logCal = Calendar.getInstance()
@@ -150,7 +164,6 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
                 "Your muscles are growing while you rest!",
                 "Enjoy the peace and quiet before the grind."
             )
-            // Use the date as a seed so the message is consistent for the same day
             val seed = selectedDate.year * 10000 + selectedDate.month * 100 + selectedDate.day
             val messageIndex = Random(seed.toLong()).nextInt(restDayMessages.size)
             binding.tvEmpty.text = restDayMessages[messageIndex]
@@ -158,10 +171,11 @@ class HistoryFragment : Fragment(), OnDateSelectedListener {
             historyAdapter.submitList(emptyList())
             binding.rvHistory.visibility = View.GONE
             binding.tvEmpty.visibility = View.VISIBLE
-            binding.tvEmpty.text = "No workouts on this day."
+            binding.tvEmpty.text = "No completed sessions on this day."
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

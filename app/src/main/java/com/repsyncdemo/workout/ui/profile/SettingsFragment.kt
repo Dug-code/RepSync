@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Lets users edit profile details, privacy settings, socials, account actions, and validates username availability.
+ */
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -20,6 +24,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.transform.CircleCropTransformation
@@ -37,6 +42,9 @@ import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.*
 
 class SettingsFragment : Fragment() {
@@ -49,9 +57,14 @@ class SettingsFragment : Fragment() {
     private val navigationLockViewModel: NavigationLockViewModel by activityViewModels()
 
     private var isInitialLoad = true
+    private var isSavingSettings = false
+    private var usernameCheckJob: Job? = null
     private var originalHeight: Int = 0
     private var originalWeight: Double = 0.0
+    private val usernamePattern = Regex("^[A-Za-z0-9._]+$")
+    private val usernameRuleMessage = "Use letters, numbers, periods, and underscores only"
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -61,6 +74,7 @@ class SettingsFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -182,12 +196,19 @@ class SettingsFragment : Fragment() {
         }
 
         profileViewModel.profileResult.observe(viewLifecycleOwner) { result ->
+            if (!isSavingSettings) return@observe
+
+            isSavingSettings = false
             result.onSuccess {
                 navigationLockViewModel.setLocked(false)
                 Toast.makeText(requireContext(), "Settings saved", Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
             }
             result.onFailure {
+                if (it.message?.startsWith("Username") == true) {
+                    binding.tilUsername.error = it.message
+                    return@observe
+                }
                 Toast.makeText(requireContext(), "Save failed: ${it.message}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -200,6 +221,7 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // Updates data or UI state.
     private fun updateProfilePicturePreview(url: String) {
         if (url.isNotEmpty() && (url.startsWith("http") || url.startsWith("https"))) {
             binding.ivProfilePic.load(url) {
@@ -219,6 +241,7 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // Shows a dialog or popup.
     private fun showProfilePictureDialog() {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_profile_picture_picker, null)
         
@@ -262,10 +285,11 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
+    // Shows a dialog or popup.
     private fun showClearHistoryConfirmation() {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Clear All Data?")
-            .setMessage("This will permanently delete all your workout logs and reset your stats. This cannot be undone.")
+            .setMessage("This will permanently delete all completed session logs and reset your stats. This cannot be undone.")
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Clear Everything") { _, _ ->
                 analyticsViewModel.clearAllHistory()
@@ -274,6 +298,7 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showDeleteAccountFlow() {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Delete Account?")
@@ -285,6 +310,7 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    // Shows a dialog or popup.
     private fun showDeleteVerificationDialog() {
         val input = EditText(requireContext())
         input.hint = "Type DELETE here"
@@ -328,6 +354,7 @@ class SettingsFragment : Fragment() {
         dialog.show()
     }
 
+    // Sets up this section.
     private fun setupChangeListeners() {
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -338,6 +365,32 @@ class SettingsFragment : Fragment() {
         }
 
         binding.etUsername.addTextChangedListener(watcher)
+        binding.etUsername.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                if (isInitialLoad) return
+
+                val username = s?.toString()?.trim().orEmpty()
+                val originalUsername = profileViewModel.myProfile.value?.username.orEmpty()
+                binding.tilUsername.error = null
+                usernameCheckJob?.cancel()
+
+                if (username.length >= 3 && !username.equals(originalUsername, ignoreCase = true)) {
+                    if (!isValidUsername(username)) {
+                        binding.tilUsername.error = usernameRuleMessage
+                        return
+                    }
+
+                    usernameCheckJob = viewLifecycleOwner.lifecycleScope.launch {
+                        delay(500)
+                        if (!profileViewModel.isUsernameAvailable(username)) {
+                            binding.tilUsername.error = "Username is already taken"
+                        }
+                    }
+                }
+            }
+        })
         binding.etBio.addTextChangedListener(watcher)
         binding.etProfilePicUrl.addTextChangedListener(watcher)
         binding.etInstagramUrl.addTextChangedListener(watcher)
@@ -353,6 +406,7 @@ class SettingsFragment : Fragment() {
         binding.switchFriendsPublic.setOnCheckedChangeListener { _, _ -> if (!isInitialLoad) updateLockState() }
     }
 
+    // Updates data or UI state.
     private fun updateLockState() {
         navigationLockViewModel.setLocked(hasUnsavedChanges())
     }
@@ -381,6 +435,7 @@ class SettingsFragment : Fragment() {
                binding.switchFriendsPublic.isChecked != original.isFriendsListPublic
     }
 
+    // Shows a dialog or popup.
     private fun showUnsavedChangesDialog(onDiscard: () -> Unit) {
         MaterialAlertDialogBuilder(requireContext(), R.style.ThemeOverlay_App_MaterialAlertDialog)
             .setTitle("Unsaved Changes")
@@ -390,6 +445,7 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    // Saves changes.
     private fun saveChanges() {
         val username = binding.etUsername.text.toString().trim()
         val bio = binding.etBio.text.toString().trim()
@@ -410,6 +466,20 @@ class SettingsFragment : Fragment() {
         val isWorkoutsPublic = binding.switchWorkoutsPublic.isChecked
         val isFriendsPublic = binding.switchFriendsPublic.isChecked
 
+        binding.tilUsername.error = null
+        if (username.isEmpty()) {
+            binding.tilUsername.error = "Username is required"
+            return
+        }
+        if (username.length < 3) {
+            binding.tilUsername.error = "Username must be at least 3 characters"
+            return
+        }
+        if (!isValidUsername(username)) {
+            binding.tilUsername.error = usernameRuleMessage
+            return
+        }
+
         if (totalHeightInches > 107) { // 8ft 11in = 107 inches
             Toast.makeText(requireContext(), "Height cannot exceed 8ft 11in", Toast.LENGTH_SHORT).show()
             return
@@ -420,25 +490,36 @@ class SettingsFragment : Fragment() {
             return
         }
 
-        // Surgical update using fields instead of the whole object
-        val updates = mutableMapOf<String, Any>(
-            "username" to username,
-            "bio" to bio,
-            "profilePictureUrl" to picUrl,
-            "instagramUrl" to instagramUrl,
-            "facebookUrl" to facebookUrl,
-            "twitterUrl" to twitterUrl,
-            "heightInches" to totalHeightInches,
-            "weightLbs" to newWeight,
-            "isHeightPublic" to isHeightPublic,
-            "isWeightPublic" to isWeightPublic,
-            "isWorkoutsPublic" to isWorkoutsPublic,
-            "isFriendsListPublic" to isFriendsPublic
-        )
-        
-        profileViewModel.updateWeightAndHeight(newWeight, totalHeightInches)
-        // This is safe because updateWeightAndHeight uses updateProfileFields internally
-        profileViewModel.updateProfileFields(updates)
+        val originalUsername = profileViewModel.myProfile.value?.username.orEmpty()
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (!username.equals(originalUsername, ignoreCase = true) && !profileViewModel.isUsernameAvailable(username)) {
+                binding.tilUsername.error = "Username is already taken"
+                return@launch
+            }
+
+            // Surgical update using fields instead of the whole object
+            val updates = mutableMapOf<String, Any>(
+                "username" to username,
+                "bio" to bio,
+                "profilePictureUrl" to picUrl,
+                "instagramUrl" to instagramUrl,
+                "facebookUrl" to facebookUrl,
+                "twitterUrl" to twitterUrl,
+                "heightInches" to totalHeightInches,
+                "weightLbs" to newWeight,
+                "isHeightPublic" to isHeightPublic,
+                "isWeightPublic" to isWeightPublic,
+                "isWorkoutsPublic" to isWorkoutsPublic,
+                "isFriendsListPublic" to isFriendsPublic
+            )
+
+            isSavingSettings = true
+            profileViewModel.updateProfileFields(updates)
+        }
+    }
+
+    private fun isValidUsername(username: String): Boolean {
+        return usernamePattern.matches(username)
     }
 
     private fun isValidUrl(url: String, allowedDomains: List<String>): Boolean {
@@ -448,6 +529,7 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

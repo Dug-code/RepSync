@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.profile
 
+/**
+ * File overview: Collects the required profile information after registration and creates the first user profile.
+ */
+
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -22,7 +26,10 @@ class ProfileSetupActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProfileSetupBinding
     private val viewModel: ProfileViewModel by viewModels()
     private var usernameCheckJob: Job? = null
+    private val usernamePattern = Regex("^[A-Za-z0-9._]+$")
+    private val usernameRuleMessage = "Use letters, numbers, periods, and underscores only"
 
+    // Sets up this screen.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityProfileSetupBinding.inflate(layoutInflater)
@@ -32,6 +39,7 @@ class ProfileSetupActivity : AppCompatActivity() {
         observeViewModel()
     }
 
+    // Sets up this section.
     private fun setupListeners() {
         binding.etUsername.addTextChangedListener { text ->
             val username = text?.toString()?.trim() ?: ""
@@ -39,6 +47,11 @@ class ProfileSetupActivity : AppCompatActivity() {
             
             usernameCheckJob?.cancel()
             if (username.length >= 3) {
+                if (!isValidUsername(username)) {
+                    binding.tilUsername.error = usernameRuleMessage
+                    return@addTextChangedListener
+                }
+
                 usernameCheckJob = lifecycleScope.launch {
                     delay(500)
                     val available = viewModel.isUsernameAvailable(username)
@@ -62,6 +75,9 @@ class ProfileSetupActivity : AppCompatActivity() {
                 hasError = true
             } else if (username.length < 3) {
                 binding.tilUsername.error = "Username must be at least 3 characters"
+                hasError = true
+            } else if (!isValidUsername(username)) {
+                binding.tilUsername.error = usernameRuleMessage
                 hasError = true
             }
 
@@ -101,6 +117,11 @@ class ProfileSetupActivity : AppCompatActivity() {
         }
     }
 
+    private fun isValidUsername(username: String): Boolean {
+        return usernamePattern.matches(username)
+    }
+
+    // Watches data and updates the UI.
     private fun observeViewModel() {
         viewModel.isLoading.observe(this) { isLoading ->
             val loading = isLoading == true
@@ -114,7 +135,7 @@ class ProfileSetupActivity : AppCompatActivity() {
                 finish()
             }
             result.onFailure { e ->
-                if (e.message == "Username is already taken") {
+                if (e.message?.startsWith("Username") == true) {
                     binding.tilUsername.error = e.message
                 } else {
                     Toast.makeText(this, e.message ?: "Failed to save profile", Toast.LENGTH_SHORT).show()

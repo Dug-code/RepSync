@@ -1,8 +1,13 @@
 package com.repsyncdemo.workout.data.repository
 
+/**
+ * File overview: Owns Firestore reads and writes for feed posts, comments, reactions, and moderation operations.
+ */
+
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.GeoPoint
+import com.google.firebase.firestore.Query
 import com.repsyncdemo.workout.data.model.FeedPost
 import com.repsyncdemo.workout.data.model.FeedPostType
 import kotlinx.coroutines.channels.awaitClose
@@ -20,6 +25,7 @@ class FeedRepository {
     private val userId: String?
         get() = auth.currentUser?.uid
 
+    // Reads data.
     fun getFeed(
         userLocation: GeoPoint?,
         friendIds: List<String> = emptyList(),
@@ -30,6 +36,7 @@ class FeedRepository {
     ): Flow<List<FeedPost>> = callbackFlow {
         val currentUid = userId
         val listener = feedCollection
+            .orderBy("createdAt", Query.Direction.DESCENDING)
             .limit(100)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -56,19 +63,20 @@ class FeedRepository {
                     posts = posts.filter { targetIds.contains(it.userId) }
                 }
 
-                // Filter by distance and calculate transient distance field
-                if (userLocation != null) {
-                    if (radius != null && !showChat && !onlyFriends) {
-                        posts.forEach { post ->
-                            if (post.location != null) {
-                                post.distanceMiles = distanceMiles(userLocation, post.location)
-                            }
-                        }
-
-                        posts = posts.filter { 
-                            it.distanceMiles != null && it.distanceMiles!! <= radius 
+                // Only attach/display distances while the user is actively using radius mode.
+                val currentLocation = userLocation
+                val activeRadius = radius
+                if (currentLocation != null && activeRadius != null && !onlyFriends) {
+                    posts.forEach { post ->
+                        post.distanceMiles = post.location?.let { location ->
+                            distanceMiles(currentLocation, location)
                         }
                     }
+                    posts = posts.filter {
+                        it.distanceMiles != null && it.distanceMiles!! <= activeRadius
+                    }
+                } else {
+                    posts.forEach { it.distanceMiles = null }
                 }
 
                 trySend(posts.sortedByDescending { it.createdAt })
@@ -76,6 +84,7 @@ class FeedRepository {
         awaitClose { listener.remove() }
     }
 
+    // Reads data.
     fun getUserPosts(targetUserId: String, includeChat: Boolean = true): Flow<List<FeedPost>> = callbackFlow {
         val listener = feedCollection
             .whereEqualTo("userId", targetUserId)
@@ -95,6 +104,7 @@ class FeedRepository {
         awaitClose { listener.remove() }
     }
 
+    // Reads data.
     fun getMyPosts(includeChat: Boolean = true): Flow<List<FeedPost>> {
         val currentUid = userId ?: return callbackFlow { 
             trySend(emptyList())
@@ -103,6 +113,7 @@ class FeedRepository {
         return getUserPosts(currentUid, includeChat)
     }
 
+    // Writes data.
     suspend fun createPost(post: FeedPost): Result<String> {
         return try {
             val currentUid = userId ?: throw IllegalStateException("User not logged in")
@@ -114,6 +125,7 @@ class FeedRepository {
         }
     }
 
+    // Writes data.
     suspend fun updatePost(postId: String, description: String): Result<Unit> {
         return try {
             feedCollection.document(postId).update("description", description).await()
@@ -123,6 +135,7 @@ class FeedRepository {
         }
     }
 
+    // Reads data.
     suspend fun toggleLike(postId: String): Result<Unit> {
         return try {
             val currentUid = userId ?: throw IllegalStateException("User not logged in")
@@ -143,6 +156,7 @@ class FeedRepository {
         }
     }
 
+    // Reads data.
     suspend fun toggleReaction(postId: String?, emoji: String): Result<Unit> {
         if (postId == null) return Result.failure(Exception("Post ID is null"))
         return try {
@@ -165,6 +179,7 @@ class FeedRepository {
         }
     }
 
+    // Writes data.
     suspend fun deletePost(postId: String): Result<Unit> {
         return try {
             feedCollection.document(postId).delete().await()

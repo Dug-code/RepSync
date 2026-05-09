@@ -22,7 +22,7 @@
                 android:id="@+id/tvWorkoutName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Workout Name"
+                android:text="Session Name"
                 android:textColor="?attr/colorOnBackground"
                 android:textSize="26sp"
                 android:textStyle="bold" />
@@ -49,7 +49,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Workout Time"
+                        android:text="Session Time"
                         android:textColor="?attr/colorTextSecondary"
                         android:textSize="12sp"
                         android:textAllCaps="true"
@@ -159,24 +159,50 @@
                 android:layout_marginTop="20dp"
                 android:nestedScrollingEnabled="false" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAddExercise"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
                 android:layout_marginTop="12dp"
-                android:text="+ Add Exercise"
-                android:textAllCaps="false"
-                app:strokeColor="@color/primary"
-                android:textColor="@color/primary"
-                app:cornerRadius="12dp" />
+                android:gravity="center_vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAddExercise"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:text="Library"
+                    android:textAllCaps="false"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="12dp"
+                    app:icon="@drawable/ic_library_books"
+                    app:iconTint="@color/primary"
+                    app:strokeColor="@color/primary" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnScanExercise"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:text="Scan"
+                    android:textAllCaps="false"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="12dp"
+                    app:icon="@android:drawable/ic_menu_camera"
+                    app:iconTint="@color/primary"
+                    app:strokeColor="@color/primary" />
+            </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:hint="Workout Notes"
+                android:hint="Session Notes"
                 app:boxStrokeColor="@color/primary"
                 app:hintTextColor="@color/primary"
                 app:boxCornerRadiusTopStart="12dp"
@@ -209,7 +235,7 @@
             android:id="@+id/btnComplete"
             android:layout_width="match_parent"
             android:layout_height="64dp"
-            android:text="Complete Workout"
+            android:text="Complete Session"
             android:textAllCaps="false"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -224,7 +250,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_gravity="center_horizontal"
-            android:text="Discard Workout"
+            android:text="Discard Session"
             android:textColor="@color/error"
             android:textAllCaps="false"
             android:visibility="gone" />

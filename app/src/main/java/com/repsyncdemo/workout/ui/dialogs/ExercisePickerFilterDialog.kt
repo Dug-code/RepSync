@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.dialogs
 
+/**
+ * File overview: Presents a focused dialog or picker flow and returns the selected data to the calling screen.
+ */
+
 import android.app.Dialog
 import android.os.Bundle
 import androidx.fragment.app.DialogFragment

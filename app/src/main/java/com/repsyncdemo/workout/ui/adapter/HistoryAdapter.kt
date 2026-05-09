@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds completed workout log cards for history and recent-session lists.
+ */
+
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -13,11 +17,13 @@ import java.util.Date
 import java.util.Locale
 
 class HistoryAdapter(
-    private val onEditClick: (WorkoutLog) -> Unit
+    private val onItemClick: (WorkoutLog) -> Unit,
+    private val onEditClick: ((WorkoutLog) -> Unit)? = null
 ) : ListAdapter<WorkoutLog, HistoryAdapter.ViewHolder>(HistoryDiffCallback()) {
 
     private val monthFormat = SimpleDateFormat("MMM", Locale.getDefault())
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemHistoryBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -25,6 +31,7 @@ class HistoryAdapter(
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -33,6 +40,7 @@ class HistoryAdapter(
         private val binding: ItemHistoryBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(log: WorkoutLog) {
             val date = Date(log.completedAt)
             binding.tvDateMonth.text = monthFormat.format(date).uppercase()
@@ -43,7 +51,11 @@ class HistoryAdapter(
             val count = log.exercises.size
             binding.tvExerciseCount.text = "$count ${if (count == 1) "exercise" else "exercises"}"
             
-            binding.btnEdit.setOnClickListener { onEditClick(log) }
+            binding.root.setOnClickListener { onItemClick(log) }
+            
+            binding.btnEdit.setOnClickListener { 
+                onEditClick?.invoke(log) ?: onItemClick(log)
+            }
         }
 
         private fun getDayWithSuffix(timestamp: Long): String {

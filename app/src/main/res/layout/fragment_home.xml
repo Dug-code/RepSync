@@ -36,7 +36,7 @@
             android:insetTop="0dp"
             android:insetRight="0dp"
             android:insetBottom="0dp"
-            app:icon="@android:drawable/ic_menu_today"
+            app:icon="@drawable/ic_calendar_today"
             app:iconGravity="textStart"
             app:iconPadding="0dp"
             app:iconTint="@color/primary"
@@ -73,28 +73,49 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:gravity="center">
+            android:padding="18dp"
+            android:gravity="start">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="30-Day Activity"
+                android:textAllCaps="true"
+                android:textColor="@color/primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05" />
 
             <TextView
                 android:id="@+id/tvCongrats"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Congrats! You worked out 0 times in the last 30 days"
+                android:layout_marginTop="8dp"
+                android:text="Nice work!"
                 android:textColor="?attr/colorOnSurface"
-                android:textSize="15sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
-                android:gravity="center" />
+                android:gravity="start" />
+
+            <TextView
+                android:id="@+id/tvWorkoutCount"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="0 workouts in the last 30 days"
+                android:textColor="?attr/colorOnSurface"
+                android:alpha="0.7"
+                android:textSize="14sp"
+                android:layout_marginTop="6dp" />
 
             <TextView
                 android:id="@+id/tvMotivationalMessage"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Keep up the momentum!"
+                android:text="Keep up the momentum."
                 android:textColor="?attr/colorOnSurface"
-                android:alpha="0.7"
-                android:textSize="12sp"
-                android:layout_marginTop="4dp" />
+                android:alpha="0.55"
+                android:textSize="13sp"
+                android:layout_marginTop="3dp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -113,11 +134,11 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Recent" />
+            android:text="Logs" />
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Saved" />
+            android:text="Templates" />
     </com.google.android.material.tabs.TabLayout>
 
     <androidx.viewpager2.widget.ViewPager2
@@ -144,7 +165,7 @@
             android:layout_width="0dp"
             android:layout_height="56dp"
             android:layout_weight="1"
-            android:text="Start Workout"
+            android:text="Start Session"
             android:textAllCaps="false"
             android:textSize="16sp"
             android:textStyle="bold"

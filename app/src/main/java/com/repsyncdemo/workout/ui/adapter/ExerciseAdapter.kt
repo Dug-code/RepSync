@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.adapter
 
+/**
+ * File overview: Binds exercise data into RecyclerView rows and forwards user actions to the owning screen.
+ */
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +15,7 @@ import com.repsyncdemo.workout.databinding.ItemExerciseBinding
 
 class ExerciseAdapter : ListAdapter<Exercise, ExerciseAdapter.ViewHolder>(ExerciseDiffCallback()) {
 
+    // Creates the item row.
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemExerciseBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
@@ -18,6 +23,7 @@ class ExerciseAdapter : ListAdapter<Exercise, ExerciseAdapter.ViewHolder>(Exerci
         return ViewHolder(binding)
     }
 
+    // Shows the item row.
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.bind(getItem(position))
     }
@@ -26,13 +32,27 @@ class ExerciseAdapter : ListAdapter<Exercise, ExerciseAdapter.ViewHolder>(Exerci
         private val binding: ItemExerciseBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        // Fills this row with data.
         fun bind(exercise: Exercise) {
             binding.tvExerciseName.text = exercise.name
             binding.tvSetsReps.text = "${exercise.sets} sets x ${exercise.reps} reps"
-            binding.tvWeight.text = if (exercise.weight > 0) "${exercise.weight} lbs" else ""
+            if (exercise.weight > 0) {
+                binding.tvWeight.text = "${exercise.weight.toCleanString()} lbs"
+                binding.tvWeight.visibility = View.VISIBLE
+            } else {
+                binding.tvWeight.visibility = View.GONE
+            }
             
             // Show subtle "Custom" label for user-created exercises
             binding.tvCustomLabel.visibility = if (exercise.isCustom) View.VISIBLE else View.GONE
+        }
+
+        private fun Double.toCleanString(): String {
+            return if (this % 1.0 == 0.0) {
+                toInt().toString()
+            } else {
+                toString()
+            }
         }
     }
 

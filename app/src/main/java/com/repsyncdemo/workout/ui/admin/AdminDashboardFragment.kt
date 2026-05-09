@@ -1,5 +1,9 @@
 package com.repsyncdemo.workout.ui.admin
 
+/**
+ * File overview: Displays admin-only user management and moderation tools.
+ */
+
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -24,6 +28,7 @@ class AdminDashboardFragment : Fragment() {
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private lateinit var userAdapter: UserAdapter
 
+    // Sets up this screen.
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -33,6 +38,7 @@ class AdminDashboardFragment : Fragment() {
         return binding.root
     }
 
+    // Connects views, clicks, and data.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -74,6 +80,7 @@ class AdminDashboardFragment : Fragment() {
         })
     }
 
+    // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

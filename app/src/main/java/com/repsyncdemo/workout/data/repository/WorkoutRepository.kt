@@ -1,8 +1,11 @@
 package com.repsyncdemo.workout.data.repository
 
+/**
+ * File overview: Owns Firestore reads and writes for workout templates, logs, rest days, custom exercises, and weight logs.
+ */
+
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.repsyncdemo.workout.data.model.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -22,6 +25,7 @@ class WorkoutRepository {
     private val userId: String?
         get() = auth.currentUser?.uid
 
+    // Reads data.
     fun getWorkouts(targetUserId: String? = null): Flow<List<Workout>> = callbackFlow {
         val id = targetUserId ?: userId
         if (id == null) {
@@ -42,6 +46,7 @@ class WorkoutRepository {
         awaitClose { listener.remove() }
     }
 
+    // Reads data.
     suspend fun getWorkout(workoutId: String): Result<Workout> {
         return try {
             val doc = workoutCollection.document(workoutId).get().await()
@@ -53,6 +58,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun addWorkout(workout: Workout): Result<String> {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
@@ -64,6 +70,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun updateWorkout(workout: Workout): Result<Unit> {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
@@ -75,6 +82,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun updateWorkoutOrder(workouts: List<Workout>): Result<Unit> {
         return try {
             val batch = db.batch()
@@ -89,6 +97,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun deleteWorkout(workoutId: String): Result<Unit> {
         return try {
             workoutCollection.document(workoutId).delete().await()
@@ -98,6 +107,7 @@ class WorkoutRepository {
         }
     }
 
+    // Reads data.
     fun getWorkoutLogs(targetUserId: String? = null): Flow<List<WorkoutLog>> = callbackFlow {
         val id = targetUserId ?: userId
         if (id == null) {
@@ -118,6 +128,7 @@ class WorkoutRepository {
         awaitClose { listener.remove() }
     }
 
+    // Reads data.
     suspend fun getWorkoutLog(logId: String): Result<WorkoutLog> {
         return try {
             val doc = logsCollection.document(logId).get().await()
@@ -129,6 +140,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun addWorkoutLog(log: WorkoutLog): Result<String> {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
@@ -140,6 +152,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun updateWorkoutLog(log: WorkoutLog): Result<Unit> {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
@@ -151,6 +164,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun deleteWorkoutLog(logId: String): Result<Unit> {
         return try {
             logsCollection.document(logId).delete().await()
@@ -160,6 +174,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun deleteAllWorkoutLogs(): Result<Unit> {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
@@ -173,6 +188,7 @@ class WorkoutRepository {
         }
     }
 
+    // Reads data.
     fun getRestDays(): Flow<List<RestDay>> = callbackFlow {
         val uid = userId
         if (uid == null) {
@@ -193,6 +209,7 @@ class WorkoutRepository {
         awaitClose { listener.remove() }
     }
 
+    // Writes data.
     suspend fun addRestDay(restDay: RestDay): Result<Unit> {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
@@ -203,6 +220,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun deleteRestDay(restDayId: String): Result<Unit> {
         return try {
             restDaysCollection.document(restDayId).delete().await()
@@ -229,6 +247,7 @@ class WorkoutRepository {
         }
     }
 
+    // Reads data.
     fun getWeightLogs(): Flow<List<WeightLog>> = callbackFlow {
         val uid = userId
         if (uid == null) {
@@ -238,14 +257,13 @@ class WorkoutRepository {
         }
         val listener = weightLogsCollection
             .whereEqualTo("userId", uid)
-            .orderBy("date", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val logs = snapshot?.toObjects(WeightLog::class.java) ?: emptyList()
-                trySend(logs)
+                trySend(logs.sortedByDescending { it.date })
             }
         awaitClose { listener.remove() }
     }
@@ -272,6 +290,7 @@ class WorkoutRepository {
         awaitClose { listener.remove() }
     }
 
+    // Writes data.
     suspend fun addCustomExercise(exercise: ExerciseDefinition): Result<Unit> {
         return try {
             val uid = userId ?: throw IllegalStateException("User not logged in")
@@ -282,6 +301,7 @@ class WorkoutRepository {
         }
     }
 
+    // Writes data.
     suspend fun deleteCustomExercise(exerciseId: String): Result<Unit> {
         return try {
             customExercisesCollection.document(exerciseId).delete().await()
