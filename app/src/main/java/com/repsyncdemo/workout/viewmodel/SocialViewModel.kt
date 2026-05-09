@@ -6,8 +6,12 @@ package com.repsyncdemo.workout.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.*
+import com.google.firebase.auth.FirebaseAuth
 import com.repsyncdemo.workout.data.model.Friendship
+import com.repsyncdemo.workout.data.model.Notification
+import com.repsyncdemo.workout.data.model.NotificationType
 import com.repsyncdemo.workout.data.model.UserProfile
+import com.repsyncdemo.workout.data.repository.NotificationRepository
 import com.repsyncdemo.workout.data.repository.ProfileRepository
 import com.repsyncdemo.workout.data.repository.SocialRepository
 import kotlinx.coroutines.Job
@@ -18,6 +22,7 @@ class SocialViewModel : ViewModel() {
 
     private val repository = SocialRepository()
     private val profileRepository = ProfileRepository()
+    private val notificationRepository = NotificationRepository()
 
     val friends: LiveData<List<Friendship>> = repository.getFriends()
         .catch { e ->
@@ -52,7 +57,6 @@ class SocialViewModel : ViewModel() {
     private var profileObservationJob: Job? = null
 
     init {
-        // Observe profiles for the current user's friends/requests AND target user friends
         friends.observeForever { updateProfileObservation() }
         pendingRequests.observeForever { updateProfileObservation() }
         _targetUserFriends.observeForever { updateProfileObservation() }
@@ -100,13 +104,46 @@ class SocialViewModel : ViewModel() {
 
     fun sendFriendRequest(receiverId: String, receiverUsername: String, senderUsername: String) {
         viewModelScope.launch {
-            repository.sendFriendRequest(receiverId, receiverUsername, senderUsername)
+            Log.d("SocialViewModel", "Sending friend request to $receiverId")
+            val result = repository.sendFriendRequest(receiverId, receiverUsername, senderUsername)
+            if (result.isSuccess) {
+                Log.d("SocialViewModel", "Friend request DB entry created. Sending notification...")
+                val notification = Notification(
+                    userId = receiverId,
+                    title = "Friend Request",
+                    message = "$senderUsername sent you a friend request!",
+                    type = NotificationType.FRIEND_REQUEST,
+                    relatedId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                )
+                val notifyResult = notificationRepository.sendNotification(notification)
+                if (notifyResult.isFailure) {
+                    Log.e("SocialViewModel", "Failed to create notification document")
+                }
+            } else {
+                Log.e("SocialViewModel", "Failed to create friendship entry")
+            }
         }
     }
 
     fun acceptRequest(friendshipId: String) {
         viewModelScope.launch {
-            repository.acceptRequest(friendshipId)
+            val result = repository.acceptRequest(friendshipId)
+            if (result.isSuccess) {
+                val friendship = myFriendships.value?.find { it.id == friendshipId }
+                if (friendship != null) {
+                    val otherUserId = if (friendship.requesterId == FirebaseAuth.getInstance().currentUser?.uid) 
+                                        friendship.receiverId else friendship.requesterId
+                    val myUsername = profileRepository.getProfile().getOrNull()?.username ?: "A user"
+                    
+                    val notification = Notification(
+                        userId = otherUserId,
+                        title = "Friend Request Accepted",
+                        message = "$myUsername accepted your friend request!",
+                        type = NotificationType.FRIEND_REQUEST
+                    )
+                    notificationRepository.sendNotification(notification)
+                }
+            }
         }
     }
 
@@ -123,7 +160,6 @@ class SocialViewModel : ViewModel() {
     }
 
     override fun onCleared() {
-        // Cleaning up observers to prevent leaks
         friends.removeObserver { updateProfileObservation() }
         pendingRequests.removeObserver { updateProfileObservation() }
         _targetUserFriends.removeObserver { updateProfileObservation() }

@@ -6,7 +6,6 @@ package com.repsyncdemo.workout.data.repository
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.repsyncdemo.workout.data.model.Notification
 import com.repsyncdemo.workout.data.model.NotificationType
 import kotlinx.coroutines.channels.awaitClose
@@ -16,29 +15,22 @@ import kotlinx.coroutines.tasks.await
 
 /**
  * Repository responsible for managing notifications in Firestore.
- * Handles sending, observing, and updating notification statuses.
  */
 class NotificationRepository {
     private val db = FirebaseFirestore.getInstance()
     private val notificationsCollection = db.collection("notifications")
 
-    /**
-     * General purpose method to add a notification to the database.
-     */
     suspend fun sendNotification(notification: Notification): Result<Unit> {
         return try {
+            Log.d("NotificationRepo", "Sending notification to ${notification.userId}")
             notificationsCollection.add(notification).await()
             Result.success(Unit)
         } catch (e: Exception) {
+            Log.e("NotificationRepo", "Failed to send notification", e)
             Result.failure(e)
         }
     }
 
-    /**
-     * Specialized helper to send a moderation alert to a user.
-     * @param targetUserId The user whose content was removed.
-     * @param postDescription A brief snippet of the content that was deleted.
-     */
     suspend fun sendModerationNotification(targetUserId: String, postDescription: String): Result<Unit> {
         val notification = Notification(
             userId = targetUserId,
@@ -50,53 +42,73 @@ class NotificationRepository {
     }
 
     /**
-     * Provides a real-time stream of unread notifications for a specific user.
-     * Sorting is done in-memory to avoid mandatory Firestore composite index requirements.
+     * Observes unread notifications. 
+     * IMPORTANT: Field names "userId" and "isRead" must match Firestore document fields exactly.
      */
     fun observeUnreadNotifications(userId: String): Flow<List<Notification>> = callbackFlow {
+        Log.d("NotificationRepo", "Starting unread observation for: $userId")
         val listener = notificationsCollection
             .whereEqualTo("userId", userId)
             .whereEqualTo("isRead", false)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.e("NotificationRepo", "Error observing unread notifications", error)
-                    trySend(emptyList()) // Emit empty list so UI can show empty state or handle error
+                    Log.e("NotificationRepo", "Error observing unread", error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
+                
                 val notifications = snapshot?.toObjects(Notification::class.java) ?: emptyList()
-                // Sort by creation date descending
+                Log.d("NotificationRepo", "Found ${notifications.size} unread notifications for $userId")
+                
+                // Debugging: If you see documents in console but 0 here, it's a field name mismatch.
+                if (notifications.isEmpty() && snapshot != null && !snapshot.isEmpty) {
+                    Log.w("NotificationRepo", "Match found in Firestore, but failed to map! Check Notification.kt property names.")
+                }
+
                 trySend(notifications.sortedByDescending { it.createdAt })
             }
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Provides a real-time stream of ALL notifications for a specific user.
-     * Sorting is done in-memory to avoid mandatory Firestore composite index requirements.
-     */
     fun observeAllNotifications(userId: String): Flow<List<Notification>> = callbackFlow {
         val listener = notificationsCollection
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    Log.e("NotificationRepo", "Error observing all notifications", error)
-                    trySend(emptyList()) // Emit empty list so UI can show empty state or handle error
+                    Log.e("NotificationRepo", "Error observing all", error)
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val notifications = snapshot?.toObjects(Notification::class.java) ?: emptyList()
-                // Sort by creation date descending
                 trySend(notifications.sortedByDescending { it.createdAt })
             }
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Updates the status of a notification to read.
-     * Prevents the notification from appearing in the unread pop-up stream again.
-     */
     suspend fun markAsRead(notificationId: String): Result<Unit> {
         return try {
             notificationsCollection.document(notificationId).update("isRead", true).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteNotification(notificationId: String): Result<Unit> {
+        return try {
+            notificationsCollection.document(notificationId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAllNotifications(userId: String): Result<Unit> {
+        return try {
+            val snapshot = notificationsCollection.whereEqualTo("userId", userId).get().await()
+            val batch = db.batch()
+            snapshot.documents.forEach { batch.delete(it.reference) }
+            batch.commit().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

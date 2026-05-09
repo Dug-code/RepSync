@@ -88,4 +88,8 @@
     <string name="no">No</string>
     <string name="public_label">Public</string>
     <string name="private_label">Private</string>
+
+    <!-- Notifications -->
+    <string name="delete_notification">Delete notification</string>
+    <string name="clear_all">Clear All</string>
 </resources>

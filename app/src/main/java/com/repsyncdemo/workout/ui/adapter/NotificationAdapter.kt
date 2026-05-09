@@ -15,7 +15,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class NotificationAdapter : ListAdapter<Notification, NotificationAdapter.ViewHolder>(NotificationDiffCallback()) {
+class NotificationAdapter(
+    private val onDeleteClick: (Notification) -> Unit
+) : ListAdapter<Notification, NotificationAdapter.ViewHolder>(NotificationDiffCallback()) {
 
     private val dateFormat = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
 
@@ -36,6 +38,10 @@ class NotificationAdapter : ListAdapter<Notification, NotificationAdapter.ViewHo
             binding.tvTitle.text = notification.title
             binding.tvMessage.text = notification.message
             binding.tvTime.text = dateFormat.format(Date(notification.createdAt))
+            
+            binding.btnDelete.setOnClickListener {
+                onDeleteClick(notification)
+            }
         }
     }
 

@@ -31,14 +31,26 @@ class NotificationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val adapter = NotificationAdapter()
+        // Initialize adapter with delete logic
+        val adapter = NotificationAdapter { notification ->
+            notificationViewModel.deleteNotification(notification.id)
+        }
+        
         binding.rvNotifications.layoutManager = LinearLayoutManager(requireContext())
         binding.rvNotifications.adapter = adapter
+
+        // Handle Clear All button
+        binding.btnClearAll.setOnClickListener {
+            notificationViewModel.clearAllNotifications()
+        }
 
         // Observe ALL notifications so they stay visible even after being read
         notificationViewModel.allNotifications.observe(viewLifecycleOwner) { notifications ->
             adapter.submitList(notifications)
-            binding.tvEmpty.visibility = if (notifications.isEmpty()) View.VISIBLE else View.GONE
+            
+            val isEmpty = notifications.isEmpty()
+            binding.tvEmpty.visibility = if (isEmpty) View.VISIBLE else View.GONE
+            binding.btnClearAll.visibility = if (isEmpty) View.GONE else View.VISIBLE
         }
     }
 
