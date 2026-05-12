@@ -449,6 +449,16 @@
                     android:textAllCaps="false"
                     android:textColor="?attr/colorOnSurface" />
 
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchPreviewOnRestart"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Show Tutorial on Restart"
+                    android:textColor="?attr/colorOnSurface"
+                    app:thumbTint="@color/switch_thumb_selector"
+                    app:trackTint="@color/switch_track_selector" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnReportBug"
                     style="@style/Widget.MaterialComponents.Button.TextButton"

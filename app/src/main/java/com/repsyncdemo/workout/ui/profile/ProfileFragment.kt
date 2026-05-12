@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -20,8 +21,11 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -31,6 +35,7 @@ import androidx.viewpager2.widget.ViewPager2
 import coil.load
 import coil.transform.CircleCropTransformation
 import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.firebase.auth.FirebaseAuth
@@ -68,6 +73,7 @@ class ProfileFragment : Fragment() {
 
     private var tabMediator: TabLayoutMediator? = null
     private var spotlight: Spotlight? = null
+    private var isHandingOffToGoalTabTutorial = false
 
     companion object {
         private const val PREFS_NAME = "repsync_prefs"
@@ -158,12 +164,21 @@ class ProfileFragment : Fragment() {
             binding.btnSettings.visibility = View.VISIBLE
             binding.btnTrophyShelf.visibility = View.VISIBLE
             binding.btnFriendAction.visibility = View.GONE
-            binding.btnSettings.setOnClickListener { findNavController().navigate(R.id.action_profile_to_settings) }
-            binding.btnTrophyShelf.setOnClickListener { findNavController().navigate(R.id.action_profile_to_trophyShelf) }
-            binding.btnAdminDashboard.setOnClickListener { findNavController().navigate(R.id.action_profile_to_adminDashboard) }
+            binding.btnSettings.setOnClickListener {
+                finishProfileTutorialBeforeNavigation()
+                findNavController().navigate(R.id.action_profile_to_settings)
+            }
+            binding.btnTrophyShelf.setOnClickListener {
+                finishProfileTutorialBeforeNavigation()
+                findNavController().navigate(R.id.action_profile_to_trophyShelf)
+            }
+            binding.btnAdminDashboard.setOnClickListener {
+                finishProfileTutorialBeforeNavigation()
+                findNavController().navigate(R.id.action_profile_to_adminDashboard)
+            }
             binding.btnCreateGoalFromProfile.setOnClickListener {
+                finishProfileTutorialBeforeNavigation()
                 findNavController().navigate(R.id.goalsFragment)
-                spotlight?.finish()
             }
             
             // Allow clicking on weight layout to update it
@@ -295,6 +310,7 @@ class ProfileFragment : Fragment() {
             profile?.let {
                 binding.tvUsername.text = "@${it.username}"
                 binding.ivAdminBadge.visibility = if (it.isAdmin) View.VISIBLE else View.GONE
+                fitUsernameText()
                 binding.tvBio.text = it.bio.ifEmpty { "No bio set." }
                 updateProfilePicture(it.profilePictureUrl)
                 
@@ -539,6 +555,23 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    private fun fitUsernameText() {
+        val usernameView = binding.tvUsername
+        usernameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+        usernameView.post {
+            val availableWidth = usernameView.width - usernameView.paddingLeft - usernameView.paddingRight
+            if (availableWidth <= 0) return@post
+
+            val text = usernameView.text.toString()
+            for (sizeSp in 20 downTo 12) {
+                usernameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp.toFloat())
+                if (usernameView.paint.measureText(text) <= availableWidth) {
+                    return@post
+                }
+            }
+        }
+    }
+
     private fun hideKeyboard() {
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         val view = activity?.currentFocus ?: view
@@ -552,7 +585,9 @@ class ProfileFragment : Fragment() {
         val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val isCompleted = prefs.getBoolean(KEY_PROFILE_TUTORIAL_COMPLETED, false)
         if (!isCompleted) {
-            binding.root.post { showTutorial() }
+            binding.root.doOnPreDraw {
+                binding.root.postDelayed({ showTutorial() }, 250L)
+            }
         }
     }
 
@@ -560,42 +595,40 @@ class ProfileFragment : Fragment() {
         if (binding.btnTrophyShelf.visibility != View.VISIBLE || binding.btnSettings.visibility != View.VISIBLE) return
 
         val targets = ArrayList<Target>()
-        targets.add(
-            Target.Builder()
-                .setAnchor(binding.btnTrophyShelf)
-                .setShape(Circle(binding.btnTrophyShelf.height.toFloat() / 2 + 20f))
-                .setOverlay(createOverlay("Trophy Shelf", "Review unlocked trophies and choose what to show on your profile."))
-                .build()
-        )
-        targets.add(
-            Target.Builder()
-                .setAnchor(binding.btnSettings)
-                .setShape(Circle(binding.btnSettings.height.toFloat() / 2 + 20f))
-                .setOverlay(createOverlay("Settings", "Manage account details, privacy, and profile preferences."))
-                .build()
-        )
-        targets.add(
-            Target.Builder()
-                .setAnchor(binding.llHeightWeight)
-                .setShape(RoundedRectangle(binding.llHeightWeight.height.toFloat(), binding.llHeightWeight.width.toFloat(), 16f))
-                .setOverlay(createOverlay("Height & Weight", "Track profile measurements and tap weight to log updates."))
-                .build()
-        )
+        targets.add(createCircleTarget(binding.btnTrophyShelf, "Trophy Shelf", "Review unlocked trophies and choose what to show on your profile."))
+        targets.add(createCircleTarget(binding.btnSettings, "Settings", "Manage account details, privacy, and profile preferences."))
+        targets.add(createTarget(binding.llHeightWeight, "Height & Weight", "Track profile measurements and tap weight to log updates.", 20f))
 
         binding.profileTabs.getTabAt(0)?.view?.let {
-            targets.add(createTarget(it, "Posts", "See your shared feed posts."))
+            targets.add(createTarget(it, "Posts", "See your shared feed posts.", overlayVerticalBias = 0.18f))
         }
         binding.profileTabs.getTabAt(1)?.view?.let {
-            targets.add(createTarget(it, "Friends", "View your friends list."))
+            targets.add(createTarget(it, "Friends", "View your friends list.", overlayVerticalBias = 0.18f))
         }
         binding.profileTabs.getTabAt(2)?.view?.let {
-            targets.add(createTarget(it, "Shared Templates", "Browse workout templates shared from this profile."))
-        }
-        binding.profileTabs.getTabAt(3)?.view?.let {
-            targets.add(createTarget(it, "Goals", "Check active and completed goals."))
+            targets.add(
+                createTarget(
+                    it,
+                    "Shared Templates",
+                    "Browse workout templates shared from this profile.",
+                    overlayVerticalBias = 0.18f,
+                    onNext = {
+                        isHandingOffToGoalTabTutorial = true
+                        spotlight?.finish()
+                        spotlight = null
+                        scrollProfileTabsToEnd()
+                        binding.profileTabs.postDelayed({ showGoalTabTutorial() }, 300L)
+                    }
+                )
+            )
         }
 
+        if (targets.isEmpty()) return
+
+        isHandingOffToGoalTabTutorial = false
+        setTutorialScrollingEnabled(false)
         spotlight = Spotlight.Builder(requireActivity())
+            .setContainer(binding.root as ViewGroup)
             .setTargets(targets)
             .setBackgroundColorRes(R.color.spotlight_background)
             .setDuration(400L)
@@ -603,6 +636,44 @@ class ProfileFragment : Fragment() {
             .setOnSpotlightListener(object : OnSpotlightListener {
                 override fun onStarted() = Unit
                 override fun onEnded() {
+                    if (!isHandingOffToGoalTabTutorial) {
+                        setTutorialScrollingEnabled(true)
+                        markTutorialCompleted()
+                    }
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun showGoalTabTutorial() {
+        val goalTab = binding.profileTabs.getTabAt(3)?.view ?: run {
+            setTutorialScrollingEnabled(true)
+            markTutorialCompleted()
+            return
+        }
+
+        isHandingOffToGoalTabTutorial = false
+        spotlight = Spotlight.Builder(requireActivity())
+            .setContainer(binding.root as ViewGroup)
+            .setTargets(
+                listOf(
+                    createTarget(
+                        goalTab,
+                        "Goals",
+                        "Check active and completed goals.",
+                        overlayVerticalBias = 0.18f
+                    )
+                )
+            )
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(400L)
+            .setAnimation(DecelerateInterpolator(2f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() = Unit
+                override fun onEnded() {
+                    setTutorialScrollingEnabled(true)
                     markTutorialCompleted()
                 }
             })
@@ -611,24 +682,96 @@ class ProfileFragment : Fragment() {
         spotlight?.start()
     }
 
-    private fun createTarget(view: View, title: String, description: String): Target {
+    private fun createCircleTarget(
+        view: View,
+        title: String,
+        description: String,
+        overlayVerticalBias: Float = 0.8f,
+        onNext: (() -> Unit)? = null
+    ): Target {
+        val radius = (maxOf(view.width, view.height).toFloat() / 2f).coerceAtLeast(1f)
         return Target.Builder()
             .setAnchor(view)
-            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 8f))
-            .setOverlay(createOverlay(title, description))
+            .setShape(Circle(radius))
+            .setOverlay(createOverlay(title, description, overlayVerticalBias, onNext))
             .build()
     }
 
-    private fun createOverlay(title: String, description: String): View {
+    private fun createTarget(
+        view: View,
+        title: String,
+        description: String,
+        cornerRadius: Float = 8f,
+        overlayVerticalBias: Float = 0.8f,
+        onNext: (() -> Unit)? = null
+    ): Target {
+        return Target.Builder()
+            .setAnchor(view)
+            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), cornerRadius))
+            .setOverlay(createOverlay(title, description, overlayVerticalBias, onNext))
+            .build()
+    }
+
+    private fun createOverlay(
+        title: String,
+        description: String,
+        verticalBias: Float,
+        onNext: (() -> Unit)?
+    ): View {
         val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        val containerInfo = overlay.findViewById<LinearLayout>(R.id.containerInfo)
+        val params = containerInfo.layoutParams as ConstraintLayout.LayoutParams
+        params.verticalBias = verticalBias
+        containerInfo.layoutParams = params
+
         overlay.findViewById<TextView>(R.id.tvTitle).text = title
         overlay.findViewById<TextView>(R.id.tvDescription).text = description
-        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener { spotlight?.next() }
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
+            if (onNext != null) {
+                onNext()
+            } else {
+                spotlight?.next()
+            }
+        }
         overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
             spotlight?.finish()
+            setTutorialScrollingEnabled(true)
             markTutorialCompleted()
         }
         return overlay
+    }
+
+    private fun scrollProfileTabsToEnd() {
+        val goalTab = binding.profileTabs.getTabAt(3)?.view
+        val targetScrollX = goalTab?.left ?: run {
+            val tabStrip = binding.profileTabs.getChildAt(0) ?: return
+            (tabStrip.width - binding.profileTabs.width).coerceAtLeast(0)
+        }
+        binding.profileTabs.smoothScrollTo(targetScrollX, 0)
+    }
+
+    private fun setTutorialScrollingEnabled(enabled: Boolean) {
+        val binding = _binding ?: return
+        binding.viewPager.isUserInputEnabled = enabled
+        binding.profileTabs.isEnabled = enabled
+        binding.appBarLayout.setExpanded(true, false)
+
+        val params = binding.appBarLayout.layoutParams as? CoordinatorLayout.LayoutParams ?: return
+        val behavior = (params.behavior as? AppBarLayout.Behavior) ?: AppBarLayout.Behavior().also {
+            params.behavior = it
+            binding.appBarLayout.layoutParams = params
+        }
+
+        behavior.setDragCallback(object : AppBarLayout.Behavior.DragCallback() {
+            override fun canDrag(appBarLayout: AppBarLayout): Boolean = enabled
+        })
+    }
+
+    private fun finishProfileTutorialBeforeNavigation() {
+        isHandingOffToGoalTabTutorial = false
+        setTutorialScrollingEnabled(true)
+        spotlight?.finish()
+        spotlight = null
     }
 
     private fun markTutorialCompleted() {
@@ -638,11 +781,12 @@ class ProfileFragment : Fragment() {
 
     // Clears the view binding.
     override fun onDestroyView() {
-        super.onDestroyView()
+        setTutorialScrollingEnabled(true)
         spotlight?.finish()
         spotlight = null
         tabMediator?.detach()
         tabMediator = null
         _binding = null
+        super.onDestroyView()
     }
 }

@@ -27,7 +27,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Title"
-            android:textColor="@android:color/white"
+            android:textColor="@color/text_primary"
             android:textSize="22sp"
             android:textStyle="bold" />
 
@@ -38,7 +38,7 @@
             android:layout_marginTop="8dp"
             android:alpha="0.9"
             android:text="Description goes here. This explains the feature being highlighted."
-            android:textColor="@android:color/white"
+            android:textColor="@color/text_secondary"
             android:textSize="16sp" />
 
         <LinearLayout
@@ -54,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:text="Skip"
                 android:textAllCaps="false"
-                android:textColor="@android:color/white" />
+                android:textColor="@color/text_secondary" />
 
             <View
                 android:layout_width="0dp"
@@ -68,8 +68,8 @@
                 android:layout_height="wrap_content"
                 android:text="Next"
                 android:textAllCaps="false"
-                android:textColor="@android:color/white"
-                app:strokeColor="@android:color/white" />
+                android:textColor="@color/primary"
+                app:strokeColor="@color/primary" />
         </LinearLayout>
     </LinearLayout>
 

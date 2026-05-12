@@ -6,6 +6,7 @@ package com.repsyncdemo.workout
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
+import com.repsyncdemo.workout.util.TutorialPreferences
 
 class RepSyncApp : Application() {
     // Sets up this screen.
@@ -14,5 +15,9 @@ class RepSyncApp : Application() {
         
         // Force dark mode ONLY
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
+
+        if (TutorialPreferences.shouldRepeatOnRestart(this)) {
+            TutorialPreferences.resetCompletedTutorials(this)
+        }
     }
 }

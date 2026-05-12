@@ -38,6 +38,7 @@ import com.repsyncdemo.workout.data.model.GoalType
 import com.repsyncdemo.workout.data.model.WeightLog
 import com.repsyncdemo.workout.databinding.FragmentSettingsBinding
 import com.repsyncdemo.workout.ui.auth.LoginActivity
+import com.repsyncdemo.workout.util.TutorialPreferences
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import com.repsyncdemo.workout.viewmodel.GoalViewModel
 import com.repsyncdemo.workout.viewmodel.NavigationLockViewModel
@@ -173,6 +174,16 @@ class SettingsFragment : Fragment() {
 
         binding.btnClearHistory.setOnClickListener {
             showClearHistoryConfirmation()
+        }
+
+        binding.switchPreviewOnRestart.isChecked = TutorialPreferences.shouldRepeatOnRestart(requireContext())
+        binding.switchPreviewOnRestart.setOnCheckedChangeListener { _, isChecked ->
+            TutorialPreferences.setRepeatOnRestart(requireContext(), isChecked)
+            if (isChecked) {
+                Toast.makeText(requireContext(), "Walkthrough preview will show after the next app restart", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "Walkthrough preview will stay completed", Toast.LENGTH_SHORT).show()
+            }
         }
 
         binding.btnReportBug.setOnClickListener {

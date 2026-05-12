@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.fragment.app.Fragment
@@ -75,16 +74,8 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
         val targets = ArrayList<Target>()
 
         binding.tabLayout.getTabAt(0)?.view?.let {
-            targets.add(summaryCreateTarget(it, "Summary", "Start with a quick view of training volume, consistency, and favorites."))
+            targets.add(createTarget(it, "Summary", "Start with a quick view of training volume, consistency, and favorites."))
         }
-
-        targets.add(
-            Target.Builder()
-                .setAnchor(binding.viewPager)
-                .setShape(RoundedRectangle(binding.viewPager.height.toFloat(), binding.viewPager.width.toFloat(), 16f))
-                .setOverlay(hiddenOverlay())
-                .build()
-        )
 
         binding.tabLayout.getTabAt(1)?.view?.let {
             targets.add(createTarget(it, "Advanced", "Open deeper analytics when you want more detail."))
@@ -114,14 +105,6 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
             .build()
     }
 
-    private fun summaryCreateTarget(view: View, title: String, description: String): Target {
-        return Target.Builder()
-            .setAnchor(view)
-            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 8f))
-            .setOverlay(summaryCreateOverlay(title, description))
-            .build()
-    }
-
     private fun createOverlay(title: String, description: String): View {
         val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
         overlay.findViewById<TextView>(R.id.tvTitle).text = title
@@ -131,24 +114,6 @@ class AnalyticsFragment : Fragment(R.layout.fragment_analytics) {
             spotlight?.finish()
             markTutorialCompleted()
         }
-        return overlay
-    }
-
-    private fun summaryCreateOverlay(title: String, description: String): View {
-        val overlay = createOverlay(title, description)
-        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
-            spotlight?.next()
-            childFragmentManager.fragments
-                .filterIsInstance<AnalyticsSummaryFragment>()
-                .firstOrNull()
-                ?.checkTutorial()
-        }
-        return overlay
-    }
-
-    private fun hiddenOverlay(): View {
-        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
-        overlay.findViewById<LinearLayout>(R.id.containerInfo).visibility = View.GONE
         return overlay
     }
 
