@@ -13,9 +13,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
+import android.widget.Button
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -31,6 +35,11 @@ import com.repsyncdemo.workout.databinding.FragmentFeedBinding
 import com.repsyncdemo.workout.viewmodel.FeedViewModel
 import com.repsyncdemo.workout.viewmodel.NotificationViewModel
 import com.repsyncdemo.workout.viewmodel.ProfileViewModel
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.shape.Circle
+import com.takusemba.spotlight.shape.RoundedRectangle
 
 class FeedFragment : Fragment() {
 
@@ -39,6 +48,12 @@ class FeedFragment : Fragment() {
     private val feedViewModel: FeedViewModel by activityViewModels()
     private val profileViewModel: ProfileViewModel by activityViewModels()
     private val notificationViewModel: NotificationViewModel by activityViewModels()
+    private var spotlight: Spotlight? = null
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_FEED_TUTORIAL_COMPLETED = "feed_tutorial_completed"
+    }
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -69,16 +84,90 @@ class FeedFragment : Fragment() {
         setupViewPager()
         checkLocationPermission()
         setupNotificationButton()
+        checkTutorial()
         
         // Initial load of the background tabs
         feedViewModel.loadFriendsFeed()
         feedViewModel.loadChatFeed()
     }
 
+    private fun checkTutorial() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val isCompleted = prefs.getBoolean(KEY_FEED_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post { showTutorial() }
+        }
+    }
+
+    private fun showTutorial() {
+        val targets = ArrayList<Target>()
+
+        binding.feedTabs.getTabAt(0)?.view?.let {
+            targets.add(createTarget(it, "Explore", "Find posts from nearby lifters or switch to the global feed."))
+        }
+
+        binding.feedTabs.getTabAt(1)?.view?.let {
+            targets.add(createTarget(it, "Friends", "See training updates from people you follow."))
+        }
+
+        binding.feedTabs.getTabAt(2)?.view?.let {
+            targets.add(createTarget(it, "Chat", "Jump into community conversations."))
+        }
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.btnNotifications)
+                .setShape(Circle(binding.btnNotifications.height.toFloat() / 2 + 20f))
+                .setOverlay(createOverlay("Notifications", "Review friend requests, reactions, and other updates."))
+                .build()
+        )
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(400L)
+            .setAnimation(DecelerateInterpolator(2f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() = Unit
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun createTarget(view: View, title: String, description: String): Target {
+        return Target.Builder()
+            .setAnchor(view)
+            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 8f))
+            .setOverlay(createOverlay(title, description))
+            .build()
+    }
+
+    private fun createOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener { spotlight?.next() }
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            markTutorialCompleted()
+        }
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_FEED_TUTORIAL_COMPLETED, true) }
+    }
+
     // Sets up this section.
     private fun setupNotificationButton() {
         binding.btnNotifications.setOnClickListener {
             findNavController().navigate(R.id.action_feed_to_notifications)
+            spotlight?.finish()
         }
 
         notificationViewModel.unreadNotifications.observe(viewLifecycleOwner) { notifications ->
@@ -213,6 +302,8 @@ class FeedFragment : Fragment() {
     // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
+        spotlight?.finish()
+        spotlight = null
         _binding = null
     }
 }

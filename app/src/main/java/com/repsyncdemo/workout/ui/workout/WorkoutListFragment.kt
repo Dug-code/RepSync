@@ -4,12 +4,18 @@ package com.repsyncdemo.workout.ui.workout
  * File overview: Displays saved workout templates with search, sorting, drag-to-reorder, and create-template navigation.
  */
 
+import android.content.Context
+import android.graphics.Color.argb
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.widget.Button
+import android.widget.TextView
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -21,6 +27,12 @@ import com.repsyncdemo.workout.data.model.Workout
 import com.repsyncdemo.workout.databinding.FragmentWorkoutListBinding
 import com.repsyncdemo.workout.ui.adapter.WorkoutAdapter
 import com.repsyncdemo.workout.viewmodel.WorkoutViewModel
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.effet.FlickerEffect
+import com.takusemba.spotlight.shape.Circle
+import com.takusemba.spotlight.shape.RoundedRectangle
 import java.util.Collections
 
 class WorkoutListFragment : Fragment() {
@@ -35,6 +47,12 @@ class WorkoutListFragment : Fragment() {
     private var pendingScrollWorkoutId: String? = null
 
     enum class SortType { MANUAL, DATE, NAME }
+    private var spotlight: Spotlight? = null
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_WORKOUT_TUTORIAL_COMPLETED = "workout_tutorial_completed"
+    }
 
     // Sets up this screen.
     override fun onCreateView(
@@ -66,12 +84,15 @@ class WorkoutListFragment : Fragment() {
         setupDragAndDrop()
         setupListeners()
         setupObservers()
+        checkTutorial()
     }
 
     // Sets up this section.
     private fun setupListeners() {
         binding.fabAdd.setOnClickListener {
             findNavController().navigate(R.id.action_workoutList_to_createWorkout)
+            spotlight?.finish()
+            markTutorialCompleted()
         }
 
         binding.btnEmptyAction.setOnClickListener {
@@ -189,9 +210,94 @@ class WorkoutListFragment : Fragment() {
         binding.rvWorkouts.visibility = if (isEmpty) View.GONE else View.VISIBLE
     }
 
+    private fun checkTutorial() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val isCompleted = prefs.getBoolean(KEY_WORKOUT_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post { showTutorial() }
+        }
+    }
+
+    private fun showTutorial() {
+        val targets = ArrayList<Target>()
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.tilSearch)
+                .setShape(RoundedRectangle(binding.tilSearch.height.toFloat(), binding.tilSearch.width.toFloat(), 64f))
+                .setOverlay(createOverlay("Search", "Find saved templates by name."))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.chipGroupSort)
+                .setShape(RoundedRectangle(binding.chipGroupSort.height.toFloat(), binding.chipGroupSort.width.toFloat(), 64f))
+                .setOverlay(createOverlay("Sort", "Switch between manual order, newest templates, and names."))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.rvWorkouts)
+                .setShape(RoundedRectangle(binding.rvWorkouts.height.toFloat(), binding.rvWorkouts.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Saved Templates", "Open a template or drag items while in manual sort."))
+                .build()
+        )
+
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.fabAdd)
+                .setShape(Circle(binding.fabAdd.height.toFloat() / 2 + 10f))
+                .setEffect(FlickerEffect(100f, argb(255, 68, 71, 78)))
+                .setOverlay(finalActionOverlay("Create Template", "Build a new custom workout.\n\nTap the highlighted button to begin."))
+                .build()
+        )
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(400L)
+            .setAnimation(DecelerateInterpolator(2f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() = Unit
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun createOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener { spotlight?.next() }
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            markTutorialCompleted()
+        }
+        return overlay
+    }
+
+    private fun finalActionOverlay(title: String, description: String): View {
+        val overlay = createOverlay(title, description)
+        overlay.findViewById<Button>(R.id.btnNext).visibility = View.GONE
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_WORKOUT_TUTORIAL_COMPLETED, true) }
+    }
+
     // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
+        spotlight?.finish()
+        spotlight = null
         _binding = null
     }
 }

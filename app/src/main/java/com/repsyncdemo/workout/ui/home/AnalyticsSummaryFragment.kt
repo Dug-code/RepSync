@@ -4,15 +4,19 @@ package com.repsyncdemo.workout.ui.home
  * File overview: Displays high-level workout analytics, charts, streaks, totals, and volume breakdowns.
  */
 
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -33,6 +37,10 @@ import com.repsyncdemo.workout.ui.adapter.VolumeBreakdownAdapter
 import com.repsyncdemo.workout.viewmodel.AnalyticsViewModel
 import com.repsyncdemo.workout.viewmodel.StatItem
 import com.repsyncdemo.workout.viewmodel.TimeRange
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.shape.RoundedRectangle
 import java.text.NumberFormat
 import java.util.*
 
@@ -43,6 +51,7 @@ class AnalyticsSummaryFragment : Fragment() {
     private val viewModel: AnalyticsViewModel by activityViewModels()
     private var muscleDistribution: Map<String, Int> = emptyMap()
     private var muscleColors: Map<String, Int> = emptyMap()
+    private var spotlight: Spotlight? = null
 
     private val chartColors = listOf(
         Color.rgb(227, 30, 36),
@@ -54,6 +63,11 @@ class AnalyticsSummaryFragment : Fragment() {
         Color.rgb(0, 188, 212),
         Color.rgb(233, 30, 99)
     )
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_ANALYTICS_TUTORIAL_COMPLETED = "analytics_tutorial_completed"
+    }
 
     // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -458,9 +472,97 @@ class AnalyticsSummaryFragment : Fragment() {
             .show()
     }
 
+    internal fun checkTutorial() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val isCompleted = prefs.getBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post { showTutorial() }
+        }
+    }
+
+    private fun showTutorial() {
+        val targets = ArrayList<Target>()
+
+        targets.add(summaryTarget(binding.toggleTimeRange, "Date Range", "Choose the time range for the analytics on this screen."))
+        targets.add(summaryTarget(binding.cardTotalVolume, "Total Volume", "See total logged lifting volume for the selected range."))
+        targets.add(summaryTarget(binding.cardMuscleFocus, "Muscle Focus", "Review which muscle groups are getting the most completed sets."))
+        targets.add(summaryTarget(binding.cardWeeklyMomentum, "Weekly Momentum", "Track consistency across recent weeks."))
+        targets.add(summaryTarget(binding.cardTotalTime, "Total Time", "See total training time logged."))
+        targets.add(summaryTarget(binding.cardAvgTime, "Average Session", "Check your average workout length."))
+        targets.add(summaryTarget(binding.cardFavWorkout, "Top Session", "Open your most frequent workout sessions."))
+        targets.add(summaryTarget(binding.cardFavMuscle, "Favorite Muscle", "See your most trained muscle group."))
+        targets.add(summaryTarget(binding.cardWorkouts, "Sessions", "Open completed workout history for this range."))
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.cardRestDays)
+                .setShape(RoundedRectangle(binding.cardRestDays.height.toFloat(), binding.cardRestDays.width.toFloat(), 16f))
+                .setOverlay(finishOverlay("Rest Days", "Open rest day history for this range."))
+                .build()
+        )
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setContainer(binding.root as ViewGroup)
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(0L)
+            .setAnimation(DecelerateInterpolator(1f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() = Unit
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun summaryTarget(view: View, title: String, description: String): Target {
+        return Target.Builder()
+            .setAnchor(view)
+            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 16f))
+            .setOverlay(createOverlay(title, description))
+            .build()
+    }
+
+    private fun createOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        val containerInfo = overlay.findViewById<LinearLayout>(R.id.containerInfo)
+        val params = containerInfo.layoutParams as ViewGroup.MarginLayoutParams
+        params.bottomMargin = (-50 * resources.displayMetrics.density).toInt()
+        containerInfo.layoutParams = params
+
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener { spotlight?.next() }
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            (parentFragment as? AnalyticsFragment)?.finishSpotlight()
+            markTutorialCompleted()
+        }
+        return overlay
+    }
+
+    private fun finishOverlay(title: String, description: String): View {
+        val overlay = createOverlay(title, description)
+        overlay.findViewById<Button>(R.id.btnNext).text = "Finish"
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener {
+            spotlight?.finish()
+            (parentFragment as? AnalyticsFragment)?.nextSpotlight()
+        }
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_ANALYTICS_TUTORIAL_COMPLETED, true) }
+    }
+
     // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
+        spotlight?.finish()
+        spotlight = null
         _binding = null
     }
 }

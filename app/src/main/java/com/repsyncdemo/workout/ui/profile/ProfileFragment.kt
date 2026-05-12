@@ -11,13 +11,17 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -35,6 +39,11 @@ import com.repsyncdemo.workout.data.model.*
 import com.repsyncdemo.workout.databinding.FragmentProfileBinding
 import com.repsyncdemo.workout.ui.adapter.*
 import com.repsyncdemo.workout.viewmodel.*
+import com.takusemba.spotlight.OnSpotlightListener
+import com.takusemba.spotlight.Spotlight
+import com.takusemba.spotlight.Target
+import com.takusemba.spotlight.shape.Circle
+import com.takusemba.spotlight.shape.RoundedRectangle
 
 /**
  * ProfileFragment displays user information, social links, trophies, and active goals.
@@ -58,6 +67,12 @@ class ProfileFragment : Fragment() {
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     private var tabMediator: TabLayoutMediator? = null
+    private var spotlight: Spotlight? = null
+
+    companion object {
+        private const val PREFS_NAME = "repsync_prefs"
+        private const val KEY_PROFILE_TUTORIAL_COMPLETED = "profile_tutorial_completed"
+    }
 
     // Sets up this screen.
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -131,6 +146,7 @@ class ProfileFragment : Fragment() {
             }
         }
         tabMediator?.attach()
+        checkTutorial()
     }
 
     /**
@@ -145,7 +161,10 @@ class ProfileFragment : Fragment() {
             binding.btnSettings.setOnClickListener { findNavController().navigate(R.id.action_profile_to_settings) }
             binding.btnTrophyShelf.setOnClickListener { findNavController().navigate(R.id.action_profile_to_trophyShelf) }
             binding.btnAdminDashboard.setOnClickListener { findNavController().navigate(R.id.action_profile_to_adminDashboard) }
-            binding.btnCreateGoalFromProfile.setOnClickListener { findNavController().navigate(R.id.goalsFragment) }
+            binding.btnCreateGoalFromProfile.setOnClickListener {
+                findNavController().navigate(R.id.goalsFragment)
+                spotlight?.finish()
+            }
             
             // Allow clicking on weight layout to update it
             binding.layoutWeight.setOnClickListener { showWeighInDialog() }
@@ -528,9 +547,100 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    private fun checkTutorial() {
+        if (targetUserId != null || spotlight != null) return
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val isCompleted = prefs.getBoolean(KEY_PROFILE_TUTORIAL_COMPLETED, false)
+        if (!isCompleted) {
+            binding.root.post { showTutorial() }
+        }
+    }
+
+    private fun showTutorial() {
+        if (binding.btnTrophyShelf.visibility != View.VISIBLE || binding.btnSettings.visibility != View.VISIBLE) return
+
+        val targets = ArrayList<Target>()
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.btnTrophyShelf)
+                .setShape(Circle(binding.btnTrophyShelf.height.toFloat() / 2 + 20f))
+                .setOverlay(createOverlay("Trophy Shelf", "Review unlocked trophies and choose what to show on your profile."))
+                .build()
+        )
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.btnSettings)
+                .setShape(Circle(binding.btnSettings.height.toFloat() / 2 + 20f))
+                .setOverlay(createOverlay("Settings", "Manage account details, privacy, and profile preferences."))
+                .build()
+        )
+        targets.add(
+            Target.Builder()
+                .setAnchor(binding.llHeightWeight)
+                .setShape(RoundedRectangle(binding.llHeightWeight.height.toFloat(), binding.llHeightWeight.width.toFloat(), 16f))
+                .setOverlay(createOverlay("Height & Weight", "Track profile measurements and tap weight to log updates."))
+                .build()
+        )
+
+        binding.profileTabs.getTabAt(0)?.view?.let {
+            targets.add(createTarget(it, "Posts", "See your shared feed posts."))
+        }
+        binding.profileTabs.getTabAt(1)?.view?.let {
+            targets.add(createTarget(it, "Friends", "View your friends list."))
+        }
+        binding.profileTabs.getTabAt(2)?.view?.let {
+            targets.add(createTarget(it, "Shared Templates", "Browse workout templates shared from this profile."))
+        }
+        binding.profileTabs.getTabAt(3)?.view?.let {
+            targets.add(createTarget(it, "Goals", "Check active and completed goals."))
+        }
+
+        spotlight = Spotlight.Builder(requireActivity())
+            .setTargets(targets)
+            .setBackgroundColorRes(R.color.spotlight_background)
+            .setDuration(400L)
+            .setAnimation(DecelerateInterpolator(2f))
+            .setOnSpotlightListener(object : OnSpotlightListener {
+                override fun onStarted() = Unit
+                override fun onEnded() {
+                    markTutorialCompleted()
+                }
+            })
+            .build()
+
+        spotlight?.start()
+    }
+
+    private fun createTarget(view: View, title: String, description: String): Target {
+        return Target.Builder()
+            .setAnchor(view)
+            .setShape(RoundedRectangle(view.height.toFloat(), view.width.toFloat(), 8f))
+            .setOverlay(createOverlay(title, description))
+            .build()
+    }
+
+    private fun createOverlay(title: String, description: String): View {
+        val overlay = layoutInflater.inflate(R.layout.layout_spotlight_overlay, binding.root, false)
+        overlay.findViewById<TextView>(R.id.tvTitle).text = title
+        overlay.findViewById<TextView>(R.id.tvDescription).text = description
+        overlay.findViewById<Button>(R.id.btnNext).setOnClickListener { spotlight?.next() }
+        overlay.findViewById<Button>(R.id.btnSkip).setOnClickListener {
+            spotlight?.finish()
+            markTutorialCompleted()
+        }
+        return overlay
+    }
+
+    private fun markTutorialCompleted() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit { putBoolean(KEY_PROFILE_TUTORIAL_COMPLETED, true) }
+    }
+
     // Clears the view binding.
     override fun onDestroyView() {
         super.onDestroyView()
+        spotlight?.finish()
+        spotlight = null
         tabMediator?.detach()
         tabMediator = null
         _binding = null
